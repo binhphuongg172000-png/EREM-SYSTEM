@@ -465,11 +465,11 @@ export default function ProposalForm({
         }
         
         .item-row {
-          display: grid; grid-template-columns: 1fr 110px 140px 40px; gap: 1rem; align-items: start;
-          padding: 1.25rem; background: rgba(30, 41, 59, 0.4); border: 1px solid #334155;
-          border-radius: 12px; margin-bottom: 0.75rem; transition: all 0.2s ease;
+          display: grid; grid-template-columns: 1fr 90px 140px 140px 34px; gap: 0.85rem; align-items: center;
+          padding: 0.75rem 0.85rem; background: rgba(30, 41, 59, 0.4); border: 1px solid #334155;
+          border-radius: 10px; transition: all 0.2s ease;
         }
-        .item-row:hover { background: rgba(30, 41, 59, 0.6); border-color: #475569; }
+        .item-row:hover { background: rgba(30, 41, 59, 0.7); border-color: #475569; }
         
         .item-badge {
           display: inline-flex;
@@ -484,19 +484,25 @@ export default function ProposalForm({
         }
         
         .remove-btn {
-          width: 36px; height: 36px;
+          width: 34px; height: 34px;
           border-radius: 8px;
-          border: none;
+          border: 1px solid rgba(244, 63, 94, 0.2);
           background: rgba(244, 63, 94, 0.1);
           color: #f43f5e;
+          display: flex; align-items: center; justify-content: center;
           cursor: pointer;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          transition: all 0.15s ease;
+          transition: all 0.2s;
+          margin-top: 14px;
         }
-        .remove-btn:hover { background: rgba(244, 63, 94, 0.2); }
-        .remove-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+        .remove-btn:hover:not(:disabled) {
+          background: #f43f5e;
+          color: #fff;
+          border-color: #f43f5e;
+        }
+        .remove-btn:disabled {
+          opacity: 0.4;
+          cursor: not-allowed;
+        }
         
         .budget-bar-track {
           height: 8px;
@@ -957,66 +963,149 @@ export default function ProposalForm({
               })()}
             </div>
 
-            {/* Item List */}
+            {/* Item List Separated by Category */}
             {items.length > 0 ? (
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                {items.map((item, idx) => (
-                  <div key={item.tempId} className="item-row">
-                    <div>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: 6 }}>
-                        <span className="item-badge" style={{ 
-                          background: item.type === "ITEM" ? "rgba(56, 189, 248, 0.1)" : "rgba(168, 85, 247, 0.1)",
-                          color: item.type === "ITEM" ? "#38bdf8" : "#a855f7"
-                        }}>
-                          {item.type === "ITEM" ? <Package size={10} /> : <Building2 size={10} />}
-                          {item.type === "ITEM" ? "TB" : "ĐT"}
-                        </span>
-                        <span style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.95rem" }}>{item.name}</span>
+              <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+                
+                {/* GROUP 1: THIẾT BỊ HỌC TẬP */}
+                {items.filter(i => i.type === "ITEM").length > 0 && (
+                  <div style={{ background: "rgba(15, 23, 42, 0.4)", border: "1px solid rgba(56, 189, 248, 0.25)", borderRadius: "12px", overflow: "hidden" }}>
+                    <div style={{
+                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                      padding: "0.55rem 0.85rem", background: "rgba(56, 189, 248, 0.08)",
+                      borderBottom: "1px solid rgba(56, 189, 248, 0.25)"
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#38bdf8", fontWeight: 700, fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                        <Package size={14} />
+                        Thiết bị Học tập ({items.filter(i => i.type === "ITEM").length})
                       </div>
-                      {item.specifications && (
-                        <div style={{ fontSize: "0.8rem", color: "#94a3b8", paddingLeft: "0.25rem", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                          {item.specifications}
+                      <div style={{ fontSize: "0.825rem", fontWeight: 700, color: "#38bdf8" }}>
+                        Tổng thiết bị: {items.filter(i => i.type === "ITEM").reduce((acc, curr) => acc + (curr.quantity * curr.price), 0).toLocaleString()}đ
+                      </div>
+                    </div>
+
+                    <div style={{ padding: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                      {items.filter(i => i.type === "ITEM").map((item) => (
+                        <div key={item.tempId} className="item-row">
+                          <div>
+                            <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.875rem", marginBottom: 3 }}>{item.name}</div>
+                            {item.specifications && (
+                              <div style={{ fontSize: "0.75rem", color: "#94a3b8", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                                {item.specifications}
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div>
+                            <div style={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 700, marginBottom: 4 }}>SỐ LƯỢNG</div>
+                            <input 
+                              type="number" 
+                              min="0"
+                              step="0.01" 
+                              className="form-input" 
+                              style={{ textAlign: "center", padding: "6px", borderRadius: 8, fontSize: "0.85rem", fontWeight: 600 }}
+                              value={item.quantity} 
+                              onChange={e => updateItemQuantity(item.tempId, parseFloat(e.target.value) || 0)}
+                              disabled={selectedSchool?.isLocked}
+                              title="Số lượng"
+                            />
+                          </div>
+                          
+                          <div>
+                            <div style={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 700, marginBottom: 4 }}>ĐƠN GIÁ (đ/{item.unit || "Bộ"})</div>
+                            <CurrencyInput 
+                              value={item.price} 
+                              onChange={val => updateItemPrice(item.tempId, parseInt(val) || 0)}
+                              style={{ padding: "6px", borderRadius: 8, fontSize: "0.85rem", fontWeight: 600 }}
+                              disabled={selectedSchool?.isLocked}
+                            />
+                          </div>
+                          
+                          <div style={{ textAlign: "right" }}>
+                            <div style={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 700, marginBottom: 4 }}>THÀNH TIỀN</div>
+                            <div style={{ padding: "6px 0", fontSize: "0.875rem", fontWeight: 700, color: "#38bdf8", whiteSpace: "nowrap" }}>
+                              {(item.quantity * item.price).toLocaleString()}đ
+                            </div>
+                          </div>
+                          
+                          <button type="button" onClick={() => removeItem(item.tempId)} disabled={selectedSchool?.isLocked} className="remove-btn" title="Xóa">
+                            <Trash2 size={14} />
+                          </button>
                         </div>
-                      )}
+                      ))}
                     </div>
-                    
-                    <div>
-                      <div style={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 700, marginBottom: 6 }}>SỐ LƯỢNG</div>
-                      <input 
-                        type="number" 
-                        min="0"
-                        step="0.01" 
-                        className="form-input" 
-                        style={{ textAlign: "center", padding: "8px", borderRadius: 8, fontSize: "0.95rem", fontWeight: 600 }}
-                        value={item.quantity} 
-                        onChange={e => updateItemQuantity(item.tempId, parseFloat(e.target.value) || 0)}
-                        disabled={selectedSchool?.isLocked}
-                        title="Số lượng"
-                      />
-                    </div>
-                    
-                    <div>
-                      <div style={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 700, marginBottom: 6 }}>ĐƠN GIÁ (đ/{item.unit || "Bộ"})</div>
-                      <CurrencyInput 
-                        value={item.price} 
-                        onChange={val => updateItemPrice(item.tempId, parseInt(val) || 0)}
-                        style={{ padding: "8px", borderRadius: 8, fontSize: "0.95rem", fontWeight: 600 }}
-                        disabled={selectedSchool?.isLocked}
-                      />
-                    </div>
-                    
-                    <div style={{ textAlign: "right" }}>
-                      <div style={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 700, marginBottom: 6 }}>THÀNH TIỀN</div>
-                      <div style={{ padding: "8px 0", fontSize: "0.95rem", fontWeight: 700, color: "#38bdf8" }}>
-                        {(item.quantity * item.price).toLocaleString()}đ
+                  </div>
+                )}
+
+                {/* GROUP 2: HẠNG MỤC ĐẦU TƯ KHÁC */}
+                {items.filter(i => i.type === "INVESTMENT").length > 0 && (
+                  <div style={{ background: "rgba(15, 23, 42, 0.4)", border: "1px solid rgba(168, 85, 247, 0.25)", borderRadius: "12px", overflow: "hidden" }}>
+                    <div style={{
+                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                      padding: "0.55rem 0.85rem", background: "rgba(168, 85, 247, 0.08)",
+                      borderBottom: "1px solid rgba(168, 85, 247, 0.25)"
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#a855f7", fontWeight: 700, fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                        <Building2 size={14} />
+                        Hạng mục Đầu tư khác ({items.filter(i => i.type === "INVESTMENT").length})
+                      </div>
+                      <div style={{ fontSize: "0.825rem", fontWeight: 700, color: "#a855f7" }}>
+                        Tổng đầu tư: {items.filter(i => i.type === "INVESTMENT").reduce((acc, curr) => acc + (curr.quantity * curr.price), 0).toLocaleString()}đ
                       </div>
                     </div>
-                    
-                    <button type="button" onClick={() => removeItem(item.tempId)} disabled={selectedSchool?.isLocked} className="remove-btn" title="Xóa" style={{ marginTop: "22px" }}>
-                      <Trash2 size={15} />
-                    </button>
+
+                    <div style={{ padding: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                      {items.filter(i => i.type === "INVESTMENT").map((item) => (
+                        <div key={item.tempId} className="item-row">
+                          <div>
+                            <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.875rem", marginBottom: 3 }}>{item.name}</div>
+                            {item.specifications && (
+                              <div style={{ fontSize: "0.75rem", color: "#94a3b8", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                                {item.specifications}
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div>
+                            <div style={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 700, marginBottom: 4 }}>SỐ LƯỢNG</div>
+                            <input 
+                              type="number" 
+                              min="0"
+                              step="0.01" 
+                              className="form-input" 
+                              style={{ textAlign: "center", padding: "6px", borderRadius: 8, fontSize: "0.85rem", fontWeight: 600 }}
+                              value={item.quantity} 
+                              onChange={e => updateItemQuantity(item.tempId, parseFloat(e.target.value) || 0)}
+                              disabled={selectedSchool?.isLocked}
+                              title="Số lượng"
+                            />
+                          </div>
+                          
+                          <div>
+                            <div style={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 700, marginBottom: 4 }}>ĐƠN GIÁ (đ/{item.unit || "Cái"})</div>
+                            <CurrencyInput 
+                              value={item.price} 
+                              onChange={val => updateItemPrice(item.tempId, parseInt(val) || 0)}
+                              style={{ padding: "6px", borderRadius: 8, fontSize: "0.85rem", fontWeight: 600 }}
+                              disabled={selectedSchool?.isLocked}
+                            />
+                          </div>
+                          
+                          <div style={{ textAlign: "right" }}>
+                            <div style={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 700, marginBottom: 4 }}>THÀNH TIỀN</div>
+                            <div style={{ padding: "6px 0", fontSize: "0.875rem", fontWeight: 700, color: "#a855f7", whiteSpace: "nowrap" }}>
+                              {(item.quantity * item.price).toLocaleString()}đ
+                            </div>
+                          </div>
+                          
+                          <button type="button" onClick={() => removeItem(item.tempId)} disabled={selectedSchool?.isLocked} className="remove-btn" title="Xóa">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                ))}
+                )}
               </div>
             ) : (
               <div className="empty-state">
