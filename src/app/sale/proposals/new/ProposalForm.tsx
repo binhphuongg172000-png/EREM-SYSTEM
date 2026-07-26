@@ -103,7 +103,9 @@ export default function ProposalForm({
 
   const selectedSchool = schools.find(s => s.id === selectedSchoolId);
   const allocatedBudget = selectedSchoolId ? Math.floor(((Number(schoolDetails.newStudents) || 0) * BUDGET_PER_RATIO) / RATIO) : 0;
-  const totalInvested = items.reduce((acc, curr) => acc + (curr.quantity * curr.price), 0);
+  const totalEquipment = items.filter(i => i.type === "ITEM").reduce((acc, curr) => acc + (curr.quantity * curr.price), 0);
+  const totalInvestment = items.filter(i => i.type === "INVESTMENT").reduce((acc, curr) => acc + (curr.quantity * curr.price), 0);
+  const totalInvested = totalEquipment + totalInvestment;
   const delta = allocatedBudget - totalInvested;
   const budgetUsagePercent = allocatedBudget > 0 ? Math.min((totalInvested / allocatedBudget) * 100, 100) : 0;
 
@@ -806,25 +808,39 @@ export default function ProposalForm({
                 </div>
 
                 {/* Summary Numbers */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginBottom: "0.6rem" }}>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", marginBottom: "0.6rem" }}>
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ color: "#94a3b8", fontSize: "0.78rem" }}>Tổng đầu tư</span>
-                    <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "#f1f5f9" }}>
+                    <span style={{ color: "#94a3b8", fontSize: "0.76rem" }}>Ngân sách thiết bị</span>
+                    <span style={{ fontWeight: 600, fontSize: "0.825rem", color: "#38bdf8" }}>
+                      {totalEquipment.toLocaleString()}đ
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ color: "#94a3b8", fontSize: "0.76rem" }}>Ngân sách đầu tư khác</span>
+                    <span style={{ fontWeight: 600, fontSize: "0.825rem", color: "#a855f7" }}>
+                      {totalInvestment.toLocaleString()}đ
+                    </span>
+                  </div>
+
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "0.15rem" }}>
+                    <span style={{ color: "#e2e8f0", fontSize: "0.76rem", fontWeight: 600 }}>Tổng kinh phí sử dụng</span>
+                    <span style={{ fontWeight: 700, fontSize: "0.85rem", color: "#f1f5f9" }}>
                       {totalInvested.toLocaleString()}đ
                     </span>
                   </div>
                   
-                  <div style={{ height: 1, background: "rgba(51, 65, 85, 0.5)" }} />
+                  <div style={{ height: 1, background: "rgba(51, 65, 85, 0.5)", margin: "0.2rem 0" }} />
                   
                   <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.78rem" }}>
-                      {delta >= 0 ? "Còn dư" : "Vượt ngân sách"}
+                    <span style={{ fontWeight: 700, color: "#f1f5f9", fontSize: "0.78rem" }}>
+                      Chênh lệch ngân sách
                     </span>
                     <span style={{ 
-                      fontWeight: 700, fontSize: "1rem", 
+                      fontWeight: 700, fontSize: "0.95rem", 
                       color: delta >= 0 ? "#10b981" : "#f43f5e",
                     }}>
-                      {delta >= 0 ? "+" : ""}{delta.toLocaleString()}đ
+                      {delta >= 0 ? `+${delta.toLocaleString()}đ` : `${delta.toLocaleString()}đ`}
                     </span>
                   </div>
                 </div>
