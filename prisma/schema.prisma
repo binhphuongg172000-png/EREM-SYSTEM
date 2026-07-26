@@ -1,0 +1,145 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// 1. Người dùng hệ thống
+model User {
+  id        String   @id @default(uuid())
+  username  String   @unique
+  password  String
+  role      String   // ADMIN / SALE
+  status    String   // ACTIVE / LOCKED
+  name      String
+  email     String?  @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Quan hệ
+  schools           School[]   @relation("SaleSchools")
+  proposals         Proposal[] @relation("SaleProposals")
+  handoversSent     Handover[] @relation("SenderHandovers")
+  handoversReceived Handover[] @relation("ReceiverHandovers")
+  auditLogs         AuditLog[] @relation("UserAuditLogs")
+}
+
+// 2. Lịch sử thao tác (Audit Log)
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation("UserAuditLogs", fields: [userId], references: [id], onDelete: Cascade)
+  action    String
+  details   String   @db.Text // Nội dung chi tiết thao tác và thay đổi dữ liệu
+  createdAt DateTime @default(now())
+}
+
+// 3. Danh mục Trường học
+model School {
+  id             String   @id @default(uuid())
+  name           String
+  address        String
+  principalName  String?
+  contractNumber String?
+  investedClassrooms Int @default(0)
+  oldStudents    Int      @default(0)
+  newStudents    Int      @default(0)
+  isLocked       Boolean  @default(false)
+  saleId         String
+  sale           User     @relation("SaleSchools", fields: [saleId], references: [id], onDelete: Restrict)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  // Quan hệ
+  proposals Proposal[]
+  handovers Handover[]
+}
+
+// 4. Danh mục Thiết bị (Admin quản lý)
+model Item {
+  id             String   @id @default(uuid())
+  code           String   @unique
+  name           String
+  specifications String   @db.Text
+  accessories    String?  @db.Text
+  unit           String   @default("Bộ")
+  standardPrice  Decimal  @db.Decimal(15, 2)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// 5. Danh mục Đầu tư khác (Admin quản lý)
+model OtherInvestment {
+  id             String   @id @default(uuid())
+  name           String
+  description    String   @db.Text
+  unit           String
+  standardPrice  Decimal  @db.Decimal(15, 2)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// 6. Dự trù kinh phí
+model Proposal {
+  id              String   @id @default(uuid())
+  schoolId        String
+  school          School   @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  saleId          String
+  sale            User     @relation("SaleProposals", fields: [saleId], references: [id], onDelete: Restrict)
+  status          String   // DRAFT / PENDING / APPROVED / REJECTED / COMPLETED
+  rejectReason    String?  @db.Text
+  allocatedBudget Decimal  @db.Decimal(15, 2) // Ngân sách được cấp
+  investedBudget  Decimal  @db.Decimal(15, 2) // Tổng ngân sách đầu tư thực tế
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Chi tiết dự trù
+  items       ProposalItem[]
+  investments ProposalInvestment[]
+  handovers   Handover[]
+}
+
+// 7. Chi tiết hạng mục thiết bị trong dự trù
+model ProposalItem {
+  id             String   @id @default(uuid())
+  proposalId     String
+  proposal       Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  name           String
+  specifications String   @db.Text
+  accessories    String?  @db.Text
+  quantity       Decimal  @db.Decimal(10, 2) // Cho phép số thập phân (ví dụ: 1.5)
+  price          Decimal  @db.Decimal(15, 2)
+  totalPrice     Decimal  @db.Decimal(15, 2)
+}
+
+// 8. Chi tiết hạng mục đầu tư khác trong dự trù
+model ProposalInvestment {
+  id          String   @id @default(uuid())
+  proposalId  String
+  proposal    Proposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  name        String
+  description String   @db.Text
+  quantity    Decimal  @db.Decimal(10, 2) // Cho phép số thập phân (ví dụ: 1.5)
+  price       Decimal  @db.Decimal(15, 2)
+  totalPrice  Decimal  @db.Decimal(15, 2)
+}
+
+// 9. Biên bản bàn giao (BBBG)
+model Handover {
+  id            String    @id @default(uuid())
+  proposalId    String
+  proposal      Proposal  @relation(fields: [proposalId], references: [id], onDelete: Restrict)
+  schoolId      String
+  school        School    @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  senderId      String
+  sender        User      @relation("SenderHandovers", fields: [senderId], references: [id], onDelete: Restrict)
+  receiverId    String
+  receiver      User      @relation("ReceiverHandovers", fields: [receiverId], references: [id], onDelete: Restrict)
+  status        String    // PENDING / CONFIRMED
+  attachmentUrl String?
+  createdAt     DateTime  @default(now())
+  confirmedAt   DateTime?
+}
