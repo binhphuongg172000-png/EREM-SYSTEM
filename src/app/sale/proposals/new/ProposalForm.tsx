@@ -921,46 +921,51 @@ export default function ProposalForm({
                 const hasResults = filteredItems.length > 0 || filteredInvs.length > 0;
                 
                 return (
-                  <div className="dropdown-list" style={{ display: "flex", flexDirection: "column", gap: "0.65rem", padding: "0.65rem 0.5rem 0.65rem 0.65rem", maxHeight: "540px", overflowY: "auto" }}>
+                  <div className="dropdown-list" style={{ display: "flex", flexDirection: "column", padding: "0.4rem", maxHeight: "520px", overflowY: "auto" }}>
                     {!hasResults ? (
                       <div style={{ padding: "1.25rem", textAlign: "center", color: "#64748b", fontSize: "0.825rem" }}>Không tìm thấy kết quả phù hợp</div>
                     ) : (
                       <>
                         {/* THIẾT BỊ GROUP */}
                         {filteredItems.length > 0 && (
-                          <div style={{ background: "rgba(15, 23, 42, 0.5)", border: "1px solid rgba(56, 189, 248, 0.25)", borderRadius: "10px", overflow: "hidden" }}>
+                          <div style={{ marginBottom: "0.5rem" }}>
                             <div style={{
+                              position: "sticky", top: 0, zIndex: 10,
                               display: "flex", alignItems: "center", justifyContent: "space-between",
-                              padding: "0.4rem 0.75rem", background: "rgba(56, 189, 248, 0.08)",
-                              borderBottom: "1px solid rgba(56, 189, 248, 0.2)", color: "#38bdf8",
-                              fontWeight: 700, fontSize: "0.75rem"
+                              padding: "0.35rem 0.65rem", background: "rgba(15, 23, 42, 0.95)",
+                              backdropFilter: "blur(8px)", borderBottom: "1px solid rgba(56, 189, 248, 0.3)",
+                              color: "#38bdf8", fontWeight: 700, fontSize: "0.75rem", borderRadius: "6px", marginBottom: "0.25rem"
                             }}>
                               <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                                 <Package size={13} color="#38bdf8" />
                                 <span>Thiết bị ({filteredItems.length})</span>
                               </div>
-                              <span style={{ fontSize: "0.68rem", opacity: 0.8, fontWeight: 500, color: "#94a3b8" }}>Click để chọn thiết bị</span>
+                              <span style={{ fontSize: "0.68rem", opacity: 0.8, fontWeight: 500, color: "#94a3b8" }}>Click để chọn</span>
                             </div>
 
-                            <div style={{ padding: "0.45rem", display: "flex", flexDirection: "column", gap: "0.35rem", maxHeight: "240px", overflowY: "auto" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
                               {filteredItems.map(i => (
                                 <div key={`ITEM_${i.id}`} className="dropdown-item" onClick={() => {
                                   addItemByValue(`ITEM_${i.id}`);
                                   setItemSearchQuery("");
                                   setIsItemDropdownOpen(false);
                                 }}>
-                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem" }}>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                      <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.835rem", lineHeight: 1.3, marginBottom: 2 }}>{i.name}</div>
-                                      <div style={{ fontSize: "0.725rem", color: "#94a3b8", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{i.specifications}</div>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
+                                    <div style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                      <span style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.835rem" }}>{i.name}</span>
+                                      {i.specifications && (
+                                        <span style={{ fontSize: "0.725rem", color: "#94a3b8", marginLeft: "8px", opacity: 0.85 }}>
+                                          — {i.specifications}
+                                        </span>
+                                      )}
                                     </div>
 
-                                    <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", flexShrink: 0 }}>
-                                      <span style={{ fontSize: "0.725rem", padding: "0.2rem 0.5rem", borderRadius: "5px", background: "rgba(51, 65, 85, 0.4)", color: "#cbd5e1", border: "1px solid #334155", fontWeight: 500 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexShrink: 0 }}>
+                                      <span style={{ fontSize: "0.7rem", padding: "0.15rem 0.45rem", borderRadius: "4px", background: "rgba(51, 65, 85, 0.4)", color: "#cbd5e1", border: "1px solid #334155", fontWeight: 500 }}>
                                         {i.unit || "Bộ"}
                                       </span>
-                                      <div style={{ background: "rgba(56,189,248,0.1)", padding: "0.25rem 0.6rem", borderRadius: "6px", border: "1px solid rgba(56,189,248,0.2)" }}>
-                                        <span style={{ fontSize: "0.85rem", color: "#38bdf8", fontWeight: 700, whiteSpace: "nowrap" }}>
+                                      <div style={{ background: "rgba(56,189,248,0.1)", padding: "0.2rem 0.5rem", borderRadius: "5px", border: "1px solid rgba(56,189,248,0.2)" }}>
+                                        <span style={{ fontSize: "0.825rem", color: "#38bdf8", fontWeight: 700, whiteSpace: "nowrap" }}>
                                           {Number(i.standardPrice).toLocaleString()}đ
                                         </span>
                                       </div>
@@ -974,39 +979,44 @@ export default function ProposalForm({
 
                         {/* ĐẦU TƯ KHÁC GROUP */}
                         {filteredInvs.length > 0 && (
-                          <div style={{ background: "rgba(15, 23, 42, 0.5)", border: "1px solid rgba(168, 85, 247, 0.25)", borderRadius: "10px", overflow: "hidden" }}>
+                          <div>
                             <div style={{
+                              position: "sticky", top: 0, zIndex: 10,
                               display: "flex", alignItems: "center", justifyContent: "space-between",
-                              padding: "0.4rem 0.75rem", background: "rgba(168, 85, 247, 0.08)",
-                              borderBottom: "1px solid rgba(168, 85, 247, 0.2)", color: "#a855f7",
-                              fontWeight: 700, fontSize: "0.75rem"
+                              padding: "0.35rem 0.65rem", background: "rgba(15, 23, 42, 0.95)",
+                              backdropFilter: "blur(8px)", borderBottom: "1px solid rgba(168, 85, 247, 0.3)",
+                              color: "#a855f7", fontWeight: 700, fontSize: "0.75rem", borderRadius: "6px", marginBottom: "0.25rem"
                             }}>
                               <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
                                 <Building2 size={13} color="#a855f7" />
                                 <span>Đầu tư khác ({filteredInvs.length})</span>
                               </div>
-                              <span style={{ fontSize: "0.68rem", opacity: 0.8, fontWeight: 500, color: "#94a3b8" }}>Click để chọn hạng mục</span>
+                              <span style={{ fontSize: "0.68rem", opacity: 0.8, fontWeight: 500, color: "#94a3b8" }}>Click để chọn</span>
                             </div>
 
-                            <div style={{ padding: "0.45rem", display: "flex", flexDirection: "column", gap: "0.35rem", maxHeight: "240px", overflowY: "auto" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
                               {filteredInvs.map(i => (
                                 <div key={`INV_${i.id}`} className="dropdown-item" onClick={() => {
                                   addItemByValue(`INV_${i.id}`);
                                   setItemSearchQuery("");
                                   setIsItemDropdownOpen(false);
                                 }}>
-                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem" }}>
-                                    <div style={{ flex: 1, minWidth: 0 }}>
-                                      <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.835rem", lineHeight: 1.3, marginBottom: 2 }}>{i.name}</div>
-                                      <div style={{ fontSize: "0.725rem", color: "#94a3b8", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{i.description}</div>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
+                                    <div style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                      <span style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.835rem" }}>{i.name}</span>
+                                      {i.description && (
+                                        <span style={{ fontSize: "0.725rem", color: "#94a3b8", marginLeft: "8px", opacity: 0.85 }}>
+                                          — {i.description}
+                                        </span>
+                                      )}
                                     </div>
 
-                                    <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", flexShrink: 0 }}>
-                                      <span style={{ fontSize: "0.725rem", padding: "0.2rem 0.5rem", borderRadius: "5px", background: "rgba(51, 65, 85, 0.4)", color: "#cbd5e1", border: "1px solid #334155", fontWeight: 500 }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexShrink: 0 }}>
+                                      <span style={{ fontSize: "0.7rem", padding: "0.15rem 0.45rem", borderRadius: "4px", background: "rgba(51, 65, 85, 0.4)", color: "#cbd5e1", border: "1px solid #334155", fontWeight: 500 }}>
                                         {i.unit || "Cái"}
                                       </span>
-                                      <div style={{ background: "rgba(168,85,247,0.1)", padding: "0.25rem 0.6rem", borderRadius: "6px", border: "1px solid rgba(168,85,247,0.2)" }}>
-                                        <span style={{ fontSize: "0.85rem", color: "#a855f7", fontWeight: 700, whiteSpace: "nowrap" }}>
+                                      <div style={{ background: "rgba(168,85,247,0.1)", padding: "0.2rem 0.5rem", borderRadius: "5px", border: "1px solid rgba(168,85,247,0.2)" }}>
+                                        <span style={{ fontSize: "0.825rem", color: "#a855f7", fontWeight: 700, whiteSpace: "nowrap" }}>
                                           {Number(i.standardPrice).toLocaleString()}đ
                                         </span>
                                       </div>
