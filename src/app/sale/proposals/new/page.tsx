@@ -90,9 +90,9 @@ export default async function NewProposalPage({
 
   return (
     <div>
-      <div style={{ marginBottom: "2rem" }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 800, background: "linear-gradient(135deg, #f1f5f9, #94a3b8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Tạo Dự trù Mới</h1>
-        <p style={{ color: "#64748b", fontSize: "0.9rem", marginTop: "0.25rem" }}>Tìm kiếm trường, nhập chỉ tiêu và chọn hạng mục đầu tư để tính toán ngân sách.</p>
+      <div style={{ marginBottom: "1rem" }}>
+        <h1 style={{ fontSize: "1.35rem", fontWeight: 800, background: "linear-gradient(135deg, #f1f5f9, #94a3b8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Tạo Dự trù Mới</h1>
+        <p style={{ color: "#64748b", fontSize: "0.8rem", marginTop: "0.15rem" }}>Tìm kiếm trường, nhập chỉ tiêu và chọn hạng mục đầu tư để tính toán ngân sách.</p>
       </div>
 
       <ProposalForm 

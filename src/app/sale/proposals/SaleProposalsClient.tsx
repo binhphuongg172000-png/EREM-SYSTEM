@@ -196,8 +196,7 @@ export default function SaleProposalsClient({ proposals }: { proposals: any[] })
                 let badgeClass = "badge-warning";
                 let statusLabel = "Khởi tạo";
                 if (p.status === "COMPLETED") { badgeClass = "badge-success"; statusLabel = "Hoàn thành"; }
-                else if (p.status === "APPROVED") { badgeClass = "badge-success"; statusLabel = "Đã duyệt"; }
-                else if (p.school?.isLocked) { badgeClass = "badge-error"; statusLabel = "Đang thực hiện"; }
+                else if (p.school?.isLocked || p.status === "APPROVED") { badgeClass = "badge-error"; statusLabel = "Đang thực hiện"; }
                 
                 const delta = p.allocatedBudget - p.investedBudget;
 

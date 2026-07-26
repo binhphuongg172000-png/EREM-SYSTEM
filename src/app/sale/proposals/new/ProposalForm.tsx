@@ -69,6 +69,23 @@ export default function ProposalForm({
   const [initialHash, setInitialHash] = useState<string>("");
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
+  const [schoolFilter, setSchoolFilter] = useState<"ALL" | "NONE" | "INIT" | "LOCKED" | "COMPLETED">("ALL");
+
+  const getSchoolStatus = (s: any) => {
+    if (!s.latestProposal) return { type: "NONE", label: "Chưa có dự trù", color: "#10b981", bg: "rgba(16, 185, 129, 0.15)" };
+    if (s.latestProposal.status === "COMPLETED") return { type: "COMPLETED", label: "Đã hoàn thành", color: "#38bdf8", bg: "rgba(56, 189, 248, 0.15)" };
+    if (s.isLocked || s.latestProposal.status === "APPROVED") return { type: "LOCKED", label: "Đang thực hiện", color: "#f43f5e", bg: "rgba(244, 63, 94, 0.15)" };
+    return { type: "INIT", label: "Khởi tạo", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)" };
+  };
+
+  const filteredSchools = schools.filter(s => {
+    const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                          s.address.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matchesSearch) return false;
+    const st = getSchoolStatus(s).type;
+    if (schoolFilter !== "ALL" && st !== schoolFilter) return false;
+    return true;
+  });
 
   const [schoolDetails, setSchoolDetails] = useState<{
     investedClassrooms: number | string;
@@ -283,10 +300,6 @@ export default function ProposalForm({
     }
   };
 
-  const filteredSchools = schools.filter(s => 
-    (s.name + " " + (s.address || "")).toLowerCase().includes(searchQuery.toLowerCase())
-  );
-
   const itemEquipmentCount = items.filter(i => i.type === "ITEM").length;
   const itemInvestmentCount = items.filter(i => i.type === "INVESTMENT").length;
 
@@ -324,8 +337,8 @@ export default function ProposalForm({
         .proposal-card {
           background: linear-gradient(145deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.6));
           border: 1px solid rgba(51, 65, 85, 0.5);
-          border-radius: 16px;
-          padding: 1.75rem;
+          border-radius: 12px;
+          padding: 1.15rem;
           backdrop-filter: blur(10px);
           transition: all 0.3s ease;
         }
@@ -334,75 +347,99 @@ export default function ProposalForm({
         .section-title {
           display: flex;
           align-items: center;
-          gap: 0.75rem;
-          font-size: 1.1rem;
-          font-weight: 600;
-          margin-bottom: 1.25rem;
+          gap: 0.5rem;
+          font-size: 0.95rem;
+          font-weight: 700;
+          margin-bottom: 0.85rem;
           color: #f1f5f9;
         }
         .section-title .icon-wrap {
-          width: 36px; height: 36px;
-          border-radius: 10px;
+          width: 30px; height: 30px;
+          border-radius: 8px;
           display: flex; align-items: center; justify-content: center;
           flex-shrink: 0;
         }
         
-        .search-wrapper {
+        .input-with-icon {
           position: relative;
+          display: flex;
+          align-items: center;
+          width: 100%;
         }
-        .search-wrapper .search-icon {
+        .input-with-icon .search-icon {
           position: absolute;
-          left: 14px;
-          top: 50%;
-          transform: translateY(-50%);
+          left: 0.75rem;
           color: #64748b;
           pointer-events: none;
-          z-index: 1;
-        }
-        .search-wrapper input {
-          padding-left: 42px !important;
-          background: rgba(15, 23, 42, 0.6) !important;
-          border: 1px solid rgba(51, 65, 85, 0.6) !important;
-          border-radius: 12px !important;
-          height: 48px;
-          font-size: 0.95rem;
-          transition: all 0.2s ease;
-        }
-        .search-wrapper input:focus {
-          border-color: rgba(56, 189, 248, 0.5) !important;
-          box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.1) !important;
+          z-index: 2;
         }
         
+        /* Core form styles */
+        .form-input {
+          width: 100%;
+          padding: 0.5rem 0.75rem;
+          background: #0f172a;
+          border: 1px solid #334155;
+          border-radius: 8px;
+          color: #f8fafc;
+          outline: none;
+          transition: all 0.3s ease;
+          font-family: inherit;
+          font-size: 0.85rem;
+        }
+        .form-input:focus {
+          border-color: #38bdf8;
+          box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
+          background: #1e293b;
+        }
+        .form-input:disabled { opacity: 0.6; cursor: not-allowed; }
+        
+        .input-with-icon .form-input {
+          padding-left: 2.35rem !important;
+          border-radius: 8px !important;
+          height: 38px;
+        }
+        
+        /* Dropdown Lists - Solid Dark Background */
         .dropdown-list {
           position: absolute;
           top: calc(100% + 6px);
           left: 0; right: 0;
-          background: #1e293b;
-          border: 1px solid #334155;
-          border-radius: 12px;
-          max-height: 280px;
+          background: #0d1424 !important;
+          border: 1.5px solid #38bdf8 !important;
+          border-radius: 10px;
+          max-height: 320px;
           overflow-y: auto;
-          z-index: 50;
+          z-index: 100;
+          box-shadow: 0 15px 30px rgba(0, 0, 0, 0.9);
           list-style: none;
-          padding: 6px;
-          box-shadow: 0 20px 40px rgba(0,0,0,0.4);
-          animation: slideDown 0.15s ease;
+          margin: 0;
+          padding: 0.35rem;
+          animation: slideDown 0.2s ease;
         }
-        .dropdown-list::-webkit-scrollbar { width: 6px; }
-        .dropdown-list::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
-        
         .dropdown-item {
-          padding: 0.75rem 1rem;
+          padding: 0.6rem 0.75rem;
           cursor: pointer;
-          border-radius: 8px;
-          transition: all 0.15s ease;
-          margin-bottom: 2px;
+          border-radius: 6px;
+          border-bottom: 1px solid rgba(51, 65, 85, 0.3);
+          transition: all 0.2s ease;
         }
-        .dropdown-item:hover { background: rgba(56, 189, 248, 0.08); }
+        .dropdown-item:last-child {
+          border-bottom: none;
+        }
+        .dropdown-item:hover {
+          background: #1e293b;
+        }
+        
+        .school-card-item:hover {
+          background: rgba(30, 41, 59, 0.9) !important;
+          border-color: #38bdf8 !important;
+          transform: translateY(-2px);
+        }
         
         .dropdown-group-label {
-          padding: 0.5rem 1rem;
-          font-size: 0.7rem;
+          padding: 0.4rem 0.75rem;
+          font-size: 0.65rem;
           font-weight: 700;
           color: #64748b;
           text-transform: uppercase;
@@ -428,20 +465,11 @@ export default function ProposalForm({
         }
         
         .item-row {
-          display: grid;
-          grid-template-columns: 1fr 70px 130px 120px 40px;
-          gap: 1rem;
-          align-items: start;
-          padding: 1.25rem;
-          background: rgba(15, 23, 42, 0.5);
-          border: 1px solid rgba(51, 65, 85, 0.3);
-          border-radius: 12px;
-          transition: all 0.2s ease;
+          display: grid; grid-template-columns: 1fr 110px 140px 40px; gap: 1rem; align-items: start;
+          padding: 1.25rem; background: rgba(30, 41, 59, 0.4); border: 1px solid #334155;
+          border-radius: 12px; margin-bottom: 0.75rem; transition: all 0.2s ease;
         }
-        .item-row:hover {
-          border-color: rgba(51, 65, 85, 0.6);
-          background: rgba(15, 23, 42, 0.7);
-        }
+        .item-row:hover { background: rgba(30, 41, 59, 0.6); border-color: #475569; }
         
         .item-badge {
           display: inline-flex;
@@ -555,129 +583,302 @@ export default function ProposalForm({
         }
       `}</style>
 
-      <form onSubmit={handleSubmit} style={{ display: "grid", gridTemplateColumns: "1fr 380px", gap: "1.5rem", animation: "fadeIn 0.4s ease" }}>
-        {/* LEFT COLUMN */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.5rem" }}>
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem", animation: "fadeIn 0.4s ease" }}>
+        
+        {/* ROW 1: School Search & Proposal Overview Side by Side */}
+        <div style={{ display: "grid", gridTemplateColumns: selectedSchool ? "1fr 280px" : "1fr", gap: "1.25rem", alignItems: "stretch" }}>
           
           {/* STEP 1: School Search */}
-          <div className="proposal-card">
-            <div className="section-title">
-              <div className="icon-wrap" style={{ background: "linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(59, 130, 246, 0.2))" }}>
-                <Search size={18} color="#38bdf8" />
-              </div>
-              Tìm kiếm Trường học
-            </div>
-            
-            <div className="search-wrapper" ref={schoolSearchRef}>
-              <Search size={18} className="search-icon" />
-              <input 
-                type="text" 
-                className="form-input" 
-                placeholder="Nhập tên trường hoặc địa chỉ để tìm..." 
-                value={searchQuery}
-                onChange={(e) => {
-                  setSearchQuery(e.target.value);
-                  setIsDropdownOpen(true);
-                  if (selectedSchoolId) setSelectedSchoolId("");
-                }}
-                onFocus={() => setIsDropdownOpen(true)}
-              />
-              {isDropdownOpen && (
-                <ul className="dropdown-list">
-                  {filteredSchools.length > 0 ? filteredSchools.map(s => (
-                    <li 
-                      key={s.id} 
-                      className="dropdown-item"
-                      style={{ background: s.id === selectedSchoolId ? "rgba(56, 189, 248, 0.1)" : undefined }}
-                      onClick={() => {
-                        setSelectedSchoolId(s.id);
-                        setSearchQuery(s.name);
-                        setIsDropdownOpen(false);
-                      }}
-                    >
-                      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                        <div>
-                          <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.95rem" }}>
-                            {s.name}
-                          </div>
-                          <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: 2 }}>{s.address}</div>
-                        </div>
-                        {s.isLocked && (
-                          <span style={{ fontSize: "0.7rem", padding: "3px 8px", borderRadius: 6, background: "rgba(244, 63, 94, 0.15)", color: "#f43f5e", fontWeight: 600 }}>Đang thực hiện</span>
-                        )}
-                      </div>
-                    </li>
-                  )) : (
-                    <li style={{ padding: "1.5rem", textAlign: "center", color: "#64748b" }}>Không tìm thấy trường nào</li>
-                  )}
-                </ul>
-              )}
-            </div>
-
-            {/* School Info Section */}
-            {selectedSchool && (
-              <div style={{ marginTop: "1.5rem", animation: "fadeIn 0.3s ease" }}>
-                {/* Alerts */}
-                {selectedSchool.isLocked && (
-                  <div className="alert-box error">
-                    <AlertCircle size={18} style={{ flexShrink: 0, marginTop: 2 }} />
-                    <span><strong>Trường đang được thực hiện dự trù.</strong> Bạn không thể lập hoặc chỉnh sửa dự trù cho trường này.</span>
-                  </div>
-                )}
-                {selectedSchool.latestProposal && (
-                  <div className="alert-box warning">
-                    <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: 2 }} />
-                    <span>Trường đã có bản dự trù trước đó (cập nhật {new Date(selectedSchool.latestProposal.updatedAt).toLocaleString("vi-VN")}). Dữ liệu cũ đã được load lại — Khi bấm lưu sẽ tạo ra một <strong>phiên bản dự trù mới</strong>.</span>
-                  </div>
-                )}
-
-                {/* Stats Grid */}
-                <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.75rem", background: "rgba(30, 41, 59, 0.5)", padding: "1rem", borderRadius: "12px", border: "1px solid #334155" }}>
-                  <div>
-                    <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "0.5rem", fontWeight: 500 }}><GraduationCap size={14}/> HS Cũ</label>
-                    <input type="number" className="form-input" style={{ width: "100%", padding: "0.6rem 0.75rem", background: "#0f172a", border: "1px solid #334155", borderRadius: "8px", color: "#f8fafc", fontSize: "0.9rem" }} 
-                      value={schoolDetails.oldStudents} 
-                      onChange={e => setSchoolDetails({...schoolDetails, oldStudents: e.target.value})} 
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#38bdf8", marginBottom: "0.5rem", fontWeight: 500 }}><GraduationCap size={14}/> HS Mới <span style={{color:"#f43f5e"}}>*</span></label>
-                    <input type="number" className="form-input" required style={{ width: "100%", padding: "0.6rem 0.75rem", background: "rgba(56,189,248,0.05)", border: "1px solid rgba(56,189,248,0.3)", borderRadius: "8px", color: "#38bdf8", fontSize: "0.9rem" }} 
-                      value={schoolDetails.newStudents} 
-                      onChange={e => setSchoolDetails({...schoolDetails, newStudents: e.target.value})} 
-                    />
-                  </div>
-                  <div>
-                    <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#a855f7", marginBottom: "0.5rem", fontWeight: 500 }}><DoorOpen size={14}/> Phòng ĐT</label>
-                    <input type="number" className="form-input" style={{ width: "100%", padding: "0.6rem 0.75rem", background: "rgba(168,85,247,0.05)", border: "1px solid rgba(168,85,247,0.3)", borderRadius: "8px", color: "#a855f7", fontSize: "0.9rem" }} 
-                      value={schoolDetails.investedClassrooms} 
-                      onChange={e => setSchoolDetails({...schoolDetails, investedClassrooms: e.target.value})} 
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* STEP 2: Items */}
-          {selectedSchool && (
-            <div className="proposal-card" style={{ animation: "fadeIn 0.3s ease" }}>
+          <div className="proposal-card" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", margin: 0 }}>
+            <div>
               <div className="section-title">
-                <div className="icon-wrap" style={{ background: "linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2))" }}>
-                  <Plus size={18} color="#10b981" />
+                <div className="icon-wrap" style={{ background: "linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(59, 130, 246, 0.2))" }}>
+                  <Search size={18} color="#38bdf8" />
                 </div>
-                Bổ sung Hạng mục
-                {items.length > 0 && (
-                  <span style={{ marginLeft: "auto", fontSize: "0.8rem", color: "#64748b", fontWeight: 400 }}>
-                    {itemEquipmentCount > 0 && <span style={{ color: "#38bdf8" }}>{itemEquipmentCount} thiết bị</span>}
-                    {itemEquipmentCount > 0 && itemInvestmentCount > 0 && " · "}
-                    {itemInvestmentCount > 0 && <span style={{ color: "#a855f7" }}>{itemInvestmentCount} đầu tư</span>}
-                  </span>
-                )}
+                Tìm kiếm Trường học
               </div>
               
-              {/* Item Search */}
-              <div className="search-wrapper" ref={itemSearchRef} style={{ marginBottom: "1rem" }}>
+              <div className="search-wrapper" ref={schoolSearchRef} style={{ position: "relative", maxWidth: "420px" }}>
+                <div className="input-with-icon">
+                  <Search size={18} className="search-icon" />
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    placeholder="Nhập tên trường hoặc địa chỉ để tìm..." 
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      setIsDropdownOpen(true);
+                      if (selectedSchoolId) setSelectedSchoolId("");
+                    }}
+                    onFocus={() => setIsDropdownOpen(true)}
+                  />
+                </div>
+                {isDropdownOpen && (
+                  <ul className="dropdown-list">
+                    {filteredSchools.length > 0 ? filteredSchools.map(s => (
+                      <li 
+                        key={s.id} 
+                        className="dropdown-item"
+                        style={{ background: s.id === selectedSchoolId ? "rgba(56, 189, 248, 0.1)" : undefined }}
+                        onClick={() => {
+                          setSelectedSchoolId(s.id);
+                          setSearchQuery(s.name);
+                          setIsDropdownOpen(false);
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <div>
+                            <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.95rem" }}>
+                              {s.name}
+                            </div>
+                            <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: 2 }}>{s.address}</div>
+                          </div>
+                          {s.isLocked && (
+                            <span style={{ fontSize: "0.7rem", padding: "3px 8px", borderRadius: 6, background: "rgba(244, 63, 94, 0.15)", color: "#f43f5e", fontWeight: 600 }}>Đang thực hiện</span>
+                          )}
+                        </div>
+                      </li>
+                    )) : (
+                      <li style={{ padding: "1.5rem", textAlign: "center", color: "#64748b" }}>Không tìm thấy trường nào</li>
+                    )}
+                  </ul>
+                )}
+              </div>
+
+              {/* School Info Section or Quick Select Grid */}
+              {selectedSchool ? (
+                <div style={{ marginTop: "1rem", animation: "fadeIn 0.3s ease" }}>
+                  {/* Alerts */}
+                  {selectedSchool.isLocked && (
+                    <div className="alert-box error">
+                      <AlertCircle size={18} style={{ flexShrink: 0, marginTop: 2 }} />
+                      <span><strong>Trường đang được thực hiện dự trù.</strong> Bạn không thể lập hoặc chỉnh sửa dự trù cho trường này.</span>
+                    </div>
+                  )}
+                  {selectedSchool.latestProposal && (
+                    <div className="alert-box warning">
+                      <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: 2 }} />
+                      <span>Trường đã có bản dự trù trước đó (cập nhật {new Date(selectedSchool.latestProposal.updatedAt).toLocaleString("vi-VN")}). Dữ liệu cũ đã được load lại — Khi bấm lưu sẽ tạo ra một <strong>phiên bản dự trù mới</strong>.</span>
+                    </div>
+                  )}
+
+                  {/* Stats Grid */}
+                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.75rem", background: "rgba(30, 41, 59, 0.5)", padding: "0.85rem", borderRadius: "10px", border: "1px solid #334155" }}>
+                    <div>
+                      <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "0.35rem", fontWeight: 500 }}><GraduationCap size={14}/> HS Cũ</label>
+                      <input type="number" className="form-input" style={{ width: "100%", padding: "0.5rem 0.75rem", background: "rgba(15,23,42,0.4)", borderRadius: "8px" }} 
+                        value={schoolDetails.oldStudents} 
+                        onChange={e => setSchoolDetails({...schoolDetails, oldStudents: e.target.value})} 
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#38bdf8", marginBottom: "0.35rem", fontWeight: 500 }}><GraduationCap size={14}/> HS Mới <span style={{color:"#f43f5e"}}>*</span></label>
+                      <input type="number" className="form-input" required style={{ width: "100%", padding: "0.5rem 0.75rem", background: "rgba(56,189,248,0.05)", border: "1px solid rgba(56,189,248,0.3)", borderRadius: "8px", color: "#38bdf8" }} 
+                        value={schoolDetails.newStudents} 
+                        onChange={e => setSchoolDetails({...schoolDetails, newStudents: e.target.value})} 
+                      />
+                    </div>
+                    <div>
+                      <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#a855f7", marginBottom: "0.35rem", fontWeight: 500 }}><DoorOpen size={14}/> Phòng ĐT</label>
+                      <input type="number" className="form-input" style={{ width: "100%", padding: "0.5rem 0.75rem", background: "rgba(168,85,247,0.05)", border: "1px solid rgba(168,85,247,0.3)", borderRadius: "8px", color: "#a855f7" }} 
+                        value={schoolDetails.investedClassrooms} 
+                        onChange={e => setSchoolDetails({...schoolDetails, investedClassrooms: e.target.value})} 
+                      />
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div style={{ marginTop: "1.25rem", animation: "fadeIn 0.3s ease" }}>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                    <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                      <Building2 size={13} color="#38bdf8" />
+                      Danh sách trường được phân công ({filteredSchools.length})
+                    </div>
+
+                    {/* Filter Buttons */}
+                    <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap" }}>
+                      {[
+                        { key: "ALL", label: `Tất cả (${schools.length})`, color: "#38bdf8" },
+                        { key: "NONE", label: `Chưa có dự trù (${schools.filter(s => getSchoolStatus(s).type === "NONE").length})`, color: "#10b981" },
+                        { key: "INIT", label: `Khởi tạo (${schools.filter(s => getSchoolStatus(s).type === "INIT").length})`, color: "#f59e0b" },
+                        { key: "LOCKED", label: `Đang thực hiện (${schools.filter(s => getSchoolStatus(s).type === "LOCKED").length})`, color: "#f43f5e" },
+                        { key: "COMPLETED", label: `Đã hoàn thành (${schools.filter(s => getSchoolStatus(s).type === "COMPLETED").length})`, color: "#38bdf8" },
+                      ].map(btn => (
+                        <button
+                          key={btn.key}
+                          type="button"
+                          onClick={() => setSchoolFilter(btn.key as any)}
+                          style={{
+                            padding: "3px 8px",
+                            borderRadius: "6px",
+                            fontSize: "0.72rem",
+                            fontWeight: 600,
+                            border: "1px solid",
+                            borderColor: schoolFilter === btn.key ? btn.color : "#334155",
+                            background: schoolFilter === btn.key ? `${btn.color}22` : "transparent",
+                            color: schoolFilter === btn.key ? btn.color : "#94a3b8",
+                            cursor: "pointer",
+                            transition: "all 0.2s"
+                          }}
+                        >
+                          {btn.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "0.75rem" }}>
+                    {filteredSchools.map(s => {
+                      const stInfo = getSchoolStatus(s);
+                      return (
+                        <div 
+                          key={s.id}
+                          onClick={() => {
+                            if (s.isLocked) return;
+                            setSelectedSchoolId(s.id);
+                            setSearchQuery(s.name);
+                          }}
+                          style={{
+                            background: "rgba(15, 23, 42, 0.6)",
+                            border: "1px solid #334155",
+                            borderRadius: "10px",
+                            padding: "0.75rem 0.85rem",
+                            cursor: s.isLocked ? "not-allowed" : "pointer",
+                            opacity: s.isLocked ? 0.6 : 1,
+                            transition: "all 0.2s ease"
+                          }}
+                          className="school-card-item"
+                        >
+                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem" }}>
+                            <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.85rem", lineHeight: 1.3 }}>{s.name}</div>
+                            <span style={{ fontSize: "0.6rem", padding: "2px 6px", borderRadius: 4, background: stInfo.bg, color: stInfo.color, fontWeight: 700, flexShrink: 0 }}>
+                              {stInfo.label}
+                            </span>
+                          </div>
+                          <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: 4 }}>{s.address}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* RIGHT COLUMN: Live Preview (Equal Height to Left Card) */}
+          {selectedSchool && (
+            <div className="proposal-card" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", margin: 0, padding: "1rem" }}>
+              <div>
+                <div className="section-title" style={{ marginBottom: "0.75rem", fontSize: "0.9rem" }}>
+                  <div className="icon-wrap" style={{ background: "linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2))", width: 26, height: 26 }}>
+                    <FileText size={15} color="#fbbf24" />
+                  </div>
+                  Tổng quan Dự trù
+                </div>
+
+                {/* Budget Bar */}
+                <div style={{ background: "rgba(15, 23, 42, 0.5)", borderRadius: 10, padding: "0.75rem", marginBottom: "0.6rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "0.3rem" }}>
+                    <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Ngân sách được cấp</span>
+                    <span style={{ fontSize: "1.1rem", fontWeight: 700, color: "#38bdf8" }}>
+                      {allocatedBudget.toLocaleString()}đ
+                    </span>
+                  </div>
+                  <div className="budget-bar-track" style={{ margin: "0.4rem 0" }}>
+                    <div className="budget-bar-fill" style={{
+                      width: `${budgetUsagePercent}%`,
+                      background: budgetUsagePercent > 100 
+                        ? "linear-gradient(90deg, #f43f5e, #e11d48)" 
+                        : budgetUsagePercent > 80 
+                          ? "linear-gradient(90deg, #f59e0b, #ef4444)"
+                          : "linear-gradient(90deg, #38bdf8, #3b82f6)"
+                    }} />
+                  </div>
+                  <div style={{ fontSize: "0.7rem", color: "#64748b" }}>
+                    <span>Đã sử dụng {budgetUsagePercent.toFixed(1)}%</span>
+                  </div>
+                </div>
+
+                {/* Summary Numbers */}
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginBottom: "0.6rem" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ color: "#94a3b8", fontSize: "0.78rem" }}>Tổng đầu tư</span>
+                    <span style={{ fontWeight: 700, fontSize: "0.9rem", color: "#f1f5f9" }}>
+                      {totalInvested.toLocaleString()}đ
+                    </span>
+                  </div>
+                  
+                  <div style={{ height: 1, background: "rgba(51, 65, 85, 0.5)" }} />
+                  
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <span style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.78rem" }}>
+                      {delta >= 0 ? "Còn dư" : "Vượt ngân sách"}
+                    </span>
+                    <span style={{ 
+                      fontWeight: 700, fontSize: "1rem", 
+                      color: delta >= 0 ? "#10b981" : "#f43f5e",
+                    }}>
+                      {delta >= 0 ? "+" : ""}{delta.toLocaleString()}đ
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginTop: "0.5rem" }}>
+                <button 
+                  type="submit" 
+                  className="submit-btn primary"
+                  style={{ padding: "0.55rem", fontSize: "0.825rem", borderRadius: 8 }}
+                  disabled={isSubmitting || !selectedSchoolId || selectedSchool?.isLocked || !isDirty || items.length === 0}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <span style={{ width: 14, height: 14, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.6s linear infinite", display: "inline-block" }} />
+                      Đang lưu...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 size={15} />
+                      Xác nhận Xuất Dự trù
+                    </>
+                  )}
+                </button>
+                <button 
+                  type="button" 
+                  className="submit-btn secondary"
+                  style={{ padding: "0.5rem", fontSize: "0.775rem", borderRadius: 8 }}
+                  onClick={handleClearData}
+                  disabled={!selectedSchoolId || selectedSchool?.isLocked || (items.length === 0 && !schoolDetails.oldStudents && !schoolDetails.newStudents && !schoolDetails.investedClassrooms)}
+                >
+                  <RefreshCcw size={13} /> Làm sạch dữ liệu
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ROW 2: Items Search & Table (Full Width) */}
+        {selectedSchool && (
+          <div className="proposal-card" style={{ animation: "fadeIn 0.3s ease" }}>
+            <div className="section-title">
+              <div className="icon-wrap" style={{ background: "linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2))" }}>
+                <Plus size={18} color="#10b981" />
+              </div>
+              Bổ sung Hạng mục
+              {items.length > 0 && (
+                <span style={{ marginLeft: "auto", fontSize: "0.8rem", color: "#64748b", fontWeight: 400 }}>
+                  {itemEquipmentCount > 0 && <span style={{ color: "#38bdf8" }}>{itemEquipmentCount} thiết bị</span>}
+                  {itemEquipmentCount > 0 && itemInvestmentCount > 0 && " · "}
+                  {itemInvestmentCount > 0 && <span style={{ color: "#a855f7" }}>{itemInvestmentCount} đầu tư</span>}
+                </span>
+              )}
+            </div>
+            
+            {/* Item Search */}
+            <div className="search-wrapper" ref={itemSearchRef} style={{ marginBottom: "1rem", position: "relative" }}>
+              <div className="input-with-icon">
                 <Plus size={18} className="search-icon" />
                 <input 
                   type="text" 
@@ -691,254 +892,143 @@ export default function ProposalForm({
                   onFocus={() => setIsItemDropdownOpen(true)}
                   disabled={selectedSchool?.isLocked}
                 />
-                {isItemDropdownOpen && !selectedSchool?.isLocked && (() => {
-                  const query = itemSearchQuery.toLowerCase();
-                  const filteredItems = catalogItems.filter(i => i.name.toLowerCase().includes(query));
-                  const filteredInvs = catalogInvestments.filter(i => i.name.toLowerCase().includes(query));
-                  const hasResults = filteredItems.length > 0 || filteredInvs.length > 0;
-                  
-                  return (
-                    <ul className="dropdown-list">
-                      {!hasResults ? (
-                        <li style={{ padding: "1.5rem", textAlign: "center", color: "#64748b" }}>Không tìm thấy kết quả</li>
-                      ) : (
-                        <>
-                          {filteredItems.length > 0 && (
-                            <li className="dropdown-group-label">
-                              <Package size={12} style={{ display: "inline", marginRight: 4, verticalAlign: "middle" }} />
-                              Thiết bị ({filteredItems.length})
-                            </li>
-                          )}
-                          {filteredItems.map(i => (
-                            <li key={`ITEM_${i.id}`} className="dropdown-item" onClick={() => {
-                              addItemByValue(`ITEM_${i.id}`);
-                              setItemSearchQuery("");
-                              setIsItemDropdownOpen(false);
-                            }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                                <div>
-                                  <div style={{ fontWeight: 500, color: "#f1f5f9" }}>{i.name}</div>
-                                  <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: 4 }}>{i.specifications}</div>
-                                </div>
-                                <span style={{ fontSize: "0.85rem", color: "#38bdf8", fontWeight: 600, whiteSpace: "nowrap", marginLeft: 12 }}>{Number(i.standardPrice).toLocaleString()}đ/{i.unit || "Bộ"}</span>
-                              </div>
-                            </li>
-                          ))}
-                          {filteredInvs.length > 0 && (
-                            <li className="dropdown-group-label">
-                              <Building2 size={12} style={{ display: "inline", marginRight: 4, verticalAlign: "middle" }} />
-                              Đầu tư khác ({filteredInvs.length})
-                            </li>
-                          )}
-                          {filteredInvs.map(i => (
-                            <li key={`INV_${i.id}`} className="dropdown-item" onClick={() => {
-                              addItemByValue(`INV_${i.id}`);
-                              setItemSearchQuery("");
-                              setIsItemDropdownOpen(false);
-                            }}>
-                              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                                <div>
-                                  <div style={{ fontWeight: 500, color: "#f1f5f9" }}>{i.name}</div>
-                                  <div style={{ fontSize: "0.75rem", color: "#94a3b8", marginTop: 4 }}>{i.description}</div>
-                                </div>
-                                <span style={{ fontSize: "0.85rem", color: "#a855f7", fontWeight: 600, whiteSpace: "nowrap", marginLeft: 12 }}>{Number(i.standardPrice).toLocaleString()}đ/{i.unit}</span>
-                              </div>
-                            </li>
-                          ))}
-                        </>
-                      )}
-                    </ul>
-                  );
-                })()}
               </div>
-
-              {/* Item List */}
-              {items.length > 0 ? (
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                  {items.map((item, idx) => (
-                    <div key={item.tempId} className="item-row">
-                      <div>
-                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: 6 }}>
-                          <span className="item-badge" style={{ 
-                            background: item.type === "ITEM" ? "rgba(56, 189, 248, 0.1)" : "rgba(168, 85, 247, 0.1)",
-                            color: item.type === "ITEM" ? "#38bdf8" : "#a855f7"
-                          }}>
-                            {item.type === "ITEM" ? <Package size={10} /> : <Building2 size={10} />}
-                            {item.type === "ITEM" ? "TB" : "ĐT"}
-                          </span>
-                          <span style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.95rem" }}>{item.name}</span>
-                        </div>
-                        {item.specifications && (
-                          <div style={{ fontSize: "0.8rem", color: "#94a3b8", paddingLeft: "0.25rem", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                            {item.specifications}
-                          </div>
+              {isItemDropdownOpen && !selectedSchool?.isLocked && (() => {
+                const query = itemSearchQuery.toLowerCase();
+                const filteredItems = catalogItems.filter(i => i.name.toLowerCase().includes(query));
+                const filteredInvs = catalogInvestments.filter(i => i.name.toLowerCase().includes(query));
+                const hasResults = filteredItems.length > 0 || filteredInvs.length > 0;
+                
+                return (
+                  <ul className="dropdown-list">
+                    {!hasResults ? (
+                      <li style={{ padding: "1.5rem", textAlign: "center", color: "#64748b" }}>Không tìm thấy kết quả</li>
+                    ) : (
+                      <>
+                        {filteredItems.length > 0 && (
+                          <li className="dropdown-group-label">
+                            <Package size={12} style={{ display: "inline", marginRight: 4, verticalAlign: "middle" }} />
+                            Thiết bị ({filteredItems.length})
+                          </li>
                         )}
+                        {filteredItems.map(i => (
+                          <li key={`ITEM_${i.id}`} className="dropdown-item" onClick={() => {
+                            addItemByValue(`ITEM_${i.id}`);
+                            setItemSearchQuery("");
+                            setIsItemDropdownOpen(false);
+                          }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <div style={{ flex: 1, paddingRight: "1rem" }}>
+                                <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "1rem", marginBottom: "4px" }}>{i.name}</div>
+                                <div style={{ fontSize: "0.8rem", color: "#94a3b8", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{i.specifications}</div>
+                              </div>
+                              <div style={{ background: "rgba(56,189,248,0.1)", padding: "0.4rem 0.75rem", borderRadius: "8px", border: "1px solid rgba(56,189,248,0.2)", flexShrink: 0 }}>
+                                <span style={{ fontSize: "0.9rem", color: "#38bdf8", fontWeight: 700, whiteSpace: "nowrap" }}>{Number(i.standardPrice).toLocaleString()}đ<span style={{ fontSize: "0.75rem", color: "#cbd5e1", fontWeight: 500 }}>/{i.unit || "Bộ"}</span></span>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                        {filteredInvs.length > 0 && (
+                          <li className="dropdown-group-label">
+                            <Building2 size={12} style={{ display: "inline", marginRight: 4, verticalAlign: "middle" }} />
+                            Đầu tư khác ({filteredInvs.length})
+                          </li>
+                        )}
+                        {filteredInvs.map(i => (
+                          <li key={`INV_${i.id}`} className="dropdown-item" onClick={() => {
+                            addItemByValue(`INV_${i.id}`);
+                            setItemSearchQuery("");
+                            setIsItemDropdownOpen(false);
+                          }}>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                              <div style={{ flex: 1, paddingRight: "1rem" }}>
+                                <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "1rem", marginBottom: "4px" }}>{i.name}</div>
+                                <div style={{ fontSize: "0.8rem", color: "#94a3b8", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{i.description}</div>
+                              </div>
+                              <div style={{ background: "rgba(168,85,247,0.1)", padding: "0.4rem 0.75rem", borderRadius: "8px", border: "1px solid rgba(168,85,247,0.2)", flexShrink: 0 }}>
+                                <span style={{ fontSize: "0.9rem", color: "#a855f7", fontWeight: 700, whiteSpace: "nowrap" }}>{Number(i.standardPrice).toLocaleString()}đ<span style={{ fontSize: "0.75rem", color: "#cbd5e1", fontWeight: 500 }}>/{i.unit}</span></span>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </>
+                    )}
+                  </ul>
+                );
+              })()}
+            </div>
+
+            {/* Item List */}
+            {items.length > 0 ? (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                {items.map((item, idx) => (
+                  <div key={item.tempId} className="item-row">
+                    <div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: 6 }}>
+                        <span className="item-badge" style={{ 
+                          background: item.type === "ITEM" ? "rgba(56, 189, 248, 0.1)" : "rgba(168, 85, 247, 0.1)",
+                          color: item.type === "ITEM" ? "#38bdf8" : "#a855f7"
+                        }}>
+                          {item.type === "ITEM" ? <Package size={10} /> : <Building2 size={10} />}
+                          {item.type === "ITEM" ? "TB" : "ĐT"}
+                        </span>
+                        <span style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.95rem" }}>{item.name}</span>
                       </div>
-                      
-                      <div>
-                        <div style={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 700, marginBottom: 6 }}>SỐ LƯỢNG</div>
-                        <input 
-                          type="number" 
-                          min="0"
-                          step="0.01" 
-                          className="form-input" 
-                          style={{ textAlign: "center", padding: "8px", borderRadius: 8, fontSize: "0.95rem", fontWeight: 600 }}
-                          value={item.quantity} 
-                          onChange={e => updateItemQuantity(item.tempId, parseFloat(e.target.value) || 0)}
-                          disabled={selectedSchool?.isLocked}
-                          title="Số lượng"
-                        />
-                      </div>
-                      
-                      <div>
-                        <div style={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 700, marginBottom: 6 }}>ĐƠN GIÁ (đ/{item.unit || "Bộ"})</div>
-                        <CurrencyInput 
-                          value={item.price} 
-                          onChange={val => updateItemPrice(item.tempId, parseInt(val) || 0)}
-                          style={{ padding: "8px", borderRadius: 8, fontSize: "0.95rem", fontWeight: 600 }}
-                        />
-                      </div>
-                      
-                      <div style={{ textAlign: "right" }}>
-                        <div style={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 700, marginBottom: 6 }}>THÀNH TIỀN</div>
-                        <div style={{ padding: "8px 0", fontSize: "0.95rem", fontWeight: 700, color: "#38bdf8" }}>
-                          {(item.quantity * item.price).toLocaleString()}đ
+                      {item.specifications && (
+                        <div style={{ fontSize: "0.8rem", color: "#94a3b8", paddingLeft: "0.25rem", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                          {item.specifications}
                         </div>
-                      </div>
-                      
-                      <button type="button" onClick={() => removeItem(item.tempId)} disabled={selectedSchool?.isLocked} className="remove-btn" title="Xóa" style={{ marginTop: "22px" }}>
-                        <Trash2 size={15} />
-                      </button>
+                      )}
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="empty-state">
-                  <div className="empty-icon">
-                    <Package size={28} color="#475569" />
+                    
+                    <div>
+                      <div style={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 700, marginBottom: 6 }}>SỐ LƯỢNG</div>
+                      <input 
+                        type="number" 
+                        min="0"
+                        step="0.01" 
+                        className="form-input" 
+                        style={{ textAlign: "center", padding: "8px", borderRadius: 8, fontSize: "0.95rem", fontWeight: 600 }}
+                        value={item.quantity} 
+                        onChange={e => updateItemQuantity(item.tempId, parseFloat(e.target.value) || 0)}
+                        disabled={selectedSchool?.isLocked}
+                        title="Số lượng"
+                      />
+                    </div>
+                    
+                    <div>
+                      <div style={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 700, marginBottom: 6 }}>ĐƠN GIÁ (đ/{item.unit || "Bộ"})</div>
+                      <CurrencyInput 
+                        value={item.price} 
+                        onChange={val => updateItemPrice(item.tempId, parseInt(val) || 0)}
+                        style={{ padding: "8px", borderRadius: 8, fontSize: "0.95rem", fontWeight: 600 }}
+                      />
+                    </div>
+                    
+                    <div style={{ textAlign: "right" }}>
+                      <div style={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 700, marginBottom: 6 }}>THÀNH TIỀN</div>
+                      <div style={{ padding: "8px 0", fontSize: "0.95rem", fontWeight: 700, color: "#38bdf8" }}>
+                        {(item.quantity * item.price).toLocaleString()}đ
+                      </div>
+                    </div>
+                    
+                    <button type="button" onClick={() => removeItem(item.tempId)} disabled={selectedSchool?.isLocked} className="remove-btn" title="Xóa" style={{ marginTop: "22px" }}>
+                      <Trash2 size={15} />
+                    </button>
                   </div>
-                  <p style={{ margin: 0, fontWeight: 500, fontSize: "0.95rem" }}>Chưa có hạng mục nào</p>
-                  <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem" }}>Sử dụng thanh tìm kiếm ở trên để thêm thiết bị hoặc đầu tư</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* RIGHT COLUMN: Live Preview */}
-        <div>
-          {selectedSchool ? (
-            <div className="proposal-card" style={{ position: "sticky", top: "80px", animation: "fadeIn 0.3s ease" }}>
-              <div className="section-title" style={{ marginBottom: "1.5rem" }}>
-                <div className="icon-wrap" style={{ background: "linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2))" }}>
-                  <FileText size={18} color="#fbbf24" />
-                </div>
-                Tổng quan Dự trù
+                ))}
               </div>
-
-              {/* Budget Bar */}
-              <div style={{ background: "rgba(15, 23, 42, 0.5)", borderRadius: 12, padding: "1.25rem", marginBottom: "1rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "0.5rem" }}>
-                  <span style={{ fontSize: "0.8rem", color: "#64748b" }}>Ngân sách được cấp</span>
-                  <span style={{ fontSize: "1.35rem", fontWeight: 700, color: "#38bdf8" }}>
-                    {allocatedBudget.toLocaleString()}đ
-                  </span>
-                </div>
-                <div className="budget-bar-track">
-                  <div className="budget-bar-fill" style={{
-                    width: `${budgetUsagePercent}%`,
-                    background: budgetUsagePercent > 100 
-                      ? "linear-gradient(90deg, #f43f5e, #e11d48)" 
-                      : budgetUsagePercent > 80 
-                        ? "linear-gradient(90deg, #f59e0b, #ef4444)"
-                        : "linear-gradient(90deg, #38bdf8, #3b82f6)"
-                  }} />
-                </div>
-                <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.75rem", color: "#64748b" }}>
-                  <span>Đã sử dụng {budgetUsagePercent.toFixed(1)}%</span>
-                  <span>HS Mới × 100tr / 105</span>
-                </div>
-              </div>
-
-              {/* Summary Numbers */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem", marginBottom: "1rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ color: "#94a3b8", fontSize: "0.9rem" }}>Tổng đầu tư</span>
-                  <span style={{ fontWeight: 700, fontSize: "1.1rem", color: "#f1f5f9" }}>
-                    {totalInvested.toLocaleString()}đ
-                  </span>
-                </div>
-                
-                <div style={{ height: 1, background: "rgba(51, 65, 85, 0.5)" }} />
-                
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.9rem" }}>
-                    {delta >= 0 ? "Còn dư" : "Vượt ngân sách"}
-                  </span>
-                  <span style={{ 
-                    fontWeight: 700, fontSize: "1.25rem", 
-                    color: delta >= 0 ? "#10b981" : "#f43f5e",
-                  }}>
-                    {delta >= 0 ? "+" : ""}{delta.toLocaleString()}đ
-                  </span>
-                </div>
-              </div>
-
-              {/* Item Summary */}
-              {items.length > 0 && (
-                <div style={{ background: "rgba(15, 23, 42, 0.4)", borderRadius: 10, padding: "0.75rem 1rem", marginBottom: "1.25rem", fontSize: "0.8rem", color: "#94a3b8" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span>Thiết bị ({itemEquipmentCount})</span>
-                    <span style={{ color: "#cbd5e1" }}>{items.filter(i => i.type === "ITEM").reduce((a, c) => a + c.quantity * c.price, 0).toLocaleString()}đ</span>
-                  </div>
-                  <div style={{ display: "flex", justifyContent: "space-between" }}>
-                    <span>Đầu tư khác ({itemInvestmentCount})</span>
-                    <span style={{ color: "#cbd5e1" }}>{items.filter(i => i.type === "INVESTMENT").reduce((a, c) => a + c.quantity * c.price, 0).toLocaleString()}đ</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Action Buttons */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                <button 
-                  type="submit" 
-                  className="submit-btn primary"
-                  disabled={isSubmitting || !selectedSchoolId || selectedSchool?.isLocked || !isDirty || items.length === 0}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <span style={{ width: 18, height: 18, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.6s linear infinite", display: "inline-block" }} />
-                      Đang lưu...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 size={18} />
-                      Xác nhận Xuất Dự trù
-                    </>
-                  )}
-                </button>
-                <button 
-                  type="button" 
-                  className="submit-btn secondary"
-                  onClick={handleClearData}
-                  disabled={!selectedSchoolId || selectedSchool?.isLocked || (items.length === 0 && !schoolDetails.oldStudents && !schoolDetails.newStudents && !schoolDetails.investedClassrooms)}
-                >
-                  <RefreshCcw size={15} /> Làm sạch dữ liệu
-                </button>
-              </div>
-            </div>
-          ) : (
-            <div className="proposal-card" style={{ minHeight: "350px", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            ) : (
               <div className="empty-state">
-                <div className="empty-icon" style={{ background: "rgba(56, 189, 248, 0.08)" }}>
-                  <FileText size={28} color="#38bdf8" />
+                <div className="empty-icon">
+                  <Package size={28} color="#475569" />
                 </div>
-                <p style={{ margin: 0, fontWeight: 600, fontSize: "1.05rem", color: "#94a3b8" }}>Chọn trường để bắt đầu</p>
-                <p style={{ margin: "0.5rem 0 0", fontSize: "0.85rem" }}>Tìm kiếm và chọn một trường học để lập dự trù ngân sách đầu tư.</p>
+                <p style={{ margin: 0, fontWeight: 500, fontSize: "0.95rem" }}>Chưa có hạng mục nào</p>
+                <p style={{ margin: "0.25rem 0 0", fontSize: "0.85rem" }}>Sử dụng thanh tìm kiếm ở trên để thêm thiết bị hoặc đầu tư</p>
               </div>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </form>
 
       {/* Custom Clear Confirmation Modal */}
