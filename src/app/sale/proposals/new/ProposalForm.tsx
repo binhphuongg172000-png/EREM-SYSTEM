@@ -921,7 +921,7 @@ export default function ProposalForm({
                 const hasResults = filteredItems.length > 0 || filteredInvs.length > 0;
                 
                 return (
-                  <div className="dropdown-list" style={{ display: "flex", flexDirection: "column", gap: "0.65rem", padding: "0.65rem 0.5rem 0.65rem 0.65rem", maxHeight: "320px", overflowY: "auto" }}>
+                  <div className="dropdown-list" style={{ display: "flex", flexDirection: "column", gap: "0.65rem", padding: "0.65rem 0.5rem 0.65rem 0.65rem", maxHeight: "480px", overflowY: "auto" }}>
                     {!hasResults ? (
                       <div style={{ padding: "1.25rem", textAlign: "center", color: "#64748b", fontSize: "0.825rem" }}>Không tìm thấy kết quả phù hợp</div>
                     ) : (
@@ -939,7 +939,7 @@ export default function ProposalForm({
                                 <Package size={13} color="#38bdf8" />
                                 <span>Thiết bị ({filteredItems.length})</span>
                               </div>
-                              <span style={{ fontSize: "0.68rem", opacity: 0.8, fontWeight: 500, color: "#94a3b8" }}>Click để thêm vào dự trù</span>
+                              <span style={{ fontSize: "0.68rem", opacity: 0.8, fontWeight: 500, color: "#94a3b8" }}>Click để chọn thiết bị</span>
                             </div>
 
                             <div style={{ padding: "0.45rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
@@ -949,22 +949,21 @@ export default function ProposalForm({
                                   setItemSearchQuery("");
                                   setIsItemDropdownOpen(false);
                                 }}>
-                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.65rem" }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem" }}>
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                       <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.835rem", lineHeight: 1.3, marginBottom: 2 }}>{i.name}</div>
                                       <div style={{ fontSize: "0.725rem", color: "#94a3b8", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{i.specifications}</div>
                                     </div>
 
-                                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexShrink: 0 }}>
-                                      <div style={{ background: "rgba(56,189,248,0.1)", padding: "0.25rem 0.5rem", borderRadius: "6px", border: "1px solid rgba(56,189,248,0.2)" }}>
-                                        <span style={{ fontSize: "0.8rem", color: "#38bdf8", fontWeight: 700, whiteSpace: "nowrap" }}>
-                                          {Number(i.standardPrice).toLocaleString()}đ<span style={{ fontSize: "0.68rem", color: "#cbd5e1", fontWeight: 500 }}>/{i.unit || "Bộ"}</span>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", flexShrink: 0 }}>
+                                      <span style={{ fontSize: "0.725rem", padding: "0.2rem 0.5rem", borderRadius: "5px", background: "rgba(51, 65, 85, 0.4)", color: "#cbd5e1", border: "1px solid #334155", fontWeight: 500 }}>
+                                        {i.unit || "Bộ"}
+                                      </span>
+                                      <div style={{ background: "rgba(56,189,248,0.1)", padding: "0.25rem 0.6rem", borderRadius: "6px", border: "1px solid rgba(56,189,248,0.2)" }}>
+                                        <span style={{ fontSize: "0.85rem", color: "#38bdf8", fontWeight: 700, whiteSpace: "nowrap" }}>
+                                          {Number(i.standardPrice).toLocaleString()}đ
                                         </span>
                                       </div>
-
-                                      <button type="button" style={{ display: "flex", alignItems: "center", gap: "2px", padding: "0.25rem 0.5rem", borderRadius: "6px", background: "#38bdf8", color: "#0f172a", border: "none", fontSize: "0.725rem", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
-                                        <Plus size={12} /> Thêm
-                                      </button>
                                     </div>
                                   </div>
                                 </div>
@@ -986,7 +985,7 @@ export default function ProposalForm({
                                 <Building2 size={13} color="#a855f7" />
                                 <span>Đầu tư khác ({filteredInvs.length})</span>
                               </div>
-                              <span style={{ fontSize: "0.68rem", opacity: 0.8, fontWeight: 500, color: "#94a3b8" }}>Click để thêm vào dự trù</span>
+                              <span style={{ fontSize: "0.68rem", opacity: 0.8, fontWeight: 500, color: "#94a3b8" }}>Click để chọn hạng mục</span>
                             </div>
 
                             <div style={{ padding: "0.45rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
@@ -996,22 +995,21 @@ export default function ProposalForm({
                                   setItemSearchQuery("");
                                   setIsItemDropdownOpen(false);
                                 }}>
-                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.65rem" }}>
+                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem" }}>
                                     <div style={{ flex: 1, minWidth: 0 }}>
                                       <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.835rem", lineHeight: 1.3, marginBottom: 2 }}>{i.name}</div>
                                       <div style={{ fontSize: "0.725rem", color: "#94a3b8", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{i.description}</div>
                                     </div>
 
-                                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", flexShrink: 0 }}>
-                                      <div style={{ background: "rgba(168,85,247,0.1)", padding: "0.25rem 0.5rem", borderRadius: "6px", border: "1px solid rgba(168,85,247,0.2)" }}>
-                                        <span style={{ fontSize: "0.8rem", color: "#a855f7", fontWeight: 700, whiteSpace: "nowrap" }}>
-                                          {Number(i.standardPrice).toLocaleString()}đ<span style={{ fontSize: "0.68rem", color: "#cbd5e1", fontWeight: 500 }}>/{i.unit || "Cái"}</span>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", flexShrink: 0 }}>
+                                      <span style={{ fontSize: "0.725rem", padding: "0.2rem 0.5rem", borderRadius: "5px", background: "rgba(51, 65, 85, 0.4)", color: "#cbd5e1", border: "1px solid #334155", fontWeight: 500 }}>
+                                        {i.unit || "Cái"}
+                                      </span>
+                                      <div style={{ background: "rgba(168,85,247,0.1)", padding: "0.25rem 0.6rem", borderRadius: "6px", border: "1px solid rgba(168,85,247,0.2)" }}>
+                                        <span style={{ fontSize: "0.85rem", color: "#a855f7", fontWeight: 700, whiteSpace: "nowrap" }}>
+                                          {Number(i.standardPrice).toLocaleString()}đ
                                         </span>
                                       </div>
-
-                                      <button type="button" style={{ display: "flex", alignItems: "center", gap: "2px", padding: "0.25rem 0.5rem", borderRadius: "6px", background: "#a855f7", color: "#ffffff", border: "none", fontSize: "0.725rem", fontWeight: 700, cursor: "pointer", flexShrink: 0 }}>
-                                        <Plus size={12} /> Thêm
-                                      </button>
                                     </div>
                                   </div>
                                 </div>
