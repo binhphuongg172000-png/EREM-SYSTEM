@@ -1075,8 +1075,8 @@ export default function ProposalForm({
                               step="0.01" 
                               className="form-input" 
                               style={{ textAlign: "center", padding: "6px", borderRadius: 8, fontSize: "0.85rem", fontWeight: 600 }}
-                              value={item.quantity} 
-                              onChange={e => updateItemQuantity(item.tempId, parseFloat(e.target.value) || 0)}
+                              value={item.quantity === 0 ? "" : item.quantity} 
+                              onChange={e => updateItemQuantity(item.tempId, e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
                               disabled={selectedSchool?.isLocked}
                               title="Số lượng"
                             />
@@ -1145,8 +1145,8 @@ export default function ProposalForm({
                               step="0.01" 
                               className="form-input" 
                               style={{ textAlign: "center", padding: "6px", borderRadius: 8, fontSize: "0.85rem", fontWeight: 600 }}
-                              value={item.quantity} 
-                              onChange={e => updateItemQuantity(item.tempId, parseFloat(e.target.value) || 0)}
+                              value={item.quantity === 0 ? "" : item.quantity} 
+                              onChange={e => updateItemQuantity(item.tempId, e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
                               disabled={selectedSchool?.isLocked}
                               title="Số lượng"
                             />

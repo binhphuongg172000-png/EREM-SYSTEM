@@ -13,9 +13,9 @@ interface CurrencyInputProps {
 }
 
 export function formatCurrencyString(val: number | string | undefined | null): string {
-  if (val === undefined || val === null || val === "") return "";
+  if (val === undefined || val === null || val === "" || val === 0) return "";
   const cleanNum = String(val).replace(/\D/g, "");
-  if (!cleanNum) return "";
+  if (!cleanNum || cleanNum === "0") return "";
   return Number(cleanNum).toLocaleString("vi-VN");
 }
 
@@ -26,7 +26,7 @@ export function parseCurrencyString(formattedVal: string): string {
 export default function CurrencyInput({
   value,
   onChange,
-  placeholder = "0",
+  placeholder = "",
   className = "form-input",
   style,
   disabled = false,
