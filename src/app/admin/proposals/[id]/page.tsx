@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ProposalStatusSelect from "../ProposalStatusSelect";
+import { getCurrentUser } from "@/app/actions/auth";
 import { ArrowLeft, Package, Building2, CheckCircle2, XCircle, FileText } from "lucide-react";
 import PrintButton from "@/app/sale/proposals/[id]/PrintButton";
 import ExportHandoverButton from "@/components/ExportHandoverButton";
@@ -13,6 +14,8 @@ export default async function ProposalDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const currentUser = await getCurrentUser();
+  const isSysAdmin = currentUser?.role === "SUPER_ADMIN";
   const resolvedParams = await params;
   const { id } = resolvedParams;
 
@@ -289,14 +292,17 @@ export default async function ProposalDetailPage({
         <div className="card" style={{ padding: "1.25rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: "0.95rem", fontWeight: 600, color: "#cbd5e1" }}>Trạng thái hiện tại:</span>
           <div style={{ width: "200px", textAlign: "right" }}>
-            <ProposalStatusSelect proposal={{
-              id: proposal.id,
-              status: proposal.status,
-              school: {
-                name: proposal.school.name,
-                isLocked: proposal.school.isLocked
-              }
-            }} />
+            <ProposalStatusSelect 
+              proposal={{
+                id: proposal.id,
+                status: proposal.status,
+                school: {
+                  name: proposal.school.name,
+                  isLocked: proposal.school.isLocked
+                }
+              }} 
+              isSysAdmin={isSysAdmin}
+            />
           </div>
         </div>
       </div>

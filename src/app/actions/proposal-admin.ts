@@ -2,9 +2,15 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { getCurrentUser } from "@/app/actions/auth";
 
 export async function approveProposal(id: string) {
   try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== "SUPER_ADMIN") {
+      return { success: false, message: "Chỉ SYSADMIN mới có quyền thực hiện thao tác này." };
+    }
+
     await prisma.proposal.update({
       where: { id },
       data: { status: "APPROVED" },
@@ -21,6 +27,11 @@ export async function approveProposal(id: string) {
 
 export async function rejectProposal(id: string, reason: string) {
   try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== "SUPER_ADMIN") {
+      return { success: false, message: "Chỉ SYSADMIN mới có quyền thực hiện thao tác này." };
+    }
+
     await prisma.proposal.update({
       where: { id },
       data: { 
@@ -40,6 +51,11 @@ export async function rejectProposal(id: string, reason: string) {
 
 export async function lockProposal(id: string) {
   try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== "SUPER_ADMIN") {
+      return { success: false, message: "Chỉ SYSADMIN mới có quyền thay đổi trạng thái dự trù." };
+    }
+
     const proposal = await prisma.proposal.findUnique({
       where: { id },
       include: { school: true }
@@ -67,6 +83,11 @@ export async function lockProposal(id: string) {
 
 export async function completeProposal(id: string) {
   try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== "SUPER_ADMIN") {
+      return { success: false, message: "Chỉ SYSADMIN mới có quyền thay đổi trạng thái dự trù." };
+    }
+
     const proposal = await prisma.proposal.findUnique({
       where: { id },
       include: { school: true }
@@ -90,6 +111,11 @@ export async function completeProposal(id: string) {
 
 export async function unlockProposal(id: string) {
   try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== "SUPER_ADMIN") {
+      return { success: false, message: "Chỉ SYSADMIN mới có quyền thay đổi trạng thái dự trù." };
+    }
+
     const proposal = await prisma.proposal.findUnique({
       where: { id },
       include: { school: true }
@@ -118,6 +144,11 @@ export async function unlockProposal(id: string) {
 
 export async function revertToLocked(id: string) {
   try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== "SUPER_ADMIN") {
+      return { success: false, message: "Chỉ SYSADMIN mới có quyền thay đổi trạng thái dự trù." };
+    }
+
     await prisma.proposal.update({
       where: { id },
       data: { status: "APPROVED" },
@@ -134,6 +165,11 @@ export async function revertToLocked(id: string) {
 
 export async function deleteProposalAdmin(id: string) {
   try {
+    const user = await getCurrentUser();
+    if (!user || user.role !== "SUPER_ADMIN") {
+      return { success: false, message: "Chỉ SYSADMIN mới có quyền xóa dự trù." };
+    }
+
     await prisma.proposal.delete({
       where: { id },
     });

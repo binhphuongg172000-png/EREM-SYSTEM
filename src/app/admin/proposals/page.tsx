@@ -4,6 +4,7 @@ import SearchInput from "../SearchInput";
 import ProposalRowActions from "./ProposalRowActions";
 import ProposalFilters from "./ProposalFilters";
 import ProposalStatusSelect from "./ProposalStatusSelect";
+import { getCurrentUser } from "@/app/actions/auth";
 import { Building2, Calendar, TrendingUp, TrendingDown, UserCircle } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +14,8 @@ export default async function AdminProposalsPage({
 }: {
   searchParams: Promise<{ search?: string; saleId?: string; latest?: string; budget?: string; status?: string }>;
 }) {
+  const currentUser = await getCurrentUser();
+  const isSysAdmin = currentUser?.role === "SUPER_ADMIN";
   const resolvedParams = await searchParams;
   const search = resolvedParams?.search || "";
   const saleId = resolvedParams?.saleId || "";
@@ -224,7 +227,7 @@ export default async function AdminProposalsPage({
                       </span>
                     </td>
                     <td style={{ textAlign: "center" }}>
-                      <ProposalStatusSelect proposal={serializedProposal} />
+                      <ProposalStatusSelect proposal={serializedProposal} isSysAdmin={isSysAdmin} />
                     </td>
                     <td style={{ textAlign: "right", paddingRight: "1.25rem" }}>
                       <ProposalRowActions proposal={serializedProposal} />

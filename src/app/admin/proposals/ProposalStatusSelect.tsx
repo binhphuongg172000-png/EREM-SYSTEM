@@ -7,7 +7,13 @@ import { toast } from "@/components/Toast";
 import ConfirmModal from "@/components/ConfirmModal";
 import { ChevronDown, CircleDot, CheckCircle2, Lock } from "lucide-react";
 
-export default function ProposalStatusSelect({ proposal }: { proposal: any }) {
+export default function ProposalStatusSelect({ 
+  proposal, 
+  isSysAdmin = false 
+}: { 
+  proposal: any; 
+  isSysAdmin?: boolean;
+}) {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
@@ -36,6 +42,8 @@ export default function ProposalStatusSelect({ proposal }: { proposal: any }) {
     statusText = "ĐANG THỰC HIỆN";
   }
 
+  const canChange = isSysAdmin && currentStatus !== "closed";
+
   // Close dropdown on outside click
   useEffect(() => {
     const handleClick = (e: MouseEvent) => {
@@ -49,7 +57,7 @@ export default function ProposalStatusSelect({ proposal }: { proposal: any }) {
 
   const handleSelect = (newStatus: string) => {
     setShowMenu(false);
-    if (newStatus === currentStatus) return;
+    if (!isSysAdmin || newStatus === currentStatus) return;
 
     if (newStatus === "locked" && currentStatus === "init") setPendingAction("lock");
     else if (newStatus === "completed" && (currentStatus === "locked" || currentStatus === "init")) setPendingAction("complete");
@@ -123,11 +131,11 @@ export default function ProposalStatusSelect({ proposal }: { proposal: any }) {
     <>
       <div ref={menuRef} style={{ position: "relative", display: "inline-block", textAlign: "left" }}>
         <button
-          onClick={() => { if (currentStatus !== "closed") setShowMenu(!showMenu) }}
-          disabled={isLoading}
+          onClick={() => { if (canChange) setShowMenu(!showMenu) }}
+          disabled={isLoading || !canChange}
           className={`badge ${badgeClass}`}
           style={{ 
-            cursor: currentStatus === "closed" ? "default" : "pointer", 
+            cursor: canChange ? "pointer" : "default", 
             border: "1px solid", 
             display: "inline-flex", 
             alignItems: "center", 
@@ -136,10 +144,16 @@ export default function ProposalStatusSelect({ proposal }: { proposal: any }) {
             outline: "none",
             transition: "all 0.2s"
           }}
-          title={currentStatus === "closed" ? "Không thể đổi trạng thái của dự trù đã đóng" : "Nhấn để đổi trạng thái"}
+          title={
+            !isSysAdmin 
+              ? "Chỉ SYSADMIN mới có quyền thay đổi trạng thái" 
+              : currentStatus === "closed" 
+                ? "Không thể đổi trạng thái của dự trù đã đóng" 
+                : "Nhấn để đổi trạng thái"
+          }
         >
           {statusText}
-          {currentStatus !== "closed" && <ChevronDown size={14} style={{ opacity: 0.7, transform: showMenu ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />}
+          {canChange && <ChevronDown size={14} style={{ opacity: 0.7, transform: showMenu ? "rotate(180deg)" : "none", transition: "transform 0.2s" }} />}
         </button>
 
         {showMenu && (
