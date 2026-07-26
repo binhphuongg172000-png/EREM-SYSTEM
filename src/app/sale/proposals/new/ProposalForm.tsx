@@ -653,10 +653,10 @@ export default function ProposalForm({
                   {selectedSchool.isLocked && (
                     <div className="alert-box error">
                       <AlertCircle size={18} style={{ flexShrink: 0, marginTop: 2 }} />
-                      <span><strong>Trường đang được thực hiện dự trù.</strong> Bạn không thể lập hoặc chỉnh sửa dự trù cho trường này.</span>
+                      <span><strong>Trường đang trong trạng thái "Đang thực hiện".</strong> Bạn có thể xem thông tin chi tiết nhưng <strong>không thể chỉnh sửa</strong> hoặc lưu bản dự trù mới.</span>
                     </div>
                   )}
-                  {selectedSchool.latestProposal && (
+                  {selectedSchool.latestProposal && !selectedSchool.isLocked && (
                     <div className="alert-box warning">
                       <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: 2 }} />
                       <span>Trường đã có bản dự trù trước đó (cập nhật {new Date(selectedSchool.latestProposal.updatedAt).toLocaleString("vi-VN")}). Dữ liệu cũ đã được load lại — Khi bấm lưu sẽ tạo ra một <strong>phiên bản dự trù mới</strong>.</span>
@@ -667,21 +667,21 @@ export default function ProposalForm({
                   <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.75rem", background: "rgba(30, 41, 59, 0.5)", padding: "0.85rem", borderRadius: "10px", border: "1px solid #334155" }}>
                     <div>
                       <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "0.35rem", fontWeight: 500 }}><GraduationCap size={14}/> HS Cũ</label>
-                      <input type="number" className="form-input" style={{ width: "100%", padding: "0.5rem 0.75rem", background: "rgba(15,23,42,0.4)", borderRadius: "8px" }} 
+                      <input type="number" className="form-input" disabled={selectedSchool.isLocked} style={{ width: "100%", padding: "0.5rem 0.75rem", background: "rgba(15,23,42,0.4)", borderRadius: "8px" }} 
                         value={schoolDetails.oldStudents} 
                         onChange={e => setSchoolDetails({...schoolDetails, oldStudents: e.target.value})} 
                       />
                     </div>
                     <div>
                       <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#38bdf8", marginBottom: "0.35rem", fontWeight: 500 }}><GraduationCap size={14}/> HS Mới <span style={{color:"#f43f5e"}}>*</span></label>
-                      <input type="number" className="form-input" required style={{ width: "100%", padding: "0.5rem 0.75rem", background: "rgba(56,189,248,0.05)", border: "1px solid rgba(56,189,248,0.3)", borderRadius: "8px", color: "#38bdf8" }} 
+                      <input type="number" className="form-input" required disabled={selectedSchool.isLocked} style={{ width: "100%", padding: "0.5rem 0.75rem", background: "rgba(56,189,248,0.05)", border: "1px solid rgba(56,189,248,0.3)", borderRadius: "8px", color: "#38bdf8" }} 
                         value={schoolDetails.newStudents} 
                         onChange={e => setSchoolDetails({...schoolDetails, newStudents: e.target.value})} 
                       />
                     </div>
                     <div>
                       <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#a855f7", marginBottom: "0.35rem", fontWeight: 500 }}><DoorOpen size={14}/> Phòng ĐT</label>
-                      <input type="number" className="form-input" style={{ width: "100%", padding: "0.5rem 0.75rem", background: "rgba(168,85,247,0.05)", border: "1px solid rgba(168,85,247,0.3)", borderRadius: "8px", color: "#a855f7" }} 
+                      <input type="number" className="form-input" disabled={selectedSchool.isLocked} style={{ width: "100%", padding: "0.5rem 0.75rem", background: "rgba(168,85,247,0.05)", border: "1px solid rgba(168,85,247,0.3)", borderRadius: "8px", color: "#a855f7" }} 
                         value={schoolDetails.investedClassrooms} 
                         onChange={e => setSchoolDetails({...schoolDetails, investedClassrooms: e.target.value})} 
                       />
@@ -735,7 +735,6 @@ export default function ProposalForm({
                         <div 
                           key={s.id}
                           onClick={() => {
-                            if (s.isLocked) return;
                             setSelectedSchoolId(s.id);
                             setSearchQuery(s.name);
                           }}
@@ -744,8 +743,8 @@ export default function ProposalForm({
                             border: "1px solid #334155",
                             borderRadius: "10px",
                             padding: "0.75rem 0.85rem",
-                            cursor: s.isLocked ? "not-allowed" : "pointer",
-                            opacity: s.isLocked ? 0.6 : 1,
+                            cursor: "pointer",
+                            opacity: 1,
                             transition: "all 0.2s ease"
                           }}
                           className="school-card-item"
@@ -1002,6 +1001,7 @@ export default function ProposalForm({
                         value={item.price} 
                         onChange={val => updateItemPrice(item.tempId, parseInt(val) || 0)}
                         style={{ padding: "8px", borderRadius: 8, fontSize: "0.95rem", fontWeight: 600 }}
+                        disabled={selectedSchool?.isLocked}
                       />
                     </div>
                     
