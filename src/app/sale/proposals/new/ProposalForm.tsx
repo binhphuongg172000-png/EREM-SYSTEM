@@ -921,7 +921,7 @@ export default function ProposalForm({
                 const hasResults = filteredItems.length > 0 || filteredInvs.length > 0;
                 
                 return (
-                  <div className="dropdown-list" style={{ display: "flex", flexDirection: "column", gap: "0.65rem", padding: "0.65rem 0.5rem 0.65rem 0.65rem", maxHeight: "480px", overflowY: "auto" }}>
+                  <div className="dropdown-list" style={{ display: "flex", flexDirection: "column", gap: "0.65rem", padding: "0.65rem 0.5rem 0.65rem 0.65rem", maxHeight: "540px", overflowY: "auto" }}>
                     {!hasResults ? (
                       <div style={{ padding: "1.25rem", textAlign: "center", color: "#64748b", fontSize: "0.825rem" }}>Không tìm thấy kết quả phù hợp</div>
                     ) : (
@@ -942,7 +942,7 @@ export default function ProposalForm({
                               <span style={{ fontSize: "0.68rem", opacity: 0.8, fontWeight: 500, color: "#94a3b8" }}>Click để chọn thiết bị</span>
                             </div>
 
-                            <div style={{ padding: "0.45rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                            <div style={{ padding: "0.45rem", display: "flex", flexDirection: "column", gap: "0.35rem", maxHeight: "240px", overflowY: "auto" }}>
                               {filteredItems.map(i => (
                                 <div key={`ITEM_${i.id}`} className="dropdown-item" onClick={() => {
                                   addItemByValue(`ITEM_${i.id}`);
@@ -988,7 +988,7 @@ export default function ProposalForm({
                               <span style={{ fontSize: "0.68rem", opacity: 0.8, fontWeight: 500, color: "#94a3b8" }}>Click để chọn hạng mục</span>
                             </div>
 
-                            <div style={{ padding: "0.45rem", display: "flex", flexDirection: "column", gap: "0.35rem" }}>
+                            <div style={{ padding: "0.45rem", display: "flex", flexDirection: "column", gap: "0.35rem", maxHeight: "240px", overflowY: "auto" }}>
                               {filteredInvs.map(i => (
                                 <div key={`INV_${i.id}`} className="dropdown-item" onClick={() => {
                                   addItemByValue(`INV_${i.id}`);
