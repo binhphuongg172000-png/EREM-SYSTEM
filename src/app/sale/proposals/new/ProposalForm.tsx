@@ -977,7 +977,7 @@ export default function ProposalForm({
                     }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#38bdf8", fontWeight: 700, fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                         <Package size={14} />
-                        Thiết bị Học tập ({items.filter(i => i.type === "ITEM").length})
+                        Thiết bị ({items.filter(i => i.type === "ITEM").length})
                       </div>
                       <div style={{ fontSize: "0.825rem", fontWeight: 700, color: "#38bdf8" }}>
                         Tổng thiết bị: {items.filter(i => i.type === "ITEM").reduce((acc, curr) => acc + (curr.quantity * curr.price), 0).toLocaleString()}đ
@@ -1047,7 +1047,7 @@ export default function ProposalForm({
                     }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#a855f7", fontWeight: 700, fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                         <Building2 size={14} />
-                        Hạng mục Đầu tư khác ({items.filter(i => i.type === "INVESTMENT").length})
+                        Đầu tư khác ({items.filter(i => i.type === "INVESTMENT").length})
                       </div>
                       <div style={{ fontSize: "0.825rem", fontWeight: 700, color: "#a855f7" }}>
                         Tổng đầu tư: {items.filter(i => i.type === "INVESTMENT").reduce((acc, curr) => acc + (curr.quantity * curr.price), 0).toLocaleString()}đ
