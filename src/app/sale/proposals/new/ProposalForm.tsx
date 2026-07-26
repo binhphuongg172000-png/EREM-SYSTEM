@@ -911,9 +911,9 @@ export default function ProposalForm({
                     ) : (
                       <>
                         {filteredItems.length > 0 && (
-                          <li className="dropdown-group-label">
-                            <Package size={12} style={{ display: "inline", marginRight: 4, verticalAlign: "middle" }} />
-                            Thiết bị ({filteredItems.length})
+                          <li className="dropdown-group-label" style={{ background: "rgba(56, 189, 248, 0.08)", color: "#38bdf8", borderBottom: "1px solid rgba(56, 189, 248, 0.2)", display: "flex", alignItems: "center", gap: "6px", textTransform: "none", fontSize: "0.75rem", padding: "0.45rem 0.75rem" }}>
+                            <Package size={13} color="#38bdf8" />
+                            <strong>Thiết bị</strong> ({filteredItems.length})
                           </li>
                         )}
                         {filteredItems.map(i => (
@@ -924,19 +924,19 @@ export default function ProposalForm({
                           }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                               <div style={{ flex: 1, paddingRight: "1rem" }}>
-                                <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "1rem", marginBottom: "4px" }}>{i.name}</div>
-                                <div style={{ fontSize: "0.8rem", color: "#94a3b8", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{i.specifications}</div>
+                                <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.85rem", marginBottom: "2px" }}>{i.name}</div>
+                                <div style={{ fontSize: "0.75rem", color: "#94a3b8", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{i.specifications}</div>
                               </div>
-                              <div style={{ background: "rgba(56,189,248,0.1)", padding: "0.4rem 0.75rem", borderRadius: "8px", border: "1px solid rgba(56,189,248,0.2)", flexShrink: 0 }}>
-                                <span style={{ fontSize: "0.9rem", color: "#38bdf8", fontWeight: 700, whiteSpace: "nowrap" }}>{Number(i.standardPrice).toLocaleString()}đ<span style={{ fontSize: "0.75rem", color: "#cbd5e1", fontWeight: 500 }}>/{i.unit || "Bộ"}</span></span>
+                              <div style={{ background: "rgba(56,189,248,0.1)", padding: "0.3rem 0.6rem", borderRadius: "6px", border: "1px solid rgba(56,189,248,0.2)", flexShrink: 0 }}>
+                                <span style={{ fontSize: "0.85rem", color: "#38bdf8", fontWeight: 700, whiteSpace: "nowrap" }}>{Number(i.standardPrice).toLocaleString()}đ<span style={{ fontSize: "0.7rem", color: "#cbd5e1", fontWeight: 500 }}>/{i.unit || "Bộ"}</span></span>
                               </div>
                             </div>
                           </li>
                         ))}
                         {filteredInvs.length > 0 && (
-                          <li className="dropdown-group-label">
-                            <Building2 size={12} style={{ display: "inline", marginRight: 4, verticalAlign: "middle" }} />
-                            Đầu tư khác ({filteredInvs.length})
+                          <li className="dropdown-group-label" style={{ background: "rgba(168, 85, 247, 0.08)", color: "#a855f7", borderBottom: "1px solid rgba(168, 85, 247, 0.2)", display: "flex", alignItems: "center", gap: "6px", textTransform: "none", fontSize: "0.75rem", padding: "0.45rem 0.75rem" }}>
+                            <Building2 size={13} color="#a855f7" />
+                            <strong>Đầu tư khác</strong> ({filteredInvs.length})
                           </li>
                         )}
                         {filteredInvs.map(i => (
@@ -947,11 +947,11 @@ export default function ProposalForm({
                           }}>
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                               <div style={{ flex: 1, paddingRight: "1rem" }}>
-                                <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "1rem", marginBottom: "4px" }}>{i.name}</div>
-                                <div style={{ fontSize: "0.8rem", color: "#94a3b8", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{i.description}</div>
+                                <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.85rem", marginBottom: "2px" }}>{i.name}</div>
+                                <div style={{ fontSize: "0.75rem", color: "#94a3b8", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>{i.description}</div>
                               </div>
-                              <div style={{ background: "rgba(168,85,247,0.1)", padding: "0.4rem 0.75rem", borderRadius: "8px", border: "1px solid rgba(168,85,247,0.2)", flexShrink: 0 }}>
-                                <span style={{ fontSize: "0.9rem", color: "#a855f7", fontWeight: 700, whiteSpace: "nowrap" }}>{Number(i.standardPrice).toLocaleString()}đ<span style={{ fontSize: "0.75rem", color: "#cbd5e1", fontWeight: 500 }}>/{i.unit}</span></span>
+                              <div style={{ background: "rgba(168,85,247,0.1)", padding: "0.3rem 0.6rem", borderRadius: "6px", border: "1px solid rgba(168,85,247,0.2)", flexShrink: 0 }}>
+                                <span style={{ fontSize: "0.85rem", color: "#a855f7", fontWeight: 700, whiteSpace: "nowrap" }}>{Number(i.standardPrice).toLocaleString()}đ<span style={{ fontSize: "0.7rem", color: "#cbd5e1", fontWeight: 500 }}>/{i.unit || "Cái"}</span></span>
                               </div>
                             </div>
                           </li>
