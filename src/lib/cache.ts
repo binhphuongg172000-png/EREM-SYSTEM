@@ -1,65 +1,46 @@
-import { unstable_cache } from "next/cache";
+import { revalidatePath } from "next/cache";
 
-// In-memory store for ultra-fast repeat hits within same process
 type CacheEntry<T> = {
   data: T;
   expiry: number;
 };
 
+// Global in-memory store across requests within the process
 const memStore = new Map<string, CacheEntry<any>>();
 
-// Registry to track invalidation tags
-const keyToTags = new Map<string, string[]>();
-
 /**
- * Two-tier cache:
- * 1. In-memory (memStore): Sub-millisecond, works within the same invocation/process
- * 2. Next.js unstable_cache: Persists across serverless invocations (works on Vercel)
+ * High-performance 2-tier cache wrapper:
+ * 1. Global in-memory store (sub-millisecond instant hit)
+ * 2. Automatic TTL revalidation (defaults to 60s)
  */
 export async function getCachedData<T>(
   key: string,
   fetcher: () => Promise<T>,
-  ttlSeconds: number = 30,
+  ttlSeconds: number = 60,
   tags?: string[]
 ): Promise<T> {
   const now = Date.now();
   const existing = memStore.get(key);
 
-  // Hit in-memory cache first (fastest)
+  // Return instantly from memory if valid
   if (existing && existing.expiry > now) {
     return existing.data as T;
   }
 
+  // Fetch fresh data
   try {
-    const cacheTags = tags || [key.split("_")[0] || "data"];
-    keyToTags.set(key, cacheTags);
-
-    const cachedFetcher = unstable_cache(
-      fetcher,
-      [key],
-      {
-        revalidate: ttlSeconds,
-        tags: cacheTags,
-      }
-    );
-
-    const freshData = await cachedFetcher();
-
-    // Also store in memory for repeat hits in this invocation
-    memStore.set(key, {
-      data: freshData,
-      expiry: now + Math.min(ttlSeconds, 30) * 1000,
-    });
-
-    return freshData;
-  } catch (err) {
-    // Fail-safe fallback if unstable_cache fails or data is non-serializable
     const freshData = await fetcher();
     memStore.set(key, {
       data: freshData,
-      expiry: now + Math.min(ttlSeconds, 30) * 1000,
+      expiry: now + ttlSeconds * 1000,
     });
     return freshData;
+  } catch (err) {
+    // Fail-safe: if fetch fails, return stale data if available
+    if (existing) {
+      return existing.data as T;
+    }
+    throw err;
   }
 }
 
@@ -74,4 +55,3 @@ export function clearCache(pattern?: string) {
     }
   }
 }
-
