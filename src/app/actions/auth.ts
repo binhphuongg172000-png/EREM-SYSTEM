@@ -6,6 +6,13 @@ import { cookies } from "next/headers";
 import { getCachedData } from "@/lib/cache";
 import { cache } from "react";
 
+// Warms up the serverless function + DB connection on login page load
+export async function warmupAction() {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+  } catch {}
+}
+
 export async function loginAction(data: any) {
   try {
     const username = data?.username?.trim();

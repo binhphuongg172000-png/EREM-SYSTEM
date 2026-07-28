@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
-import { loginAction } from "@/app/actions/auth";
+import { loginAction, warmupAction } from "@/app/actions/auth";
 import { User, Lock, Eye, EyeOff, Sparkles, ShieldCheck, TrendingUp, Layers, ArrowRight, Loader2 } from "lucide-react";
 import "./login.css";
 
@@ -29,9 +29,10 @@ export default function LoginPage() {
     router.prefetch("/admin/dashboard");
     router.prefetch("/sale/dashboard");
 
-    // Pre-warm the serverless function + DB connection immediately on page load
-    // So when user submits, cold-start penalty is already paid
-    fetch("/api/ping").catch(() => {});
+    // Pre-warm the SAME serverless function that handles loginAction
+    // This establishes the DB connection before user submits
+    warmupAction().catch(() => {});
+
 
     const handleMouseMove = (e: MouseEvent) => {
       const { innerWidth, innerHeight } = window;
