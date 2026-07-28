@@ -3,6 +3,8 @@ import prisma from "@/lib/prisma";
 import { notFound } from "next/navigation";
 import EditUserForm from "./form";
 
+import { getCachedData } from "@/lib/cache";
+
 export const dynamic = "force-dynamic";
 
 export default async function EditUserPage({
@@ -13,9 +15,12 @@ export default async function EditUserPage({
   const resolvedParams = await params;
   const { id } = resolvedParams;
 
-  const user = await prisma.user.findUnique({
-    where: { id },
-  });
+  const cacheKey = `edit_user_${id}`;
+  const user = await getCachedData(cacheKey, async () => {
+    return prisma.user.findUnique({
+      where: { id },
+    });
+  }, 30);
 
   if (!user) {
     notFound();

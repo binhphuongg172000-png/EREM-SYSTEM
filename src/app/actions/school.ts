@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { clearCache } from "@/lib/cache";
 
 export async function createSchool(data: any) {
   try {
@@ -17,6 +18,7 @@ export async function createSchool(data: any) {
       },
     });
 
+    clearCache();
     revalidatePath("/admin/schools");
     return { success: true, school: newSchool };
   } catch (error: any) {
@@ -29,6 +31,7 @@ export async function deleteSchool(id: string) {
     await prisma.school.delete({
       where: { id },
     });
+    clearCache();
     revalidatePath("/admin/schools");
     return { success: true };
   } catch (error: any) {
@@ -51,13 +54,13 @@ export async function updateSchool(id: string, data: any) {
       },
     });
 
+    clearCache();
     revalidatePath("/admin/schools");
     return { success: true, school: updated };
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi cập nhật thông tin trường học" };
   }
 }
-
 
 export async function updateSchoolStats(id: string, data: { oldStudents: number, newStudents: number, investedClassrooms: number }) {
   try {
@@ -70,6 +73,7 @@ export async function updateSchoolStats(id: string, data: { oldStudents: number,
       },
     });
 
+    clearCache();
     revalidatePath("/sale/proposals");
     revalidatePath("/admin/proposals");
     return { success: true, school: updated };
@@ -82,46 +86,82 @@ export async function importSchoolsBulk(records: { name: string; address: string
   try {
     const sales = await prisma.user.findMany({ where: { role: "SALE" } });
     if (sales.length === 0) {
-      throw new Error("Hệ thống chưa có Tài khoản Sale nào để gán trường học");
+      throw new Error("Hệ thống chưa có Tài khoản Sale nào. Vui lòng tạo tài khoản Sale trước!");
     }
 
-    const dataToCreate = [];
+    const validSchoolsToCreate: any[] = [];
+    const rejectedList: Array<{ name: string; reason: string }> = [];
 
     for (const r of records) {
-      if (!r.saleName) {
-        throw new Error(`Trường học "${r.name}" thiếu Tên Sale`);
+      const targetSaleName = (r.saleName || "").trim();
+      if (!targetSaleName) {
+        rejectedList.push({
+          name: r.name,
+          reason: "Chưa điền Tên Sale trong file Excel",
+        });
+        continue;
       }
 
-      const found = sales.find(
-        s => s.name.toLowerCase() === r.saleName!.toLowerCase() || 
-             s.username.toLowerCase() === r.saleName!.toLowerCase()
+      const targetLower = targetSaleName.toLowerCase();
+
+      // MUST STRICTLY MATCH SALE NAME OR USERNAME (EXACT MATCH ONLY)
+      const matchedSale = sales.find(
+        s => s.name.trim().toLowerCase() === targetLower || 
+             s.username.trim().toLowerCase() === targetLower
       );
 
-      if (!found) {
-        throw new Error(`Nhân viên sale "${r.saleName}" không tồn tại (áp dụng cho trường: ${r.name})`);
+      // If NOT matched with an exact existing Sale account -> REJECT THIS ROW!
+      if (!matchedSale) {
+        rejectedList.push({
+          name: r.name,
+          reason: `Tên Sale "${r.saleName}" không khớp đúng với bất kỳ tài khoản Sale nào trên hệ thống`,
+        });
+        continue;
       }
 
-      dataToCreate.push({
+      validSchoolsToCreate.push({
         name: r.name,
         address: r.address || "",
         principalName: "",
         contractNumber: "",
         oldStudents: 0,
         newStudents: 0,
-        saleId: found.id,
+        saleId: matchedSale.id,
       });
     }
 
-    const result = await prisma.school.createMany({
-      data: dataToCreate,
-    });
+    let successCount = 0;
+    if (validSchoolsToCreate.length > 0) {
+      const result = await prisma.school.createMany({
+        data: validSchoolsToCreate,
+      });
+      successCount = result.count;
+    }
 
+    clearCache();
     revalidatePath("/admin/schools");
-    return { success: true, count: result.count };
+
+    return {
+      success: true,
+      successCount,
+      rejectedCount: rejectedList.length,
+      rejectedList,
+    };
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi nhập danh sách trường học từ Excel" };
   }
 }
 
-
+export async function getSaleNamesList() {
+  try {
+    const sales = await prisma.user.findMany({
+      where: { role: "SALE" },
+      select: { id: true, name: true, username: true },
+      orderBy: { name: "asc" }
+    });
+    return sales;
+  } catch {
+    return [];
+  }
+}
 

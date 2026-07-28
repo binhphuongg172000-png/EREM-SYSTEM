@@ -2,6 +2,7 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import { clearCache } from "@/lib/cache";
 
 export async function createItem(data: any) {
   try {
@@ -26,6 +27,7 @@ export async function createItem(data: any) {
       },
     });
 
+    clearCache();
     revalidatePath("/admin/items");
     return { success: true, item: newItem };
   } catch (error: any) {

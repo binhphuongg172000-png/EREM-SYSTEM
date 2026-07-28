@@ -3,10 +3,13 @@ import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import ProposalStatusSelect from "../ProposalStatusSelect";
-import { getCurrentUser } from "@/app/actions/auth";
+import { cookies } from "next/headers";
 import { ArrowLeft, Package, Building2, CheckCircle2, XCircle, FileText } from "lucide-react";
 import PrintButton from "@/app/sale/proposals/[id]/PrintButton";
 import ExportHandoverButton from "@/components/ExportHandoverButton";
+import DeleteProposalDetailButton from "./DeleteProposalDetailButton";
+import { getCachedData } from "@/lib/cache";
+
 export const dynamic = "force-dynamic";
 
 export default async function ProposalDetailPage({
@@ -14,23 +17,30 @@ export default async function ProposalDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const currentUser = await getCurrentUser();
-  const isSysAdmin = currentUser?.role === "SUPER_ADMIN";
   const resolvedParams = await params;
   const { id } = resolvedParams;
+  const cookieStore = await cookies();
+  const userRole = cookieStore.get("userRole")?.value;
+  const isSysAdmin = userRole === "SUPER_ADMIN";
+  const isSuperAdmin = userRole === "SUPER_ADMIN";
 
-  const proposal = await prisma.proposal.findUnique({
-    where: { id: resolvedParams.id },
-    include: {
-      school: true,
-      items: true,
-      investments: true,
-      sale: true,
-    }
-  });
-
-  const catalogItems = await prisma.item.findMany({ select: { name: true, unit: true } });
-  const catalogInvestments = await prisma.otherInvestment.findMany({ select: { name: true, unit: true, description: true } });
+  const cacheKey = `admin_proposal_detail_${id}`;
+  const { proposal, catalogItems, catalogInvestments } = await getCachedData(cacheKey, async () => {
+    const [proposal, catalogItems, catalogInvestments] = await Promise.all([
+      prisma.proposal.findUnique({
+        where: { id },
+        include: {
+          school: true,
+          items: true,
+          investments: true,
+          sale: true,
+        }
+      }),
+      prisma.item.findMany({ select: { name: true, unit: true } }),
+      prisma.otherInvestment.findMany({ select: { name: true, unit: true, description: true } })
+    ]);
+    return { proposal, catalogItems, catalogInvestments };
+  }, 30);
 
   if (!proposal) {
     notFound();
@@ -88,14 +98,17 @@ export default async function ProposalDetailPage({
         }
         
         @media print {
-          @page { size: landscape; margin: 10mm; }
+          @page { size: A4 landscape; margin: 5mm 10mm 4mm 10mm; }
+          html, body { background: white !important; }
           body * { visibility: hidden; }
           .print-only, .print-only * { visibility: visible !important; color: black !important; background: white !important; font-family: "Times New Roman", Times, serif; }
-          .print-only { position: absolute; left: 0; top: 0; width: 100%; display: block !important; padding: 10px; }
+          .print-only { position: absolute; left: 0; top: 0; width: 100%; display: block !important; padding: 0; font-size: 11px; line-height: 1.25; }
           .screen-only { display: none !important; }
           
-          .print-bg-orange { background-color: #ff8a00 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-          .print-bg-lightorange { background-color: #ffcc99 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .print-bg-orange { background-color: #fce4d6 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          .print-bg-lightorange { background-color: #fef0e5 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          
+          table, th, td { border: 1px solid black !important; border-collapse: collapse; }
         }
       `}</style>
       {/* Header */}
@@ -113,7 +126,7 @@ export default async function ProposalDetailPage({
         </div>
         
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          {proposal.school.isLocked && (
+          {proposal.school.isLocked && isSuperAdmin && (
             <ExportHandoverButton 
               proposalId={proposal.id}
               schoolId={proposal.schoolId}
@@ -124,6 +137,9 @@ export default async function ProposalDetailPage({
             />
           )}
           <div style={{ height: "fit-content" }}><PrintButton fileName={`DuTruKinhPhi_${proposal.school?.name || "Truong"}.doc`} /></div>
+          {isSysAdmin && (
+            <DeleteProposalDetailButton proposalId={proposal.id} schoolName={proposal.school?.name || "Trường"} />
+          )}
         </div>
       </div>
 
@@ -307,43 +323,43 @@ export default async function ProposalDetailPage({
         </div>
       </div>
 
-      {/* PRINT ONLY SECTION - EXCEL LAYOUT */}
-      <div className="print-only" style={{ fontSize: "12px" }}>
-        <div>Công ty cổ phần Giáo dục iSmart</div>
-        <div>Lầu 3, Tòa nhà Quỳnh Lan, 60 Hai Bà Trưng, Phường Sài Gòn, TP Hồ Chí Minh, VN</div>
+      {/* PRINT ONLY SECTION - OPTIMIZED FOR EXACT 1 PAGE A4 LANDSCAPE */}
+      <div className="print-only" style={{ fontSize: "11px", lineHeight: 1.25 }}>
+        <div style={{ fontSize: "10px" }}>Công ty cổ phần Giáo dục iSmart</div>
+        <div style={{ fontSize: "10px" }}>Lầu 3, Tòa nhà Quỳnh Lan, 60 Hai Bà Trưng, Phường Sài Gòn, TP Hồ Chí Minh, VN</div>
         
-        <h2 style={{ textAlign: "center", margin: "15px 0", fontSize: "16px", fontWeight: "bold", textTransform: "uppercase" }}>
+        <h2 style={{ textAlign: "center", margin: "6px 0 10px 0", fontSize: "16px", fontWeight: "bold", textTransform: "uppercase" }}>
           BẢNG DỰ TRÙ KINH PHÍ
         </h2>
         
-        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "10px" }}>
+        <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "6px" }}>
           <tbody>
             <tr>
-              <td style={{ border: "1px solid black", padding: "4px", width: "15%" }}>Trường:</td>
-              <td style={{ border: "1px solid black", padding: "4px", width: "35%", fontWeight: "bold" }}>{proposal.school.name}</td>
-              <td style={{ border: "1px solid black", padding: "4px", width: "30%" }}>Tổng số học sinh năm học 2026-2027</td>
-              <td style={{ border: "1px solid black", padding: "4px", width: "20%", textAlign: "right" }}>{proposal.school.oldStudents + proposal.school.newStudents}</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", width: "15%" }}>Trường:</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", width: "35%", fontWeight: "bold" }}>{proposal.school.name}</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", width: "30%" }}>Tổng số học sinh năm học 2026-2027</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", width: "20%", textAlign: "right" }}>{proposal.school.oldStudents + proposal.school.newStudents}</td>
             </tr>
             <tr>
-              <td style={{ border: "1px solid black", padding: "4px" }}>Sales:</td>
-              <td style={{ border: "1px solid black", padding: "4px", fontWeight: "bold" }}>{proposal.sale?.name || ""}</td>
-              <td style={{ border: "1px solid black", padding: "4px" }}>Số học sinh mới</td>
-              <td style={{ border: "1px solid black", padding: "4px", textAlign: "right" }}>{proposal.school.newStudents}</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px" }}>Sales:</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold" }}>{proposal.sale?.name || ""}</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px" }}>Số học sinh mới</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{proposal.school.newStudents}</td>
             </tr>
             <tr>
-              <td colSpan={2} style={{ border: "1px solid black", padding: "4px", textAlign: "center" }}>Thời gian đầu tư: 2026 - 2027</td>
-              <td style={{ border: "1px solid black", padding: "4px" }}>Số học sinh cũ</td>
-              <td style={{ border: "1px solid black", padding: "4px", textAlign: "right" }}>{proposal.school.oldStudents}</td>
+              <td colSpan={2} style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>Thời gian đầu tư: 2026 - 2027</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px" }}>Số học sinh cũ</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{proposal.school.oldStudents}</td>
             </tr>
             <tr>
-              <td colSpan={2} style={{ border: "1px solid black", padding: "4px", textAlign: "center" }}></td>
-              <td style={{ border: "1px solid black", padding: "4px" }}>Số phòng học đầu tư</td>
-              <td style={{ border: "1px solid black", padding: "4px", textAlign: "right" }}>{proposal.school.investedClassrooms}</td>
+              <td colSpan={2} style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}></td>
+              <td style={{ border: "1px solid black", padding: "3px 6px" }}>Số phòng học đầu tư</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{proposal.school.investedClassrooms}</td>
             </tr>
             <tr>
-              <td colSpan={2} style={{ border: "1px solid black", padding: "4px", textAlign: "center" }}>Thời gian khấu hao: 5 năm tiểu học (2030/2031)</td>
-              <td style={{ border: "1px solid black", padding: "4px", fontWeight: "bold", textAlign: "center", textTransform: "uppercase" }}>TỔNG NGÂN SÁCH TỐI ĐA ĐƯỢC ĐẦU TƯ</td>
-              <td style={{ border: "1px solid black", padding: "4px", fontWeight: "bold", textAlign: "right" }}>{allocated.toLocaleString()}</td>
+              <td colSpan={2} style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>Thời gian khấu hao: 5 năm tiểu học (2030/2031)</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold", textAlign: "center", textTransform: "uppercase" }}>TỔNG NGÂN SÁCH TỐI ĐA ĐƯỢC ĐẦU TƯ</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold", textAlign: "right" }}>{allocated.toLocaleString()}</td>
             </tr>
           </tbody>
         </table>
@@ -351,76 +367,76 @@ export default async function ProposalDetailPage({
         <table style={{ width: "100%", borderCollapse: "collapse" }}>
           <thead>
             <tr className="print-bg-orange">
-              <th style={{ border: "1px solid black", padding: "4px", width: "5%", backgroundColor: "#fce4d6" }}>STT</th>
-              <th style={{ border: "1px solid black", padding: "4px", width: "35%", backgroundColor: "#fce4d6" }}>Diễn giải các hạng mục</th>
-              <th style={{ border: "1px solid black", padding: "4px", width: "10%", backgroundColor: "#fce4d6" }}>Đơn vị tính</th>
-              <th style={{ border: "1px solid black", padding: "4px", width: "15%", backgroundColor: "#fce4d6" }}>Đơn giá</th>
-              <th style={{ border: "1px solid black", padding: "4px", width: "10%", backgroundColor: "#fce4d6" }}>Số lượng</th>
-              <th style={{ border: "1px solid black", padding: "4px", width: "15%", backgroundColor: "#fce4d6" }}>Thành tiền</th>
-              <th style={{ border: "1px solid black", padding: "4px", width: "10%", backgroundColor: "#fce4d6" }}>Ghi chú</th>
+              <th style={{ border: "1px solid black", padding: "3px 6px", width: "5%", backgroundColor: "#fce4d6" }}>STT</th>
+              <th style={{ border: "1px solid black", padding: "3px 6px", width: "35%", backgroundColor: "#fce4d6" }}>Diễn giải các hạng mục</th>
+              <th style={{ border: "1px solid black", padding: "3px 6px", width: "10%", backgroundColor: "#fce4d6" }}>Đơn vị tính</th>
+              <th style={{ border: "1px solid black", padding: "3px 6px", width: "15%", backgroundColor: "#fce4d6" }}>Đơn giá</th>
+              <th style={{ border: "1px solid black", padding: "3px 6px", width: "10%", backgroundColor: "#fce4d6" }}>Số lượng</th>
+              <th style={{ border: "1px solid black", padding: "3px 6px", width: "15%", backgroundColor: "#fce4d6" }}>Thành tiền</th>
+              <th style={{ border: "1px solid black", padding: "3px 6px", width: "10%", backgroundColor: "#fce4d6" }}>Ghi chú</th>
             </tr>
           </thead>
           <tbody>
             <tr className="print-bg-lightorange">
-              <td style={{ border: "1px solid black", padding: "4px", textAlign: "center", fontWeight: "bold", backgroundColor: "#fef0e5" }}>A</td>
-              <td style={{ border: "1px solid black", padding: "4px", fontWeight: "bold", backgroundColor: "#fef0e5" }}>NGÂN SÁCH ĐẦU TƯ THIẾT BỊ THỰC HIỆN</td>
-              <td style={{ border: "1px solid black", padding: "4px", backgroundColor: "#fef0e5" }}></td>
-              <td style={{ border: "1px solid black", padding: "4px", backgroundColor: "#fef0e5" }}></td>
-              <td style={{ border: "1px solid black", padding: "4px", backgroundColor: "#fef0e5" }}></td>
-              <td style={{ border: "1px solid black", padding: "4px", fontWeight: "bold", textAlign: "right", backgroundColor: "#fef0e5" }}>{proposal.items.reduce((sum, item) => sum + Number(item.totalPrice), 0).toLocaleString()}</td>
-              <td style={{ border: "1px solid black", padding: "4px", backgroundColor: "#fef0e5" }}></td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center", fontWeight: "bold", backgroundColor: "#fef0e5" }}>A</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold", backgroundColor: "#fef0e5" }}>NGÂN SÁCH ĐẦU TƯ THIẾT BỊ THỰC HIỆN</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fef0e5" }}></td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fef0e5" }}></td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fef0e5" }}></td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold", textAlign: "right", backgroundColor: "#fef0e5" }}>{proposal.items.reduce((sum, item) => sum + Number(item.totalPrice), 0).toLocaleString()}</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fef0e5" }}></td>
             </tr>
             {proposal.items.map((item, idx) => (
               <tr key={item.id}>
-                <td style={{ border: "1px solid black", padding: "4px", textAlign: "center" }}>{idx + 1}</td>
-                <td style={{ border: "1px solid black", padding: "4px" }}>{item.name}</td>
-                <td style={{ border: "1px solid black", padding: "4px", textAlign: "center" }}>Cái</td>
-                <td style={{ border: "1px solid black", padding: "4px", textAlign: "right" }}>{Number(item.price).toLocaleString()}</td>
-                <td style={{ border: "1px solid black", padding: "4px", textAlign: "center" }}>{Number(item.quantity)}</td>
-                <td style={{ border: "1px solid black", padding: "4px", textAlign: "right" }}>{Number(item.totalPrice).toLocaleString()}</td>
-                <td style={{ border: "1px solid black", padding: "4px" }}></td>
+                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>{idx + 1}</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px" }}>{item.name}</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>Cái</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{Number(item.price).toLocaleString()}</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>{Number(item.quantity)}</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{Number(item.totalPrice).toLocaleString()}</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px" }}></td>
               </tr>
             ))}
             
             <tr className="print-bg-lightorange">
-              <td style={{ border: "1px solid black", padding: "4px", textAlign: "center", fontWeight: "bold", backgroundColor: "#fef0e5" }}>B</td>
-              <td style={{ border: "1px solid black", padding: "4px", fontWeight: "bold", backgroundColor: "#fef0e5" }}>ĐẦU TƯ KHÁC</td>
-              <td style={{ border: "1px solid black", padding: "4px", backgroundColor: "#fef0e5" }}></td>
-              <td style={{ border: "1px solid black", padding: "4px", backgroundColor: "#fef0e5" }}></td>
-              <td style={{ border: "1px solid black", padding: "4px", backgroundColor: "#fef0e5" }}></td>
-              <td style={{ border: "1px solid black", padding: "4px", fontWeight: "bold", textAlign: "right", backgroundColor: "#fef0e5" }}>{proposal.investments.reduce((sum, inv) => sum + Number(inv.totalPrice), 0).toLocaleString()}</td>
-              <td style={{ border: "1px solid black", padding: "4px", backgroundColor: "#fef0e5" }}></td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center", fontWeight: "bold", backgroundColor: "#fef0e5" }}>B</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold", backgroundColor: "#fef0e5" }}>ĐẦU TƯ KHÁC</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fef0e5" }}></td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fef0e5" }}></td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fef0e5" }}></td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold", textAlign: "right", backgroundColor: "#fef0e5" }}>{proposal.investments.reduce((sum, inv) => sum + Number(inv.totalPrice), 0).toLocaleString()}</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fef0e5" }}></td>
             </tr>
             {proposal.investments.map((inv, idx) => (
               <tr key={inv.id}>
-                <td style={{ border: "1px solid black", padding: "4px", textAlign: "center" }}>{idx + 1}</td>
-                <td style={{ border: "1px solid black", padding: "4px" }}>{inv.name}</td>
-                <td style={{ border: "1px solid black", padding: "4px", textAlign: "center" }}>Gói</td>
-                <td style={{ border: "1px solid black", padding: "4px", textAlign: "right" }}>{Number(inv.price).toLocaleString()}</td>
-                <td style={{ border: "1px solid black", padding: "4px", textAlign: "center" }}>{Number(inv.quantity)}</td>
-                <td style={{ border: "1px solid black", padding: "4px", textAlign: "right" }}>{Number(inv.totalPrice).toLocaleString()}</td>
-                <td style={{ border: "1px solid black", padding: "4px" }}></td>
+                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>{idx + 1}</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px" }}>{inv.name}</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>Gói</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{Number(inv.price).toLocaleString()}</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>{Number(inv.quantity)}</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{Number(inv.totalPrice).toLocaleString()}</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px" }}></td>
               </tr>
             ))}
 
             <tr className="print-bg-orange">
-              <td colSpan={5} style={{ border: "1px solid black", padding: "4px", textAlign: "center", fontWeight: "bold", backgroundColor: "#fce4d6" }}>TỔNG CỘNG</td>
-              <td style={{ border: "1px solid black", padding: "4px", fontWeight: "bold", textAlign: "right", backgroundColor: "#fce4d6" }}>{invested.toLocaleString()}</td>
-              <td style={{ border: "1px solid black", padding: "4px", backgroundColor: "#fce4d6" }}></td>
+              <td colSpan={5} style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center", fontWeight: "bold", backgroundColor: "#fce4d6" }}>TỔNG CỘNG</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold", textAlign: "right", backgroundColor: "#fce4d6" }}>{invested.toLocaleString()}</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fce4d6" }}></td>
             </tr>
             <tr className="print-bg-orange">
-              <td colSpan={5} style={{ border: "1px solid black", padding: "4px", textAlign: "center", fontWeight: "bold", backgroundColor: "#fce4d6" }}>CHÊNH LỆCH NGÂN SÁCH</td>
-              <td style={{ border: "1px solid black", padding: "4px", fontWeight: "bold", textAlign: "right", backgroundColor: "#fce4d6" }}>{delta.toLocaleString()}</td>
-              <td style={{ border: "1px solid black", padding: "4px", backgroundColor: "#fce4d6" }}></td>
+              <td colSpan={5} style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center", fontWeight: "bold", backgroundColor: "#fce4d6" }}>CHÊNH LỆCH NGÂN SÁCH</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold", textAlign: "right", backgroundColor: "#fce4d6" }}>{delta.toLocaleString()}</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fce4d6" }}></td>
             </tr>
           </tbody>
         </table>
 
-        <div style={{ marginTop: "15px", textAlign: "right", fontStyle: "italic", paddingRight: "40px", pageBreakInside: "avoid" }}>
+        <div style={{ marginTop: "6px", textAlign: "right", fontStyle: "italic", paddingRight: "30px", pageBreakInside: "avoid" }}>
           TP.HCM, ngày ..... tháng ..... năm 2026
         </div>
 
-        <table style={{ width: "100%", marginTop: "10px", borderCollapse: "collapse", border: "none", pageBreakInside: "avoid" }}>
+        <table style={{ width: "100%", marginTop: "6px", borderCollapse: "collapse", border: "none", pageBreakInside: "avoid" }}>
           <tbody>
             <tr>
               <td style={{ width: "20%", textAlign: "center", fontWeight: "bold", border: "none" }}>Đại diện Sale</td>
@@ -430,7 +446,7 @@ export default async function ProposalDetailPage({
               <td style={{ width: "20%", textAlign: "center", fontWeight: "bold", border: "none" }}>Giám Đốc</td>
             </tr>
             <tr>
-              <td style={{ height: "60px", border: "none" }}></td>
+              <td style={{ height: "40px", border: "none" }}></td>
               <td style={{ border: "none" }}></td>
               <td style={{ border: "none" }}></td>
               <td style={{ border: "none" }}></td>

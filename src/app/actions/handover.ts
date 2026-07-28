@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { cookies } from "next/headers";
+import { clearCache } from "@/lib/cache";
 
 export async function deleteHandoverAdmin(id: string) {
   try {
@@ -40,7 +41,7 @@ export async function createHandover(data: {
     });
 
     // Tạo biên bản mới
-    await prisma.handover.create({
+    const handover = await prisma.handover.create({
       data: {
         proposalId: data.proposalId,
         schoolId: data.schoolId,
@@ -50,9 +51,10 @@ export async function createHandover(data: {
       }
     });
 
+    clearCache();
     revalidatePath("/sale/handovers");
     revalidatePath("/admin/handovers");
-    return { success: true };
+    return { success: true, handoverId: handover.id };
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi tạo biên bản bàn giao" };
   }

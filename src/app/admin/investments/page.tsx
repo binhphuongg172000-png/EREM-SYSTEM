@@ -6,6 +6,13 @@ import SearchInput from "../SearchInput";
 import DeleteInvestmentButton from "./DeleteInvestmentButton";
 import InvestmentHeaderActions from "./InvestmentHeaderActions";
 
+import { getCachedData } from "@/lib/cache";
+
+import { getCurrentUser } from "@/app/actions/auth";
+import { redirect } from "next/navigation";
+
+import { cookies } from "next/headers";
+
 export const dynamic = "force-dynamic";
 
 export default async function InvestmentsPage({
@@ -13,18 +20,22 @@ export default async function InvestmentsPage({
 }: {
   searchParams: Promise<{ search?: string }>;
 }) {
+  const cookieStore = await cookies();
+  const userRole = cookieStore.get("userRole")?.value;
+  if (userRole !== "SUPER_ADMIN") {
+    redirect("/admin/dashboard");
+  }
+
   const resolvedParams = await searchParams;
   const search = resolvedParams?.search || "";
 
-  const investments = await prisma.otherInvestment.findMany({
-    where: {
-      OR: [
-        { name: { contains: search, mode: "insensitive" } },
-        { description: { contains: search, mode: "insensitive" } },
-      ]
-    },
-    orderBy: { createdAt: "desc" }
-  });
+  const cacheKey = `admin_investments_${search}`;
+  const investments = await getCachedData(cacheKey, async () => {
+    return prisma.otherInvestment.findMany({
+      where: search ? { name: { contains: search, mode: "insensitive" } } : {},
+      orderBy: { createdAt: "desc" }
+    });
+  }, 15);
 
   return (
     <div>
@@ -33,7 +44,7 @@ export default async function InvestmentsPage({
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", gap: "1rem", flexWrap: "wrap" }}>
-        <SearchInput placeholder="Tìm tên hạng mục, mô tả..." />
+        <SearchInput placeholder="Tìm theo tên hạng mục..." />
         <Link href="/admin/investments/new" className="btn btn-primary">+ Thêm Hạng mục</Link>
       </div>
 

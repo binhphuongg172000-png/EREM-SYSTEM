@@ -3,6 +3,8 @@ import prisma from "@/lib/prisma";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 
+import { getCachedData } from "@/lib/cache";
+
 export const dynamic = "force-dynamic";
 
 export default async function HandoverDetailPage({
@@ -13,20 +15,23 @@ export default async function HandoverDetailPage({
   const resolvedParams = await params;
   const { id } = resolvedParams;
 
-  const handover = await prisma.handover.findUnique({
-    where: { id },
-    include: {
-      school: true,
-      sender: true,
-      receiver: true,
-      proposal: {
-        include: {
-          items: true,
-          investments: true,
+  const cacheKey = `admin_handover_detail_${id}`;
+  const handover = await getCachedData(cacheKey, async () => {
+    return prisma.handover.findUnique({
+      where: { id },
+      include: {
+        school: true,
+        sender: true,
+        receiver: true,
+        proposal: {
+          include: {
+            items: true,
+            investments: true,
+          }
         }
       }
-    }
-  });
+    });
+  }, 30);
 
   if (!handover) {
     notFound();

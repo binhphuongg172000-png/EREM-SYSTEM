@@ -6,6 +6,13 @@ import SearchInput from "../SearchInput";
 import DeleteItemButton from "./DeleteItemButton";
 import ItemHeaderActions from "./ItemHeaderActions";
 
+import { getCachedData } from "@/lib/cache";
+
+import { getCurrentUser } from "@/app/actions/auth";
+import { redirect } from "next/navigation";
+
+import { cookies } from "next/headers";
+
 export const dynamic = "force-dynamic";
 
 export default async function ItemsPage({
@@ -13,19 +20,22 @@ export default async function ItemsPage({
 }: {
   searchParams: Promise<{ search?: string }>;
 }) {
+  const cookieStore = await cookies();
+  const userRole = cookieStore.get("userRole")?.value;
+  if (userRole !== "SUPER_ADMIN") {
+    redirect("/admin/dashboard");
+  }
+
   const resolvedParams = await searchParams;
   const search = resolvedParams?.search || "";
   
-  const items = await prisma.item.findMany({
-    where: {
-      OR: [
-        { name: { contains: search, mode: "insensitive" } },
-        { code: { contains: search, mode: "insensitive" } },
-        { specifications: { contains: search, mode: "insensitive" } },
-      ]
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const cacheKey = `admin_items_${search}`;
+  const items = await getCachedData(cacheKey, async () => {
+    return prisma.item.findMany({
+      where: search ? { name: { contains: search, mode: "insensitive" } } : {},
+      orderBy: { createdAt: "desc" },
+    });
+  }, 15);
 
   return (
     <div>
@@ -34,7 +44,7 @@ export default async function ItemsPage({
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", gap: "1rem", flexWrap: "wrap" }}>
-        <SearchInput placeholder="Tìm tên thiết bị, cấu hình..." />
+        <SearchInput placeholder="Tìm theo tên thiết bị..." />
         <Link href="/admin/items/new" className="btn btn-primary">+ Thêm Thiết bị</Link>
       </div>
 

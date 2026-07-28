@@ -4,7 +4,37 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import ProposalForm from "./ProposalForm";
 
+import { getCachedData } from "@/lib/cache";
+
 export const dynamic = "force-dynamic";
+
+export async function getNewProposalData(userId: string) {
+  const cacheKey = `sale_new_proposal_${userId}`;
+  return getCachedData(cacheKey, async () => {
+    const [rawSchools, catalogItems, catalogInvestments] = await Promise.all([
+      prisma.school.findMany({
+        where: { saleId: userId },
+        include: {
+          proposals: {
+            orderBy: { updatedAt: "desc" },
+            take: 1,
+            include: {
+              items: true,
+              investments: true,
+            }
+          }
+        }
+      }),
+      prisma.item.findMany({
+        select: { id: true, name: true, specifications: true, standardPrice: true, unit: true }
+      }),
+      prisma.otherInvestment.findMany({
+        select: { id: true, name: true, description: true, standardPrice: true, unit: true }
+      })
+    ]);
+    return { rawSchools, catalogItems, catalogInvestments };
+  }, 60);
+}
 
 export default async function NewProposalPage({
   searchParams,
@@ -18,20 +48,7 @@ export default async function NewProposalPage({
   const resolvedSearchParams = await searchParams;
   const initialSchoolId = resolvedSearchParams?.schoolId || "";
 
-  // Fetch only schools assigned to this Sale, including their latest proposal
-  const rawSchools = await prisma.school.findMany({
-    where: { saleId: userId },
-    include: {
-      proposals: {
-        orderBy: { updatedAt: "desc" },
-        take: 1,
-        include: {
-          items: true,
-          investments: true,
-        }
-      }
-    }
-  });
+  const { rawSchools, catalogItems, catalogInvestments } = await getNewProposalData(userId);
 
   const serializedSchools = rawSchools.map(s => {
     const latestProposal = s.proposals[0];
@@ -39,6 +56,8 @@ export default async function NewProposalPage({
       id: s.id,
       name: s.name,
       address: s.address,
+      principalName: s.principalName,
+      contractNumber: s.contractNumber,
       investedClassrooms: s.investedClassrooms,
       oldStudents: s.oldStudents,
       newStudents: s.newStudents,
@@ -60,16 +79,6 @@ export default async function NewProposalPage({
         }))
       } : null
     };
-  });
-
-  // Fetch catalog items
-  const catalogItems = await prisma.item.findMany({
-    select: { id: true, name: true, specifications: true, standardPrice: true, unit: true }
-  });
-
-  // Fetch catalog investments
-  const catalogInvestments = await prisma.otherInvestment.findMany({
-    select: { id: true, name: true, description: true, standardPrice: true, unit: true }
   });
 
   const serializedItems = catalogItems.map(item => ({

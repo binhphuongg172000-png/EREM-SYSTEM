@@ -1,15 +1,23 @@
 import { PrismaClient } from '@prisma/client';
+import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
 
 async function main() {
   console.log('Seeding database...');
 
-  // Get SALE users
-  const saleUsers = await prisma.user.findMany({ where: { role: 'SALE', status: 'ACTIVE' } });
+  // Get SALE users (or create default SALE users if none exist)
+  let saleUsers = await prisma.user.findMany({ where: { role: 'SALE', status: 'ACTIVE' } });
   if (saleUsers.length === 0) {
-    console.error('Không tìm thấy SALE user nào!');
-    process.exit(1);
+    console.log('Tạo tài khoản SALE mẫu...');
+    const hashedPassword = await bcrypt.hash('123', 10);
+    const sale1 = await prisma.user.create({
+      data: { username: 'sale1', password: hashedPassword, role: 'SALE', status: 'ACTIVE', name: 'Nguyễn Văn Sale 1', email: 'sale1@eremsystem.local' }
+    });
+    const sale2 = await prisma.user.create({
+      data: { username: 'sale2', password: hashedPassword, role: 'SALE', status: 'ACTIVE', name: 'Trần Thị Sale 2', email: 'sale2@eremsystem.local' }
+    });
+    saleUsers = [sale1, sale2];
   }
 
   // =============================================

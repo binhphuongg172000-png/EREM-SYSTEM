@@ -5,6 +5,8 @@ import SearchInput from "../SearchInput";
 import SaleFilterSelect from "./SaleFilterSelect";
 import SchoolRowActions from "./SchoolRowActions";
 
+import { getCachedData } from "@/lib/cache";
+
 export const dynamic = "force-dynamic";
 
 export default async function SchoolsPage({
@@ -16,27 +18,27 @@ export default async function SchoolsPage({
   const search = resolvedParams?.search || "";
   const saleId = resolvedParams?.saleId || undefined;
 
-  const sales = await prisma.user.findMany({
-    where: { role: "SALE" },
-    select: { id: true, name: true },
-    orderBy: { name: "asc" }
-  });
-
-  const schools = await prisma.school.findMany({
-    where: {
-      AND: [
-        {
-          OR: [
-            { name: { contains: search, mode: "insensitive" } },
-            { address: { contains: search, mode: "insensitive" } },
+  const cacheKey = `admin_schools_${search}_${saleId || "all"}`;
+  const { sales, schools } = await getCachedData(cacheKey, async () => {
+    const [sales, schools] = await Promise.all([
+      prisma.user.findMany({
+        where: { role: "SALE" },
+        select: { id: true, name: true },
+        orderBy: { name: "asc" }
+      }),
+      prisma.school.findMany({
+        where: {
+          AND: [
+            ...(search ? [{ name: { contains: search, mode: "insensitive" as const } }] : []),
+            ...(saleId ? [{ saleId }] : [])
           ]
         },
-        ...(saleId ? [{ saleId }] : [])
-      ]
-    },
-    include: { sale: true },
-    orderBy: { createdAt: "desc" },
-  });
+        include: { sale: true },
+        orderBy: { createdAt: "desc" },
+      })
+    ]);
+    return { sales, schools };
+  }, 15);
 
   return (
     <div>
@@ -46,7 +48,7 @@ export default async function SchoolsPage({
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", gap: "1rem", flexWrap: "wrap" }}>
         <div style={{ display: "flex", gap: "1rem", flex: "1 1 auto", flexWrap: "wrap" }}>
-          <SearchInput placeholder="Tìm tên trường, địa chỉ..." />
+          <SearchInput placeholder="Tìm theo tên trường học..." />
           <SaleFilterSelect sales={sales} />
         </div>
         <Link href="/admin/schools/new" className="btn btn-primary whitespace-nowrap">+ Thêm Trường học</Link>

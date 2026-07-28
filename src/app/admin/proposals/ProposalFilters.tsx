@@ -93,6 +93,7 @@ export default function ProposalFilters({ sales, currentSaleId, currentLatest, c
         <option value="init">🟠 Khởi tạo</option>
         <option value="locked">🔴 Đang thực hiện</option>
         <option value="completed">🟢 Hoàn thành</option>
+        <option value="overdue">⚠️ Quá 5 ngày chưa thực hiện</option>
       </select>
 
       {/* Sale filter select */}

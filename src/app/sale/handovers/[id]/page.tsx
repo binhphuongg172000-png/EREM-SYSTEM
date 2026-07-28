@@ -4,6 +4,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import PrintButton from "@/app/sale/proposals/[id]/PrintButton";
 
+import { getCachedData } from "@/lib/cache";
+
 export const dynamic = "force-dynamic";
 
 export default async function SaleHandoverDetailPage({
@@ -14,20 +16,23 @@ export default async function SaleHandoverDetailPage({
   const resolvedParams = await params;
   const { id } = resolvedParams;
 
-  const handover = await prisma.handover.findUnique({
-    where: { id },
-    include: {
-      school: true,
-      sender: true,
-      receiver: true,
-      proposal: {
-        include: {
-          items: true,
-          investments: true,
+  const cacheKey = `sale_handover_detail_${id}`;
+  const handover = await getCachedData(cacheKey, async () => {
+    return prisma.handover.findUnique({
+      where: { id },
+      include: {
+        school: true,
+        sender: true,
+        receiver: true,
+        proposal: {
+          include: {
+            items: true,
+            investments: true,
+          }
         }
       }
-    }
-  });
+    });
+  }, 30);
 
   if (!handover) {
     notFound();
@@ -175,7 +180,7 @@ export default async function SaleHandoverDetailPage({
         </div>
 
         <div style={{ marginBottom: "10px" }}>
-          Số phòng lắp đặt: <strong>{handover.proposal?.school?.investedClassrooms || "..."}</strong> 
+          Số phòng lắp đặt: <strong>{handover.school?.investedClassrooms || "..."}</strong> 
           <span style={{ display: "inline-block", width: "50px" }}></span> 
           Tên phòng: ..............................................................
         </div>

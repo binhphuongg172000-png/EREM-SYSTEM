@@ -3,6 +3,7 @@
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
+import { clearCache } from "@/lib/cache";
 
 export async function createUser(data: any) {
   try {
@@ -36,6 +37,7 @@ export async function createUser(data: any) {
       },
     });
 
+    clearCache();
     revalidatePath("/admin/users");
     return { success: true, user: newUser };
   } catch (error: any) {

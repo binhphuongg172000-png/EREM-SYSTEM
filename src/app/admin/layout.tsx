@@ -19,7 +19,7 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [userName, setUserName] = useState("Admin");
+  const [userName, setUserName] = useState("Super Admin");
   const [userRole, setUserRole] = useState("ADMIN");
 
   useEffect(() => {
@@ -27,10 +27,25 @@ export default function AdminLayout({
     document.body.classList.remove("light");
     localStorage.removeItem("theme");
 
+    const cachedName = localStorage.getItem("userName");
+    const cachedRole = localStorage.getItem("userRole");
+    if (cachedRole === "ADMIN") setUserName("Admin");
+    else if (cachedName && cachedName !== "System Administrator") setUserName(cachedName);
+    else setUserName("Super Admin");
+    if (cachedRole) setUserRole(cachedRole);
+
     getCurrentUser().then((user) => {
       if (user) {
-        setUserName(user.name);
+        let displayName = user.name;
+        if (user.role === "ADMIN") {
+          displayName = "Admin";
+        } else if (user.role === "SUPER_ADMIN" || user.name === "System Administrator") {
+          displayName = "Super Admin";
+        }
+        setUserName(displayName);
         setUserRole(user.role);
+        localStorage.setItem("userName", displayName);
+        localStorage.setItem("userRole", user.role);
       } else {
         router.push("/login");
       }
@@ -38,6 +53,8 @@ export default function AdminLayout({
   }, [router]);
 
   const handleLogout = async () => {
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userRole");
     await logoutAction();
     router.push("/login");
   };
@@ -61,6 +78,8 @@ export default function AdminLayout({
           <div className="nav-group-label">HỆ THỐNG</div>
           <Link
             href="/admin/dashboard"
+            prefetch={true}
+            onMouseEnter={() => router.prefetch("/admin/dashboard")}
             className={`nav-item ${pathname === "/admin/dashboard" ? "active" : ""}`}
           >
             <LayoutDashboard className="nav-item-icon" style={{ color: "#38bdf8" }} size={18} />
@@ -69,6 +88,8 @@ export default function AdminLayout({
           {userRole === "SUPER_ADMIN" && (
             <Link
               href="/admin/users"
+              prefetch={true}
+              onMouseEnter={() => router.prefetch("/admin/users")}
               className={`nav-item ${pathname?.startsWith("/admin/users") ? "active" : ""}`}
             >
               <Users className="nav-item-icon" style={{ color: "#34d399" }} size={18} />
@@ -79,6 +100,8 @@ export default function AdminLayout({
           <div className="nav-group-label">DANH MỤC</div>
           <Link
             href="/admin/schools"
+            prefetch={true}
+            onMouseEnter={() => router.prefetch("/admin/schools")}
             className={`nav-item ${pathname?.startsWith("/admin/schools") ? "active" : ""}`}
           >
             <SchoolIcon className="nav-item-icon" style={{ color: "#fbbf24" }} size={18} />
@@ -88,6 +111,8 @@ export default function AdminLayout({
             <>
               <Link
                 href="/admin/items"
+                prefetch={true}
+                onMouseEnter={() => router.prefetch("/admin/items")}
                 className={`nav-item ${pathname?.startsWith("/admin/items") ? "active" : ""}`}
               >
                 <Laptop className="nav-item-icon" style={{ color: "#c084fc" }} size={18} />
@@ -95,6 +120,8 @@ export default function AdminLayout({
               </Link>
               <Link
                 href="/admin/investments"
+                prefetch={true}
+                onMouseEnter={() => router.prefetch("/admin/investments")}
                 className={`nav-item ${pathname?.startsWith("/admin/investments") ? "active" : ""}`}
               >
                 <Coins className="nav-item-icon" style={{ color: "#f472b6" }} size={18} />
@@ -106,6 +133,8 @@ export default function AdminLayout({
           <div className="nav-group-label">HỒ SƠ & GIAO DỊCH</div>
           <Link
             href="/admin/proposals"
+            prefetch={true}
+            onMouseEnter={() => router.prefetch("/admin/proposals")}
             className={`nav-item ${pathname?.startsWith("/admin/proposals") ? "active" : ""}`}
           >
             <FileText className="nav-item-icon" style={{ color: "#818cf8" }} size={18} />
@@ -113,6 +142,8 @@ export default function AdminLayout({
           </Link>
           <Link
             href="/admin/handovers"
+            prefetch={true}
+            onMouseEnter={() => router.prefetch("/admin/handovers")}
             className={`nav-item ${pathname?.startsWith("/admin/handovers") ? "active" : ""}`}
           >
             <ClipboardCheck className="nav-item-icon" style={{ color: "#2dd4bf" }} size={18} />

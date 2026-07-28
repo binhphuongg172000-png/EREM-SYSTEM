@@ -3,6 +3,8 @@
 import prisma from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { revalidatePath } from "next/cache";
+import { clearCache } from "@/lib/cache";
+import crypto from "crypto";
 
 export async function createProposal(data: any) {
   try {
@@ -10,44 +12,38 @@ export async function createProposal(data: any) {
     const saleId = cookieStore.get("userId")?.value;
     if (!saleId) throw new Error("Chưa đăng nhập");
 
-    // Check if school is locked
-    const school = await prisma.school.findUnique({ where: { id: data.schoolId } });
-    if (!school) throw new Error("Trường không tồn tại");
-    if (school.isLocked) throw new Error("Trường học này đã bị Admin khóa đóng băng dữ liệu.");
+    const proposalId = crypto.randomUUID();
 
-    // Start transaction
-    const proposal = await prisma.$transaction(async (tx) => {
-      // Update school info
-      await tx.school.update({
+    const ops: any[] = [
+      prisma.school.update({
         where: { id: data.schoolId },
         data: {
           investedClassrooms: Number(data.schoolDetails?.investedClassrooms) || 0,
           oldStudents: Number(data.schoolDetails?.oldStudents) || 0,
           newStudents: Number(data.schoolDetails?.newStudents) || 0,
         }
-      });
-
-      // Update old proposals to CLOSED
-      await tx.proposal.updateMany({
+      }),
+      prisma.proposal.updateMany({
         where: { schoolId: data.schoolId },
         data: { status: "CLOSED" }
-      });
-
-      // Always create a new proposal to keep history
-      const currentProposal = await tx.proposal.create({
+      }),
+      prisma.proposal.create({
         data: {
+          id: proposalId,
           schoolId: data.schoolId,
           saleId: saleId,
           status: "PENDING",
           allocatedBudget: data.allocatedBudget,
           investedBudget: data.investedBudget,
         },
-      });
+      })
+    ];
 
-      if (data.items && data.items.length > 0) {
-        await tx.proposalItem.createMany({
+    if (data.items && data.items.length > 0) {
+      ops.push(
+        prisma.proposalItem.createMany({
           data: data.items.map((i: any) => ({
-            proposalId: currentProposal.id,
+            proposalId,
             name: i.name,
             specifications: i.specifications || "",
             accessories: i.accessories || "",
@@ -55,29 +51,32 @@ export async function createProposal(data: any) {
             price: Number(i.price),
             totalPrice: Number(i.quantity) * Number(i.price),
           })),
-        });
-      }
+        })
+      );
+    }
 
-      if (data.investments && data.investments.length > 0) {
-        await tx.proposalInvestment.createMany({
+    if (data.investments && data.investments.length > 0) {
+      ops.push(
+        prisma.proposalInvestment.createMany({
           data: data.investments.map((i: any) => ({
-            proposalId: currentProposal.id,
+            proposalId,
             name: i.name,
             description: i.specifications || i.description || "",
             quantity: Number(i.quantity),
             price: Number(i.price),
             totalPrice: Number(i.quantity) * Number(i.price),
           })),
-        });
-      }
+        })
+      );
+    }
 
-      return currentProposal;
-    });
+    await prisma.$transaction(ops);
 
+    clearCache();
     revalidatePath("/sale/proposals");
     revalidatePath("/admin/proposals");
     
-    return { success: true, id: proposal.id };
+    return { success: true, id: proposalId };
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi tạo dự trù" };
   }

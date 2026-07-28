@@ -14,7 +14,7 @@ const editUserSchema = z.object({
   name: z.string().min(2, "Họ tên phải có ít nhất 2 ký tự"),
   email: z.string().email("Email không hợp lệ").or(z.literal("")),
   role: z.enum(["SUPER_ADMIN", "ADMIN", "SALE"]),
-  password: z.string().optional(),
+  password: z.string().min(3, "Mật khẩu ít nhất 3 ký tự").optional().or(z.literal("")),
 });
 
 type EditUserFormValues = z.infer<typeof editUserSchema>;

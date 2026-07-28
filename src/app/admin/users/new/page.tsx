@@ -11,8 +11,8 @@ import { toast } from "@/components/Toast";
 import { UserPlus, ArrowLeft } from "lucide-react";
 
 const userSchema = z.object({
-  username: z.string().min(3, "Tên đăng nhập ít nhất 3 ký tự"),
-  password: z.string().min(6, "Mật khẩu ít nhất 6 ký tự"),
+  username: z.string().min(1, "Vui lòng nhập tên đăng nhập"),
+  password: z.string().min(3, "Mật khẩu ít nhất 3 ký tự"),
   name: z.string().min(1, "Vui lòng nhập họ và tên"),
   email: z.string().email("Email không hợp lệ").optional().or(z.literal("")),
   role: z.enum(["SUPER_ADMIN", "ADMIN", "SALE"]),

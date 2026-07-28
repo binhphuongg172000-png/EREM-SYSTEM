@@ -1,11 +1,14 @@
 import React from "react";
 import prisma from "@/lib/prisma";
+import Link from "next/link";
 import SearchInput from "../SearchInput";
 import ProposalRowActions from "./ProposalRowActions";
 import ProposalFilters from "./ProposalFilters";
 import ProposalStatusSelect from "./ProposalStatusSelect";
-import { getCurrentUser } from "@/app/actions/auth";
-import { Building2, Calendar, TrendingUp, TrendingDown, UserCircle } from "lucide-react";
+import { getCachedData } from "@/lib/cache";
+import { vietnameseIncludes } from "@/lib/vietnamese";
+import { Building2, Calendar, TrendingUp, TrendingDown, UserCircle, AlertTriangle } from "lucide-react";
+import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -14,8 +17,6 @@ export default async function AdminProposalsPage({
 }: {
   searchParams: Promise<{ search?: string; saleId?: string; latest?: string; budget?: string; status?: string }>;
 }) {
-  const currentUser = await getCurrentUser();
-  const isSysAdmin = currentUser?.role === "SUPER_ADMIN";
   const resolvedParams = await searchParams;
   const search = resolvedParams?.search || "";
   const saleId = resolvedParams?.saleId || "";
@@ -23,40 +24,59 @@ export default async function AdminProposalsPage({
   const budget = resolvedParams?.budget || "";
   const statusFilter = resolvedParams?.status || "";
 
-  const sales = await prisma.user.findMany({
-    where: { role: "SALE" },
-    select: { id: true, name: true, username: true },
-    orderBy: { name: "asc" },
-  });
+  const cookieStore = await cookies();
+  const userRole = cookieStore.get("userRole")?.value;
+  const isSysAdmin = userRole === "SUPER_ADMIN";
+  const isSuperAdmin = userRole === "SUPER_ADMIN";
 
-  const whereClause: any = {};
-  if (saleId) {
-    whereClause.saleId = saleId;
-  }
-  if (search) {
-    whereClause.OR = [
-      { school: { name: { contains: search, mode: "insensitive" } } },
-      { school: { address: { contains: search, mode: "insensitive" } } },
-      { sale: { name: { contains: search, mode: "insensitive" } } },
-    ];
-  }
-  if (statusFilter === "init") {
-    whereClause.status = { notIn: ["COMPLETED"] };
-    whereClause.school = { ...whereClause.school, isLocked: false };
-  } else if (statusFilter === "locked") {
-    whereClause.status = { notIn: ["COMPLETED"] };
-    whereClause.school = { ...whereClause.school, isLocked: true };
-  } else if (statusFilter === "completed") {
-    whereClause.status = "COMPLETED";
-  }
+  const nowTime = Date.now();
+  const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
 
-  const rawProposals = await prisma.proposal.findMany({
-    where: whereClause,
-    include: {
-      school: true,
-      sale: true,
-    },
-    orderBy: { createdAt: "desc" },
+  const { sales, rawProposals: allProposals } = await getCachedData("admin_all_proposals_data", async () => {
+    const [sales, rawProposals] = await Promise.all([
+      prisma.user.findMany({
+        where: { role: "SALE" },
+        select: { id: true, name: true, username: true },
+        orderBy: { name: "asc" },
+      }),
+      prisma.proposal.findMany({
+        include: {
+          school: true,
+          sale: true,
+        },
+        orderBy: { createdAt: "desc" },
+      })
+    ]);
+    return { sales, rawProposals };
+  }, 30);
+
+  // Count total overdue proposals across system (>5 days not in progress/completed)
+  const overdueCount = allProposals.filter(p => {
+    if (p.status === "COMPLETED" || p.status === "APPROVED") return false;
+    const createdTime = new Date(p.createdAt).getTime();
+    return (nowTime - createdTime) >= FIVE_DAYS_MS;
+  }).length;
+
+  // Filter in memory for instant status/sale/search switching
+  const rawProposals = allProposals.filter(p => {
+    if (saleId && p.saleId !== saleId) return false;
+    if (search && !(
+      vietnameseIncludes(p.school?.name, search) ||
+      vietnameseIncludes(p.school?.address, search) ||
+      vietnameseIncludes(p.sale?.name, search)
+    )) return false;
+    if (statusFilter === "init") {
+      if (p.status === "COMPLETED" || p.school?.isLocked) return false;
+    } else if (statusFilter === "locked") {
+      if (p.status === "COMPLETED" || !p.school?.isLocked) return false;
+    } else if (statusFilter === "completed") {
+      if (p.status !== "COMPLETED") return false;
+    } else if (statusFilter === "overdue") {
+      if (p.status === "COMPLETED" || p.status === "APPROVED") return false;
+      const createdTime = new Date(p.createdAt).getTime();
+      if ((nowTime - createdTime) < FIVE_DAYS_MS) return false;
+    }
+    return true;
   });
 
   // If latest === "true", filter to keep only the newest proposal per school
@@ -77,10 +97,10 @@ export default async function AdminProposalsPage({
     displayProposals = displayProposals.filter(p => Number(p.allocatedBudget) - Number(p.investedBudget) < 0);
   }
 
-  // Calculate stats based on displayed proposals
-  const totalProposals = displayProposals.length;
-  const completedCount = displayProposals.filter(p => p.status === "COMPLETED").length;
-  const lockedCount = displayProposals.filter(p => !["COMPLETED"].includes(p.status) && (p.school?.isLocked || p.status === "APPROVED")).length;
+  // System Total Stats (Fixed metrics from total dataset, unchanged by filters)
+  const totalProposals = allProposals.length;
+  const completedCount = allProposals.filter(p => p.status === "COMPLETED").length;
+  const lockedCount = allProposals.filter(p => p.status !== "COMPLETED" && (p.school?.isLocked || p.status === "APPROVED")).length;
   const initCount = totalProposals - completedCount - lockedCount;
 
   return (
@@ -114,7 +134,7 @@ export default async function AdminProposalsPage({
       `}</style>
 
       {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "1.5rem", flexWrap: "wrap", gap: "1rem" }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: "1.25rem", flexWrap: "wrap", gap: "1rem" }}>
         <div>
           <h1 style={{ fontSize: "1.5rem", fontWeight: 800, color: "#ffffff", margin: 0, letterSpacing: "-0.02em" }}>Kho Dự trù Toàn Hệ thống</h1>
           <p style={{ color: "#94a3b8", fontSize: "0.8rem", marginTop: "0.25rem", fontWeight: 500, margin: "0.25rem 0 0 0" }}>
@@ -122,33 +142,110 @@ export default async function AdminProposalsPage({
           </p>
         </div>
       </div>
+            {/* SADMIN OVERDUE WARNING BANNER */}
+      {overdueCount > 0 && (
+        <div style={{
+          borderRadius: "12px",
+          border: "1px solid rgba(244, 63, 94, 0.4)",
+          background: "linear-gradient(135deg, rgba(225, 29, 72, 0.12) 0%, rgba(15, 23, 42, 0.98) 100%)",
+          padding: "1rem 1.25rem",
+          marginBottom: "1.25rem",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "space-between",
+          flexWrap: "wrap",
+          gap: "0.85rem",
+          boxShadow: "0 8px 30px rgba(244, 63, 94, 0.12)",
+          position: "relative",
+          overflow: "hidden"
+        }}>
+          {/* Left Glowing Accent Bar */}
+          <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: "4px", background: "#f43f5e", boxShadow: "0 0 10px #f43f5e" }} />
 
-      {/* Mini Stats */}
+          <div style={{ display: "flex", alignItems: "center", gap: "0.85rem", paddingLeft: "0.35rem" }}>
+            <div style={{
+              width: "36px", height: "36px", borderRadius: "10px",
+              background: "rgba(244, 63, 94, 0.15)", border: "1px solid rgba(244, 63, 94, 0.3)",
+              display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0
+            }}>
+              <AlertTriangle size={20} color="#f43f5e" />
+            </div>
+            <div>
+              <div style={{ fontWeight: 800, color: "#ffffff", fontSize: "0.925rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                MỤC CẢNH BÁO: Có {overdueCount} dự trù quá 5 ngày chưa chuyển sang Đang thực hiện
+              </div>
+              <div style={{ color: "#ffe4e6", fontSize: "0.825rem", marginTop: "0.2rem", opacity: 0.9 }}>
+                Các dự trù này đang bị tạm dừng ở bước Khởi tạo. Vui lòng kiểm tra và đôn đốc bộ phận liên quan.
+              </div>
+            </div>
+          </div>
+
+          <Link
+            href="/admin/proposals?status=overdue"
+            style={{
+              background: "linear-gradient(135deg, #f43f5e, #e11d48)",
+              color: "#ffffff",
+              boxShadow: "0 4px 14px rgba(244, 63, 94, 0.35)",
+              border: "none",
+              fontWeight: 700,
+              fontSize: "0.8rem",
+              padding: "0.5rem 1rem",
+              borderRadius: "8px",
+              textDecoration: "none",
+              display: "inline-flex",
+              alignItems: "center",
+              gap: "0.4rem",
+              whiteSpace: "nowrap",
+              transition: "all 0.2s ease"
+            }}
+          >
+            <AlertTriangle size={15} /> Xem ngay {overdueCount} dự trù trễ →
+          </Link>
+        </div>
+      )}
+
+      {/* Mini Stats (Clickable filters) */}
       <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
-        <div className="stat-mini">
+        <Link href="/admin/proposals" className="stat-mini" style={{ textDecoration: "none", cursor: "pointer" }}>
           <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#38bdf8" }} />
           <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Tổng cộng</span>
           <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#ffffff" }}>{totalProposals}</span>
-        </div>
-        <div className="stat-mini">
+        </Link>
+        <Link href="/admin/proposals?status=init" className="stat-mini" style={{ textDecoration: "none", cursor: "pointer" }}>
           <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#fbbf24" }} />
           <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Khởi tạo</span>
           <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#fbbf24" }}>{initCount}</span>
-        </div>
-        <div className="stat-mini">
-          <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#f43f5e" }} />
+        </Link>
+        <Link href="/admin/proposals?status=locked" className="stat-mini" style={{ textDecoration: "none", cursor: "pointer" }}>
+          <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#3b82f6" }} />
           <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Đang thực hiện</span>
-          <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#f43f5e" }}>{lockedCount}</span>
-        </div>
-        <div className="stat-mini">
+          <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#3b82f6" }}>{lockedCount}</span>
+        </Link>
+        <Link href="/admin/proposals?status=completed" className="stat-mini" style={{ textDecoration: "none", cursor: "pointer" }}>
           <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#34d399" }} />
           <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Hoàn thành</span>
           <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#34d399" }}>{completedCount}</span>
-        </div>
+        </Link>
+        <Link
+          href="/admin/proposals?status=overdue"
+          className="stat-mini"
+          style={{
+            textDecoration: "none",
+            cursor: "pointer",
+            border: statusFilter === "overdue" ? "1px solid #f43f5e" : "1px solid rgba(244,63,94,0.4)",
+            background: statusFilter === "overdue" ? "rgba(244,63,94,0.25)" : "rgba(244,63,94,0.1)",
+          }}
+        >
+          <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#f43f5e", boxShadow: "0 0 8px #f43f5e" }} />
+          <span style={{ fontSize: "0.8rem", color: "#fca5a5", fontWeight: 600 }}>Quá 5 ngày chưa làm</span>
+          <span style={{ fontSize: "0.9rem", fontWeight: 800, color: "#f43f5e" }}>{overdueCount}</span>
+        </Link>
       </div>
 
+
+
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", gap: "0.75rem", flexWrap: "wrap" }}>
-        <SearchInput placeholder="Tìm trường, địa chỉ, tên sale..." />
+        <SearchInput placeholder="Tìm theo tên trường học..." />
         <ProposalFilters
           sales={sales}
           currentSaleId={saleId}
@@ -193,6 +290,10 @@ export default async function AdminProposalsPage({
               displayProposals.map((p) => {
                 const delta = Number(p.allocatedBudget) - Number(p.investedBudget);
                 
+                const createdTime = new Date(p.createdAt).getTime();
+                const isOverdue = p.status !== "COMPLETED" && p.status !== "APPROVED" && (nowTime - createdTime) >= FIVE_DAYS_MS;
+                const daysStalled = Math.floor((nowTime - createdTime) / (24 * 60 * 60 * 1000));
+
                 const serializedProposal = {
                   ...p,
                   allocatedBudget: Number(p.allocatedBudget),
@@ -200,7 +301,7 @@ export default async function AdminProposalsPage({
                 };
 
                 return (
-                  <tr key={p.id} className="proposal-row">
+                  <tr key={p.id} className="proposal-row" style={isOverdue ? { background: "rgba(244, 63, 94, 0.03)" } : {}}>
                     <td style={{ paddingLeft: "1.25rem", overflow: "hidden", textOverflow: "ellipsis" }}>
                       <div className="school-name">
                         <Building2 size={14} color="#64748b" style={{ flexShrink: 0 }} />
@@ -215,9 +316,16 @@ export default async function AdminProposalsPage({
                       </div>
                     </td>
                     <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#94a3b8", fontSize: "0.85rem", whiteSpace: "nowrap" }}>
-                        <Calendar size={13} color="#475569" />
-                        {new Date(p.createdAt).toLocaleString("vi-VN", { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                      <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#94a3b8", fontSize: "0.85rem", whiteSpace: "nowrap" }}>
+                          <Calendar size={13} color="#475569" />
+                          {new Date(p.createdAt).toLocaleString("vi-VN", { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        </div>
+                        {isOverdue && (
+                          <span style={{ fontSize: "0.68rem", fontWeight: 800, color: "#fb7185", background: "rgba(244,63,94,0.15)", border: "1px solid rgba(244,63,94,0.3)", padding: "0.1rem 0.4rem", borderRadius: "6px", width: "fit-content" }}>
+                            🔥 Quá {daysStalled} ngày chưa làm
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td style={{ textAlign: "right", whiteSpace: "nowrap" }}>
@@ -230,7 +338,7 @@ export default async function AdminProposalsPage({
                       <ProposalStatusSelect proposal={serializedProposal} isSysAdmin={isSysAdmin} />
                     </td>
                     <td style={{ textAlign: "right", paddingRight: "1.25rem" }}>
-                      <ProposalRowActions proposal={serializedProposal} />
+                      <ProposalRowActions proposal={serializedProposal} isSuperAdmin={isSuperAdmin} />
                     </td>
                   </tr>
                 );

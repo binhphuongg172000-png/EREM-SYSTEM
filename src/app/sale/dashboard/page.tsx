@@ -1,7 +1,14 @@
 import React from "react";
 import prisma from "@/lib/prisma";
+import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { getCachedData } from "@/lib/cache";
+import SaleDashboardCharts from "./SaleDashboardCharts";
+import { 
+  Building2, FileText, Coins, Wallet, TrendingUp, TrendingDown, 
+  AlertTriangle, CheckCircle2, Eye, Pencil, Plus, Clock, Lock 
+} from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -10,124 +17,401 @@ export default async function SaleDashboardPage() {
   const userId = cookieStore.get("userId")?.value;
   if (!userId) redirect("/login");
 
-  // Fetch stats for this Sale
-  const schools = await prisma.school.findMany({
-    where: { saleId: userId },
-    include: {
-      proposals: {
-        orderBy: { updatedAt: "desc" },
-        take: 1,
-      }
-    }
-  });
+  const { 
+    totalSchools, totalProposals, initCount, lockedCount, completedCount,
+    totalAllocated, totalInvested, delta, negativeSchools, positiveSchools, schoolBudgets 
+  } = await getCachedData(
+    `sale_dashboard_${userId}`,
+    async () => {
+      const schools = await prisma.school.findMany({
+        where: { saleId: userId },
+        include: {
+          proposals: {
+            orderBy: { updatedAt: "desc" },
+            take: 1,
+          }
+        }
+      });
 
-  const proposals = schools
-    .map(s => s.proposals[0] ? { ...s.proposals[0], school: s } : null)
-    .filter(Boolean) as NonNullable<any>[];
+      const proposals = schools
+        .map(s => s.proposals[0] ? { ...s.proposals[0], school: s } : null)
+        .filter(Boolean) as NonNullable<any>[];
 
-  const totalSchools = schools.length;
-  const totalProposals = proposals.length;
-  
-  let totalAllocated = 0;
-  let totalInvested = 0;
+      const totalSchools = schools.length;
+      const totalProposals = proposals.length;
 
-  proposals.forEach(p => {
-    totalAllocated += Number(p.allocatedBudget);
-    totalInvested += Number(p.investedBudget);
-  });
+      let initCount = 0;
+      let lockedCount = 0;
+      let completedCount = 0;
 
-  const delta = totalAllocated - totalInvested;
+      let totalAllocated = 0;
+      let totalInvested = 0;
 
-  // Warning lists
-  const negativeSchools = proposals.filter(p => Number(p.allocatedBudget) < Number(p.investedBudget));
-  const positiveSchools = proposals.filter(p => Number(p.allocatedBudget) >= Number(p.investedBudget));
+      const schoolBudgets: Array<{ name: string; allocated: number; invested: number; delta: number }> = [];
+
+      proposals.forEach(p => {
+        const allocated = Number(p.allocatedBudget);
+        const invested = Number(p.investedBudget);
+
+        totalAllocated += allocated;
+        totalInvested += invested;
+
+        if (p.status === "COMPLETED") {
+          completedCount++;
+        } else if (p.school?.isLocked || p.status === "APPROVED") {
+          lockedCount++;
+        } else {
+          initCount++;
+        }
+
+        schoolBudgets.push({
+          name: p.school.name,
+          allocated,
+          invested,
+          delta: allocated - invested,
+        });
+      });
+
+      const delta = totalAllocated - totalInvested;
+
+      const negativeSchools = proposals.filter(p => Number(p.allocatedBudget) < Number(p.investedBudget));
+      const positiveSchools = proposals.filter(p => Number(p.allocatedBudget) >= Number(p.investedBudget));
+
+      return { 
+        totalSchools, totalProposals, initCount, lockedCount, completedCount,
+        totalAllocated, totalInvested, delta, negativeSchools, positiveSchools, schoolBudgets 
+      };
+    },
+    30
+  );
 
   return (
-    <div>
-      <h1 style={{ fontSize: "1.875rem", fontWeight: 700, marginBottom: "1.5rem" }}>
-        Dashboard Cá nhân
-      </h1>
+    <div style={{ animation: "fadeIn 0.25s ease-out" }}>
+      {/* Compact Top Header Banner */}
+      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "1rem", alignItems: "center", marginBottom: "1.25rem" }}>
+        {/* Left: Compact Welcome Header (Sub-text removed as requested) */}
+        <div className="sale-hero-banner" style={{ margin: 0, padding: "0.85rem 1.25rem", display: "flex", alignItems: "center" }}>
+          <h1 className="hero-title" style={{ margin: 0, fontSize: "1.25rem" }}>
+            Dashboard Cá nhân Kinh doanh 🚀
+          </h1>
+        </div>
 
-      <div style={{ marginBottom: "2rem" }}>
-        <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#94a3b8", marginBottom: "1rem" }}>THÔNG TIN CHUNG</h2>
-        <div className="dashboard-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))" }}>
-          <div className="card stat-card">
-            <span className="stat-title">Số Trường Quản lý</span>
-            <span className="stat-value">{totalSchools}</span>
+        {/* Right: Compact Dedicated Create Proposal Box */}
+        <div style={{
+          background: "linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(37, 99, 235, 0.15) 100%)",
+          border: "1.5px solid rgba(6, 182, 212, 0.4)",
+          borderRadius: "14px",
+          padding: "0.6rem 1rem",
+          display: "flex",
+          alignItems: "center",
+          boxShadow: "0 6px 20px rgba(6, 182, 212, 0.15)",
+        }}>
+          <Link 
+            href="/sale/proposals/new" 
+            prefetch={true} 
+            className="btn-cta-primary" 
+            style={{ 
+              whiteSpace: "nowrap", 
+              padding: "0.55rem 1.15rem", 
+              fontSize: "0.85rem"
+            }}
+          >
+            <Plus size={17} /> Bắt đầu lập dự trù mới
+          </Link>
+        </div>
+      </div>
+
+      {/* SECTION 1: THÔNG TIN CHUNG (5 Thẻ mét vuông vức) */}
+      <div style={{ marginBottom: "1.75rem" }}>
+        <h2 style={{ fontSize: "0.8rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.85rem" }}>
+          Thông tin chung
+        </h2>
+        <div className="sale-metric-grid" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
+          {/* Metric 1: Trường Quản Lý */}
+          <div className="sale-metric-card">
+            <div className="metric-header">
+              <span className="metric-label">Trường Quản Lý</span>
+              <div className="metric-icon-box" style={{ background: "rgba(6, 182, 212, 0.12)", color: "#06b6d4" }}>
+                <Building2 size={18} />
+              </div>
+            </div>
+            <div className="metric-value">{totalSchools}</div>
+            <div className="metric-sub" style={{ color: "#94a3b8" }}>
+              Phân công phụ trách
+            </div>
           </div>
-          <div className="card stat-card">
-            <span className="stat-title">Số Dự trù đã lập</span>
-            <span className="stat-value" style={{ color: "var(--primary)" }}>{totalProposals}</span>
+
+          {/* Metric 2: Dự Trù Đã Lập */}
+          <div className="sale-metric-card">
+            <div className="metric-header">
+              <span className="metric-label">Dự Trù Đã Lập</span>
+              <div className="metric-icon-box" style={{ background: "rgba(99, 102, 241, 0.12)", color: "#818cf8" }}>
+                <FileText size={18} />
+              </div>
+            </div>
+            <div className="metric-value" style={{ color: "#818cf8" }}>{totalProposals}</div>
+            <div className="metric-sub" style={{ color: "#94a3b8" }}>
+              Tổng hồ sơ dự trù
+            </div>
+          </div>
+
+          {/* Metric 3: Khởi Tạo */}
+          <div className="sale-metric-card">
+            <div className="metric-header">
+              <span className="metric-label">Khởi Tạo</span>
+              <div className="metric-icon-box" style={{ background: "rgba(251, 146, 60, 0.12)", color: "#fb923c" }}>
+                <Clock size={18} />
+              </div>
+            </div>
+            <div className="metric-value" style={{ color: "#fb923c" }}>{initCount}</div>
+            <div className="metric-sub" style={{ color: "#fb923c" }}>
+              Hồ sơ đang tạo mới
+            </div>
+          </div>
+
+          {/* Metric 4: Đang Thực Hiện */}
+          <div className="sale-metric-card">
+            <div className="metric-header">
+              <span className="metric-label">Đang Thực Hiện</span>
+              <div className="metric-icon-box" style={{ background: "rgba(244, 63, 94, 0.12)", color: "#fb7185" }}>
+                <Lock size={18} />
+              </div>
+            </div>
+            <div className="metric-value" style={{ color: "#fb7185" }}>{lockedCount}</div>
+            <div className="metric-sub" style={{ color: "#fb7185" }}>
+              Đã khóa & đang xử lý
+            </div>
+          </div>
+
+          {/* Metric 5: Hoàn Thành */}
+          <div className="sale-metric-card">
+            <div className="metric-header">
+              <span className="metric-label">Hoàn Thành</span>
+              <div className="metric-icon-box" style={{ background: "rgba(16, 185, 129, 0.12)", color: "#34d399" }}>
+                <CheckCircle2 size={18} />
+              </div>
+            </div>
+            <div className="metric-value" style={{ color: "#34d399" }}>{completedCount}</div>
+            <div className="metric-sub" style={{ color: "#34d399" }}>
+              Đã bàn giao nghiệm thu
+            </div>
           </div>
         </div>
       </div>
 
-      <div style={{ marginBottom: "2rem" }}>
-        <h2 style={{ fontSize: "1.1rem", fontWeight: 600, color: "#94a3b8", marginBottom: "1rem" }}>TỔNG QUAN NGÂN SÁCH</h2>
-        <div className="dashboard-grid" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))" }}>
-          <div className="card stat-card">
-            <span className="stat-title">Ngân sách Cấp (VNĐ)</span>
-            <span className="stat-value" style={{ color: "var(--success)", fontSize: "1.5rem" }}>
-              {totalAllocated.toLocaleString()}
-            </span>
+      {/* SECTION 2: BIỂU ĐỒ TRỰC QUAN (Biểu đồ Phân bổ & Ngân sách) */}
+      <SaleDashboardCharts 
+        stats={{
+          totalSchools, totalProposals, initCount, lockedCount, completedCount,
+          totalAllocated, totalInvested, delta
+        }}
+        schoolBudgets={schoolBudgets}
+      />
+
+      {/* SECTION 3: TỔNG QUAN NGÂN SÁCH (Đã đưa xuống bên dưới Biểu đồ) */}
+      <div style={{ marginBottom: "1.75rem" }}>
+        <h2 style={{ fontSize: "0.8rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.85rem" }}>
+          Tổng quan Ngân sách
+        </h2>
+        <div className="sale-metric-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+          {/* Metric 6: Ngân sách Cấp */}
+          <div className="sale-metric-card">
+            <div className="metric-header">
+              <span className="metric-label">Ngân Sách Cấp</span>
+              <div className="metric-icon-box" style={{ background: "rgba(16, 185, 129, 0.12)", color: "#10b981" }}>
+                <Coins size={18} />
+              </div>
+            </div>
+            <div className="metric-value" style={{ color: "#34d399", fontSize: "1.25rem", whiteSpace: "nowrap" }}>
+              {totalAllocated.toLocaleString()} đ
+            </div>
+            <div className="metric-sub" style={{ color: "#34d399", whiteSpace: "nowrap" }}>
+              <TrendingUp size={13} /> Định mức giao kinh phí
+            </div>
           </div>
-          <div className="card stat-card">
-            <span className="stat-title">Ngân sách Đầu tư (VNĐ)</span>
-            <span className="stat-value" style={{ color: "var(--warning)", fontSize: "1.5rem" }}>
-              {totalInvested.toLocaleString()}
-            </span>
+
+          {/* Metric 7: Ngân sách Đã Đầu Tư */}
+          <div className="sale-metric-card">
+            <div className="metric-header">
+              <span className="metric-label">Ngân Sách Đã Đầu Tư</span>
+              <div className="metric-icon-box" style={{ background: "rgba(251, 191, 36, 0.12)", color: "#fbbf24" }}>
+                <Wallet size={18} />
+              </div>
+            </div>
+            <div className="metric-value" style={{ color: "#fbbf24", fontSize: "1.25rem", whiteSpace: "nowrap" }}>
+              {totalInvested.toLocaleString()} đ
+            </div>
+            <div className="metric-sub" style={{ color: "#fbbf24", whiteSpace: "nowrap" }}>
+              Tổng kinh phí dự kiến sử dụng
+            </div>
           </div>
-          <div className="card stat-card">
-            <span className="stat-title">Chênh lệch (VNĐ)</span>
-            <span className="stat-value" style={{ color: delta >= 0 ? "var(--success)" : "var(--error)", fontSize: "1.5rem" }}>
-              {delta >= 0 ? "+" : ""}{delta.toLocaleString()}
-            </span>
+
+          {/* Metric 8: Chênh lệch Ngân sách */}
+          <div className="sale-metric-card">
+            <div className="metric-header">
+              <span className="metric-label">Chênh Lệch Ngân Sách</span>
+              <div className="metric-icon-box" style={{ 
+                background: delta >= 0 ? "rgba(16, 185, 129, 0.12)" : "rgba(244, 63, 94, 0.12)", 
+                color: delta >= 0 ? "#10b981" : "#f43f5e" 
+              }}>
+                {delta >= 0 ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
+              </div>
+            </div>
+            <div className="metric-value" style={{ color: delta >= 0 ? "#34d399" : "#fb7185", fontSize: "1.25rem", whiteSpace: "nowrap" }}>
+              {delta >= 0 ? "+" : ""}{delta.toLocaleString()} đ
+            </div>
+            <div className="metric-sub" style={{ color: delta >= 0 ? "#34d399" : "#fb7185", whiteSpace: "nowrap" }}>
+              {delta >= 0 ? "✓ Tiết kiệm ngân sách" : "⚠️ Vượt định mức kinh phí"}
+            </div>
           </div>
         </div>
       </div>
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))", gap: "1.5rem", marginTop: "2rem" }}>
-        {/* Negative Warning */}
-        <div className="card" style={{ borderTop: "4px solid var(--error)" }}>
-          <h2 style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--error)", marginBottom: "1rem" }}>
-            Cảnh báo: Ngân sách âm
-          </h2>
-          <ul style={{ listStyle: "none", padding: 0 }}>
+      {/* Budget Status Split View */}
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "1.5rem" }}>
+        
+        {/* Negative Warning Column */}
+        <div className="sale-table-card" style={{ borderTop: "3px solid #f43f5e" }}>
+          <div style={{ padding: "1.1rem 1.25rem", borderBottom: "1px solid var(--sale-card-border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <AlertTriangle size={18} color="#f43f5e" />
+              <h2 style={{ fontSize: "1rem", fontWeight: 800, margin: 0, color: "#f43f5e" }}>
+                Cảnh báo Vượt Định mức ({negativeSchools.length})
+              </h2>
+            </div>
+            <span style={{ fontSize: "0.72rem", background: "rgba(244, 63, 94, 0.15)", color: "#fb7185", padding: "0.2rem 0.5rem", borderRadius: "6px", fontWeight: 700 }}>
+              Cần tối ưu
+            </span>
+          </div>
+
+          <div style={{ padding: "0.75rem 1.25rem" }}>
             {negativeSchools.length === 0 ? (
-              <li style={{ color: "#64748b" }}>Không có trường nào vượt định mức.</li>
+              <div style={{ padding: "2rem 1rem", textAlign: "center", color: "#64748b", fontSize: "0.85rem" }}>
+                🎉 Tuyệt vời! Tất cả trường học đều nằm trong hạn mức kinh phí cho phép.
+              </div>
             ) : (
-              negativeSchools.map(p => (
-                <li key={p.id} style={{ padding: "0.75rem 0", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontWeight: 500 }}>{p.school.name}</span>
-                  <span style={{ color: "var(--error)", fontWeight: 600 }}>
-                    {(Number(p.allocatedBudget) - Number(p.investedBudget)).toLocaleString()} VNĐ
-                  </span>
-                </li>
-              ))
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                {negativeSchools.map(p => {
+                  const negDelta = Number(p.allocatedBudget) - Number(p.investedBudget);
+                  const isLocked = p.status === "APPROVED" || p.status === "COMPLETED" || p.school?.isLocked;
+                  return (
+                    <div key={p.id} style={{
+                      background: "rgba(244, 63, 94, 0.05)",
+                      border: "1px solid rgba(244, 63, 94, 0.2)",
+                      borderRadius: "10px",
+                      padding: "0.85rem 1rem",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "0.75rem"
+                    }}>
+                      <div>
+                        <div style={{ fontWeight: 700, color: "#ffffff", fontSize: "0.9rem", marginBottom: "0.2rem" }}>
+                          {p.school.name}
+                        </div>
+                        <div style={{ fontSize: "0.78rem", color: "#fb7185", fontWeight: 700 }}>
+                          Vượt: {negDelta.toLocaleString()} VNĐ
+                        </div>
+                      </div>
+
+                      {!isLocked ? (
+                        <Link 
+                          href={`/sale/proposals/new?schoolId=${p.schoolId}`}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: "0.3rem",
+                            fontSize: "0.78rem", padding: "0.35rem 0.65rem", borderRadius: "6px",
+                            background: "rgba(251, 191, 36, 0.12)", color: "#fbbf24",
+                            border: "1px solid rgba(251, 191, 36, 0.3)",
+                            textDecoration: "none", fontWeight: 700, whiteSpace: "nowrap"
+                          }}
+                        >
+                          <Pencil size={13} /> Sửa dự trù
+                        </Link>
+                      ) : (
+                        <Link 
+                          href={`/sale/proposals/${p.id}`}
+                          style={{
+                            display: "inline-flex", alignItems: "center", gap: "0.3rem",
+                            fontSize: "0.78rem", padding: "0.35rem 0.65rem", borderRadius: "6px",
+                            background: "rgba(56, 189, 248, 0.12)", color: "#38bdf8",
+                            border: "1px solid rgba(56, 189, 248, 0.3)",
+                            textDecoration: "none", fontWeight: 700, whiteSpace: "nowrap"
+                          }}
+                        >
+                          <Eye size={13} /> Xem
+                        </Link>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
             )}
-          </ul>
+          </div>
         </div>
 
-        {/* Positive Warning */}
-        <div className="card" style={{ borderTop: "4px solid var(--success)" }}>
-          <h2 style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--success)", marginBottom: "1rem" }}>
-            Ngân sách dương
-          </h2>
-          <ul style={{ listStyle: "none", padding: 0 }}>
+        {/* Positive Surplus Column */}
+        <div className="sale-table-card" style={{ borderTop: "3px solid #10b981" }}>
+          <div style={{ padding: "1.1rem 1.25rem", borderBottom: "1px solid var(--sale-card-border)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <CheckCircle2 size={18} color="#10b981" />
+              <h2 style={{ fontSize: "1rem", fontWeight: 800, margin: 0, color: "#10b981" }}>
+                Ngân sách An toàn ({positiveSchools.length})
+              </h2>
+            </div>
+            <span style={{ fontSize: "0.72rem", background: "rgba(16, 185, 129, 0.15)", color: "#34d399", padding: "0.2rem 0.5rem", borderRadius: "6px", fontWeight: 700 }}>
+              Đạt chuẩn
+            </span>
+          </div>
+
+          <div style={{ padding: "0.75rem 1.25rem" }}>
             {positiveSchools.length === 0 ? (
-              <li style={{ color: "#64748b" }}>Không có trường nào dư ngân sách.</li>
+              <div style={{ padding: "2rem 1rem", textAlign: "center", color: "#64748b", fontSize: "0.85rem" }}>
+                Chưa có hồ sơ nào trong ngân sách an toàn.
+              </div>
             ) : (
-              positiveSchools.map(p => (
-                <li key={p.id} style={{ padding: "0.75rem 0", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between" }}>
-                  <span style={{ fontWeight: 500 }}>{p.school.name}</span>
-                  <span style={{ color: "var(--success)", fontWeight: 600 }}>
-                    +{(Number(p.allocatedBudget) - Number(p.investedBudget)).toLocaleString()} VNĐ
-                  </span>
-                </li>
-              ))
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                {positiveSchools.map(p => {
+                  const posDelta = Number(p.allocatedBudget) - Number(p.investedBudget);
+                  return (
+                    <div key={p.id} style={{
+                      background: "rgba(16, 185, 129, 0.05)",
+                      border: "1px solid rgba(16, 185, 129, 0.2)",
+                      borderRadius: "10px",
+                      padding: "0.85rem 1rem",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      gap: "0.75rem"
+                    }}>
+                      <div>
+                        <div style={{ fontWeight: 700, color: "#ffffff", fontSize: "0.9rem", marginBottom: "0.2rem" }}>
+                          {p.school.name}
+                        </div>
+                        <div style={{ fontSize: "0.78rem", color: "#34d399", fontWeight: 700 }}>
+                          Dư: +{posDelta.toLocaleString()} VNĐ
+                        </div>
+                      </div>
+
+                      <Link 
+                        href={`/sale/proposals/${p.id}`}
+                        style={{
+                          display: "inline-flex", alignItems: "center", gap: "0.3rem",
+                          fontSize: "0.78rem", padding: "0.35rem 0.65rem", borderRadius: "6px",
+                          background: "rgba(56, 189, 248, 0.12)", color: "#38bdf8",
+                          border: "1px solid rgba(56, 189, 248, 0.3)",
+                          textDecoration: "none", fontWeight: 700, whiteSpace: "nowrap"
+                        }}
+                      >
+                        <Eye size={13} /> Xem
+                      </Link>
+                    </div>
+                  );
+                })}
+              </div>
             )}
-          </ul>
+          </div>
         </div>
+
       </div>
     </div>
   );

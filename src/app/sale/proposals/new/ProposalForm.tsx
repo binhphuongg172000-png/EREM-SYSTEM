@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createProposal } from "@/app/actions/proposal-sale";
+import { vietnameseIncludes } from "@/lib/vietnamese";
 import { AlertCircle, AlertTriangle, RefreshCcw, Search, Plus, Trash2, Package, Building2, ChevronDown, CheckCircle2, FileText, TrendingUp, GraduationCap, DoorOpen } from "lucide-react";
 import CurrencyInput from "@/components/CurrencyInput";
 
@@ -70,6 +71,9 @@ export default function ProposalForm({
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [schoolFilter, setSchoolFilter] = useState<"ALL" | "NONE" | "INIT" | "LOCKED" | "COMPLETED">("ALL");
+  const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
+  const [catalogModalTab, setCatalogModalTab] = useState<"ALL" | "ITEM" | "INVESTMENT">("ALL");
+  const [catalogModalSearch, setCatalogModalSearch] = useState("");
 
   const getSchoolStatus = (s: any) => {
     if (!s.latestProposal) return { type: "NONE", label: "Chưa có dự trù", color: "#10b981", bg: "rgba(16, 185, 129, 0.15)" };
@@ -79,8 +83,8 @@ export default function ProposalForm({
   };
 
   const filteredSchools = schools.filter(s => {
-    const matchesSearch = s.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                          s.address.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesSearch = vietnameseIncludes(s.name, searchQuery) || 
+                          vietnameseIncludes(s.address, searchQuery);
     if (!matchesSearch) return false;
     const st = getSchoolStatus(s).type;
     if (schoolFilter !== "ALL" && st !== schoolFilter) return false;
@@ -108,6 +112,11 @@ export default function ProposalForm({
   const totalInvested = totalEquipment + totalInvestment;
   const delta = allocatedBudget - totalInvested;
   const budgetUsagePercent = allocatedBudget > 0 ? Math.min((totalInvested / allocatedBudget) * 100, 100) : 0;
+
+  // Pre-fetch destination route for 0ms instant redirect
+  useEffect(() => {
+    router.prefetch("/sale/proposals");
+  }, [router]);
 
   // Click outside to close dropdowns
   useEffect(() => {
@@ -291,11 +300,7 @@ export default function ProposalForm({
 
     const res = await createProposal(data);
     if (res.success) {
-      setSubmitSuccess(true);
-      setTimeout(() => {
-        router.push("/sale/proposals");
-        router.refresh();
-      }, 1200);
+      router.push("/sale/proposals");
     } else {
       alert("Lỗi: " + res.message);
       setIsSubmitting(false);
@@ -402,33 +407,34 @@ export default function ProposalForm({
           height: 38px;
         }
         
-        /* Dropdown Lists - Solid Dark Background */
+        /* Dropdown Lists - Solid Opaque Background */
         .dropdown-list {
           position: absolute;
           top: calc(100% + 6px);
           left: 0; right: 0;
-          background: #0d1424 !important;
+          background: #090d16 !important;
           border: 1.5px solid #38bdf8 !important;
           border-radius: 10px;
           max-height: 320px;
           overflow-y: auto;
-          z-index: 100;
-          box-shadow: 0 15px 30px rgba(0, 0, 0, 0.9);
+          z-index: 9999 !important;
+          box-shadow: 0 20px 40px rgba(0, 0, 0, 0.95);
           list-style: none;
           margin: 0;
           padding: 0.35rem;
           animation: slideDown 0.2s ease;
         }
         .dropdown-item {
-          padding: 0.5rem 0.65rem;
+          padding: 0.55rem 0.75rem;
           cursor: pointer;
           border-radius: 8px;
-          background: rgba(15, 23, 42, 0.6);
-          border: 1px solid rgba(51, 65, 85, 0.4);
+          background: #111827 !important;
+          border: 1px solid #1e293b !important;
+          margin-bottom: 0.3rem;
           transition: all 0.2s ease;
         }
         .dropdown-item:hover {
-          background: rgba(30, 41, 59, 0.9) !important;
+          background: #1e293b !important;
           border-color: #38bdf8 !important;
           transform: translateX(2px);
         }
@@ -589,12 +595,74 @@ export default function ProposalForm({
           justify-content: center;
           margin-bottom: 1.25rem;
         }
+        
+        .budget-bottom-bar {
+          position: fixed;
+          bottom: 0;
+          left: 250px;
+          right: 0;
+          z-index: 200;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 1.5rem;
+          padding: 0.85rem 2rem;
+          background: #090e1a;
+          border-top: 1px solid rgba(56, 189, 248, 0.25);
+          box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.8);
+          animation: slideUp 0.3s ease;
+        }
+        @media (max-width: 768px) {
+          .budget-bottom-bar {
+            left: 0;
+            bottom: 62px;
+            padding: 0.75rem 1rem;
+          }
+        }
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
       `}</style>
 
-      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem", animation: "fadeIn 0.4s ease" }}>
+      <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem", animation: "fadeIn 0.4s ease", paddingBottom: selectedSchool ? "5rem" : 0 }}>
         
-        {/* ROW 1: School Search & Proposal Overview Side by Side */}
-        <div style={{ display: "grid", gridTemplateColumns: selectedSchool ? "1fr 280px" : "1fr", gap: "1.25rem", alignItems: "stretch" }}>
+        {/* Step Indicator */}
+        <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", padding: "0.2rem", background: "rgba(15, 23, 42, 0.5)", border: "1px solid #1e293b", borderRadius: "10px", width: "fit-content" }}>
+          {[
+            { step: 1, label: "Chọn trường", done: !!selectedSchoolId },
+            { step: 2, label: "Nhập chỉ tiêu & Hạng mục", done: !!selectedSchoolId && items.length > 0 },
+            { step: 3, label: "Xác nhận xuất dự trù", done: false },
+          ].map((s, idx) => (
+            <React.Fragment key={s.step}>
+              {idx > 0 && (
+                <div style={{ width: 20, height: 2, borderRadius: 1, background: s.done || (idx === 1 && !!selectedSchoolId) || (idx === 2 && items.length > 0) ? "#38bdf8" : "#334155", transition: "background 0.4s", flexShrink: 0 }} />
+              )}
+              <div style={{
+                display: "flex", alignItems: "center", gap: "0.35rem",
+                padding: "0.35rem 0.65rem", borderRadius: "8px",
+                background: s.done ? "rgba(16,185,129,0.08)" : (idx === 0 && !selectedSchoolId) || (idx === 1 && selectedSchoolId && items.length === 0) || (idx === 2 && items.length > 0) ? "rgba(56,189,248,0.08)" : "transparent",
+                border: `1px solid ${s.done ? "rgba(16,185,129,0.2)" : (idx === 0 && !selectedSchoolId) || (idx === 1 && selectedSchoolId && items.length === 0) || (idx === 2 && items.length > 0) ? "rgba(56,189,248,0.2)" : "transparent"}`,
+                transition: "all 0.3s ease"
+              }}>
+                <div style={{
+                  width: 20, height: 20, borderRadius: "50%",
+                  background: s.done ? "#10b981" : "#334155",
+                  color: s.done ? "#fff" : "#64748b",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: "0.6rem", fontWeight: 800, transition: "all 0.3s",
+                  flexShrink: 0
+                }}>
+                  {s.done ? "✓" : s.step}
+                </div>
+                <span style={{ fontSize: "0.72rem", fontWeight: 600, color: s.done ? "#10b981" : "#94a3b8", transition: "color 0.3s", whiteSpace: "nowrap" }}>{s.label}</span>
+              </div>
+            </React.Fragment>
+          ))}
+        </div>
+
+        {/* ROW 1: School Search */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
           
           {/* STEP 1: School Search */}
           <div className="proposal-card" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", margin: 0 }}>
@@ -612,7 +680,7 @@ export default function ProposalForm({
                   <input 
                     type="text" 
                     className="form-input" 
-                    placeholder="Nhập tên trường hoặc địa chỉ để tìm..." 
+                    placeholder="Nhập tên trường học để tìm..." 
                     value={searchQuery}
                     onChange={(e) => {
                       setSearchQuery(e.target.value);
@@ -772,112 +840,6 @@ export default function ProposalForm({
               )}
             </div>
           </div>
-
-          {/* RIGHT COLUMN: Live Preview (Equal Height to Left Card) */}
-          {selectedSchool && (
-            <div className="proposal-card" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", margin: 0, padding: "1rem" }}>
-              <div>
-                <div className="section-title" style={{ marginBottom: "0.75rem", fontSize: "0.9rem" }}>
-                  <div className="icon-wrap" style={{ background: "linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.2))", width: 26, height: 26 }}>
-                    <FileText size={15} color="#fbbf24" />
-                  </div>
-                  Tổng quan Dự trù
-                </div>
-
-                {/* Budget Bar */}
-                <div style={{ background: "rgba(15, 23, 42, 0.5)", borderRadius: 10, padding: "0.75rem", marginBottom: "0.6rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "0.3rem" }}>
-                    <span style={{ fontSize: "0.75rem", color: "#64748b" }}>Ngân sách được cấp</span>
-                    <span style={{ fontSize: "1.1rem", fontWeight: 700, color: "#38bdf8" }}>
-                      {allocatedBudget.toLocaleString()}đ
-                    </span>
-                  </div>
-                  <div className="budget-bar-track" style={{ margin: "0.4rem 0" }}>
-                    <div className="budget-bar-fill" style={{
-                      width: `${budgetUsagePercent}%`,
-                      background: budgetUsagePercent > 100 
-                        ? "linear-gradient(90deg, #f43f5e, #e11d48)" 
-                        : budgetUsagePercent > 80 
-                          ? "linear-gradient(90deg, #f59e0b, #ef4444)"
-                          : "linear-gradient(90deg, #38bdf8, #3b82f6)"
-                    }} />
-                  </div>
-                  <div style={{ fontSize: "0.7rem", color: "#64748b" }}>
-                    <span>Đã sử dụng {budgetUsagePercent.toFixed(1)}%</span>
-                  </div>
-                </div>
-
-                {/* Summary Numbers */}
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.35rem", marginBottom: "0.6rem" }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ color: "#94a3b8", fontSize: "0.76rem" }}>Ngân sách thiết bị</span>
-                    <span style={{ fontWeight: 600, fontSize: "0.825rem", color: "#38bdf8" }}>
-                      {totalEquipment.toLocaleString()}đ
-                    </span>
-                  </div>
-
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ color: "#94a3b8", fontSize: "0.76rem" }}>Ngân sách đầu tư khác</span>
-                    <span style={{ fontWeight: 600, fontSize: "0.825rem", color: "#a855f7" }}>
-                      {totalInvestment.toLocaleString()}đ
-                    </span>
-                  </div>
-
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "0.15rem" }}>
-                    <span style={{ color: "#e2e8f0", fontSize: "0.76rem", fontWeight: 600 }}>Tổng kinh phí sử dụng</span>
-                    <span style={{ fontWeight: 700, fontSize: "0.85rem", color: "#f1f5f9" }}>
-                      {totalInvested.toLocaleString()}đ
-                    </span>
-                  </div>
-                  
-                  <div style={{ height: 1, background: "rgba(51, 65, 85, 0.5)", margin: "0.2rem 0" }} />
-                  
-                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                    <span style={{ fontWeight: 700, color: "#f1f5f9", fontSize: "0.78rem" }}>
-                      Chênh lệch ngân sách
-                    </span>
-                    <span style={{ 
-                      fontWeight: 700, fontSize: "0.95rem", 
-                      color: delta >= 0 ? "#10b981" : "#f43f5e",
-                    }}>
-                      {delta >= 0 ? `+${delta.toLocaleString()}đ` : `${delta.toLocaleString()}đ`}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div style={{ display: "flex", flexDirection: "column", gap: "0.4rem", marginTop: "0.5rem" }}>
-                <button 
-                  type="submit" 
-                  className="submit-btn primary"
-                  style={{ padding: "0.55rem", fontSize: "0.825rem", borderRadius: 8 }}
-                  disabled={isSubmitting || !selectedSchoolId || selectedSchool?.isLocked || !isDirty || items.length === 0}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <span style={{ width: 14, height: 14, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.6s linear infinite", display: "inline-block" }} />
-                      Đang lưu...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 size={15} />
-                      Xác nhận Xuất Dự trù
-                    </>
-                  )}
-                </button>
-                <button 
-                  type="button" 
-                  className="submit-btn secondary"
-                  style={{ padding: "0.5rem", fontSize: "0.775rem", borderRadius: 8 }}
-                  onClick={handleClearData}
-                  disabled={!selectedSchoolId || selectedSchool?.isLocked || (items.length === 0 && !schoolDetails.oldStudents && !schoolDetails.newStudents && !schoolDetails.investedClassrooms)}
-                >
-                  <RefreshCcw size={13} /> Làm sạch dữ liệu
-                </button>
-              </div>
-            </div>
-          )}
         </div>
 
         {/* ROW 2: Items Search & Table (Full Width) */}
@@ -897,141 +859,154 @@ export default function ProposalForm({
               )}
             </div>
             
-            {/* Item Search */}
-            <div className="search-wrapper" ref={itemSearchRef} style={{ marginBottom: "1rem", position: "relative" }}>
-              <div className="input-with-icon">
-                <Plus size={18} className="search-icon" />
-                <input 
-                  type="text" 
-                  className="form-input" 
-                  placeholder="Tìm thiết bị hoặc hạng mục đầu tư để thêm..." 
-                  value={itemSearchQuery}
-                  onChange={(e) => {
-                    setItemSearchQuery(e.target.value);
-                    setIsItemDropdownOpen(true);
-                  }}
-                  onFocus={() => setIsItemDropdownOpen(true)}
-                  disabled={selectedSchool?.isLocked}
-                />
-              </div>
-              {isItemDropdownOpen && !selectedSchool?.isLocked && (() => {
-                const query = itemSearchQuery.toLowerCase();
-                const filteredItems = catalogItems.filter(i => i.name.toLowerCase().includes(query));
-                const filteredInvs = catalogInvestments.filter(i => i.name.toLowerCase().includes(query));
-                const hasResults = filteredItems.length > 0 || filteredInvs.length > 0;
-                
-                return (
-                  <div className="dropdown-list" style={{ display: "flex", flexDirection: "column", padding: "0.4rem", maxHeight: "520px", overflowY: "auto" }}>
-                    {!hasResults ? (
-                      <div style={{ padding: "1.25rem", textAlign: "center", color: "#64748b", fontSize: "0.825rem" }}>Không tìm thấy kết quả phù hợp</div>
-                    ) : (
-                      <>
-                        {/* THIẾT BỊ GROUP */}
-                        {filteredItems.length > 0 && (
-                          <div style={{ marginBottom: "0.5rem" }}>
-                            <div style={{
-                              position: "sticky", top: 0, zIndex: 10,
-                              display: "flex", alignItems: "center", justifyContent: "space-between",
-                              padding: "0.35rem 0.65rem", background: "rgba(15, 23, 42, 0.95)",
-                              backdropFilter: "blur(8px)", borderBottom: "1px solid rgba(56, 189, 248, 0.3)",
-                              color: "#38bdf8", fontWeight: 700, fontSize: "0.75rem", borderRadius: "6px", marginBottom: "0.25rem"
-                            }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                                <Package size={13} color="#38bdf8" />
-                                <span>Thiết bị ({filteredItems.length})</span>
-                              </div>
-                              <span style={{ fontSize: "0.68rem", opacity: 0.8, fontWeight: 500, color: "#94a3b8" }}>Click để chọn</span>
-                            </div>
+            {/* Item Search Bar & Catalog Trigger */}
+            <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1rem", flexWrap: "wrap", alignItems: "center" }}>
+              <div className="search-wrapper" ref={itemSearchRef} style={{ flex: 1, minWidth: "280px", position: "relative" }}>
+                <div className="input-with-icon">
+                  <Search size={18} className="search-icon" color="#38bdf8" />
+                  <input 
+                    type="text" 
+                    className="form-input" 
+                    placeholder="Gõ tên thiết bị hoặc gói đầu tư để tìm & thêm nhanh..." 
+                    value={itemSearchQuery}
+                    onChange={(e) => {
+                      setItemSearchQuery(e.target.value);
+                      setIsItemDropdownOpen(true);
+                    }}
+                    onFocus={() => setIsItemDropdownOpen(true)}
+                    disabled={selectedSchool?.isLocked}
+                  />
+                  {itemSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => { setItemSearchQuery(""); setIsItemDropdownOpen(false); }}
+                      style={{
+                        position: "absolute", right: "0.75rem", top: "50%", transform: "translateY(-50%)",
+                        background: "transparent", border: "none", color: "#64748b", cursor: "pointer",
+                        fontSize: "0.85rem", padding: "2px"
+                      }}
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
 
-                            <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
+                {/* Direct Typing Combobox Dropdown */}
+                {isItemDropdownOpen && !selectedSchool?.isLocked && itemSearchQuery.trim() !== "" && (() => {
+                  const filteredItems = catalogItems.filter(i => vietnameseIncludes(i.name, itemSearchQuery) || vietnameseIncludes(i.specifications, itemSearchQuery));
+                  const filteredInvs = catalogInvestments.filter(i => vietnameseIncludes(i.name, itemSearchQuery) || vietnameseIncludes(i.description, itemSearchQuery));
+                  const hasResults = filteredItems.length > 0 || filteredInvs.length > 0;
+                  
+                  return (
+                    <div 
+                      className="dropdown-list" 
+                      style={{ 
+                        position: "absolute", top: "calc(100% + 4px)", left: 0, right: 0,
+                        background: "#0d1424", border: "1.5px solid #38bdf8", borderRadius: "10px",
+                        maxHeight: "220px", overflowY: "auto", zIndex: 250,
+                        boxShadow: "0 20px 40px rgba(0, 0, 0, 0.95)", padding: "0.35rem"
+                      }}
+                    >
+                      {!hasResults ? (
+                        <div style={{ padding: "1rem", textAlign: "center", color: "#64748b", fontSize: "0.825rem" }}>
+                          Không tìm thấy kết quả cho "{itemSearchQuery}"
+                        </div>
+                      ) : (
+                        <>
+                          {filteredItems.length > 0 && (
+                            <div style={{ marginBottom: "0.4rem" }}>
+                              <div style={{ padding: "0.3rem 0.5rem", fontSize: "0.68rem", fontWeight: 800, color: "#38bdf8", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                📦 Thiết bị ({filteredItems.length})
+                              </div>
                               {filteredItems.map(i => (
-                                <div key={`ITEM_${i.id}`} className="dropdown-item" onClick={() => {
-                                  addItemByValue(`ITEM_${i.id}`);
-                                  setItemSearchQuery("");
-                                  setIsItemDropdownOpen(false);
-                                }}>
-                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
-                                    <div style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                      <span style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.835rem" }}>{i.name}</span>
-                                      {i.specifications && (
-                                        <span style={{ fontSize: "0.725rem", color: "#94a3b8", marginLeft: "8px", opacity: 0.85 }}>
-                                          — {i.specifications}
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexShrink: 0 }}>
-                                      <span style={{ fontSize: "0.7rem", padding: "0.15rem 0.45rem", borderRadius: "4px", background: "rgba(51, 65, 85, 0.4)", color: "#cbd5e1", border: "1px solid #334155", fontWeight: 500 }}>
-                                        {i.unit || "Bộ"}
-                                      </span>
-                                      <div style={{ background: "rgba(56,189,248,0.1)", padding: "0.2rem 0.5rem", borderRadius: "5px", border: "1px solid rgba(56,189,248,0.2)" }}>
-                                        <span style={{ fontSize: "0.825rem", color: "#38bdf8", fontWeight: 700, whiteSpace: "nowrap" }}>
-                                          {Number(i.standardPrice).toLocaleString()}đ
-                                        </span>
-                                      </div>
-                                    </div>
+                                <div
+                                  key={`ITEM_${i.id}`}
+                                  className="dropdown-item"
+                                  onClick={() => {
+                                    addItemByValue(`ITEM_${i.id}`);
+                                    setItemSearchQuery("");
+                                    setIsItemDropdownOpen(false);
+                                  }}
+                                  style={{ padding: "0.45rem 0.6rem", borderRadius: "6px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}
+                                >
+                                  <div style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                    <span style={{ fontWeight: 600, color: "#f8fafc", fontSize: "0.825rem" }}>{i.name}</span>
+                                    {i.specifications && (
+                                      <span style={{ fontSize: "0.725rem", color: "#94a3b8", marginLeft: "6px" }}>— {i.specifications}</span>
+                                    )}
+                                  </div>
+                                  <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexShrink: 0 }}>
+                                    <span style={{ fontSize: "0.65rem", padding: "1px 5px", borderRadius: 4, background: "rgba(51, 65, 85, 0.4)", color: "#cbd5e1" }}>{i.unit || "Bộ"}</span>
+                                    <span style={{ fontSize: "0.8rem", color: "#38bdf8", fontWeight: 700 }}>{Number(i.standardPrice).toLocaleString()}đ</span>
                                   </div>
                                 </div>
                               ))}
                             </div>
-                          </div>
-                        )}
+                          )}
 
-                        {/* ĐẦU TƯ KHÁC GROUP */}
-                        {filteredInvs.length > 0 && (
-                          <div>
-                            <div style={{
-                              position: "sticky", top: 0, zIndex: 10,
-                              display: "flex", alignItems: "center", justifyContent: "space-between",
-                              padding: "0.35rem 0.65rem", background: "rgba(15, 23, 42, 0.95)",
-                              backdropFilter: "blur(8px)", borderBottom: "1px solid rgba(168, 85, 247, 0.3)",
-                              color: "#a855f7", fontWeight: 700, fontSize: "0.75rem", borderRadius: "6px", marginBottom: "0.25rem"
-                            }}>
-                              <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
-                                <Building2 size={13} color="#a855f7" />
-                                <span>Đầu tư khác ({filteredInvs.length})</span>
+                          {filteredInvs.length > 0 && (
+                            <div>
+                              <div style={{ padding: "0.3rem 0.5rem", fontSize: "0.68rem", fontWeight: 800, color: "#a855f7", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                🏢 Đầu tư khác ({filteredInvs.length})
                               </div>
-                              <span style={{ fontSize: "0.68rem", opacity: 0.8, fontWeight: 500, color: "#94a3b8" }}>Click để chọn</span>
-                            </div>
-
-                            <div style={{ display: "flex", flexDirection: "column", gap: "0.2rem" }}>
                               {filteredInvs.map(i => (
-                                <div key={`INV_${i.id}`} className="dropdown-item" onClick={() => {
-                                  addItemByValue(`INV_${i.id}`);
-                                  setItemSearchQuery("");
-                                  setIsItemDropdownOpen(false);
-                                }}>
-                                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
-                                    <div style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                      <span style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.835rem" }}>{i.name}</span>
-                                      {i.description && (
-                                        <span style={{ fontSize: "0.725rem", color: "#94a3b8", marginLeft: "8px", opacity: 0.85 }}>
-                                          — {i.description}
-                                        </span>
-                                      )}
-                                    </div>
-
-                                    <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexShrink: 0 }}>
-                                      <span style={{ fontSize: "0.7rem", padding: "0.15rem 0.45rem", borderRadius: "4px", background: "rgba(51, 65, 85, 0.4)", color: "#cbd5e1", border: "1px solid #334155", fontWeight: 500 }}>
-                                        {i.unit || "Cái"}
-                                      </span>
-                                      <div style={{ background: "rgba(168,85,247,0.1)", padding: "0.2rem 0.5rem", borderRadius: "5px", border: "1px solid rgba(168,85,247,0.2)" }}>
-                                        <span style={{ fontSize: "0.825rem", color: "#a855f7", fontWeight: 700, whiteSpace: "nowrap" }}>
-                                          {Number(i.standardPrice).toLocaleString()}đ
-                                        </span>
-                                      </div>
-                                    </div>
+                                <div
+                                  key={`INV_${i.id}`}
+                                  className="dropdown-item"
+                                  onClick={() => {
+                                    addItemByValue(`INV_${i.id}`);
+                                    setItemSearchQuery("");
+                                    setIsItemDropdownOpen(false);
+                                  }}
+                                  style={{ padding: "0.45rem 0.6rem", borderRadius: "6px", cursor: "pointer", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}
+                                >
+                                  <div style={{ flex: 1, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                                    <span style={{ fontWeight: 600, color: "#f8fafc", fontSize: "0.825rem" }}>{i.name}</span>
+                                    {i.description && (
+                                      <span style={{ fontSize: "0.725rem", color: "#94a3b8", marginLeft: "6px" }}>— {i.description}</span>
+                                    )}
+                                  </div>
+                                  <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexShrink: 0 }}>
+                                    <span style={{ fontSize: "0.65rem", padding: "1px 5px", borderRadius: 4, background: "rgba(51, 65, 85, 0.4)", color: "#cbd5e1" }}>{i.unit || "Cái"}</span>
+                                    <span style={{ fontSize: "0.8rem", color: "#a855f7", fontWeight: 700 }}>{Number(i.standardPrice).toLocaleString()}đ</span>
                                   </div>
                                 </div>
                               ))}
                             </div>
-                          </div>
-                        )}
-                      </>
-                    )}
-                  </div>
-                );
-              })()}
+                          )}
+                        </>
+                      )}
+                    </div>
+                  );
+                })()}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsCatalogModalOpen(true)}
+                disabled={selectedSchool?.isLocked}
+                style={{
+                  padding: "0.55rem 1.15rem",
+                  borderRadius: "8px",
+                  fontSize: "0.825rem",
+                  fontWeight: 700,
+                  background: "linear-gradient(135deg, #38bdf8, #2563eb)",
+                  boxShadow: "0 4px 12px rgba(56, 189, 248, 0.25)",
+                  border: "none",
+                  color: "#ffffff",
+                  cursor: "pointer",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.4rem",
+                  whiteSpace: "nowrap",
+                  transition: "all 0.2s"
+                }}
+                onMouseOver={(e) => { e.currentTarget.style.transform = "translateY(-1px)"; }}
+                onMouseOut={(e) => { e.currentTarget.style.transform = "none"; }}
+              >
+                <Package size={15} />
+                + Bổ sung Hạng mục (Catalog)
+              </button>
             </div>
 
             {/* Item List Separated by Category */}
@@ -1189,7 +1164,314 @@ export default function ProposalForm({
             )}
           </div>
         )}
+
+        {/* ── STICKY BOTTOM BUDGET BAR ── */}
+        {selectedSchool && (
+          <div className="budget-bottom-bar">
+            <div style={{ display: "flex", alignItems: "center", gap: "1.25rem", flex: 1, flexWrap: "wrap", minWidth: 0 }}>
+              {/* Budget Allocated */}
+              <div style={{ flexShrink: 0 }}>
+                <div style={{ fontSize: "0.6rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Ngân sách</div>
+                <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#38bdf8", letterSpacing: "-0.02em" }}>{allocatedBudget.toLocaleString()}đ</div>
+              </div>
+
+              <div style={{ width: 1, height: 28, background: "rgba(51, 65, 85, 0.6)", flexShrink: 0 }} />
+
+              {/* Usage Progress */}
+              <div style={{ minWidth: 140, flexShrink: 0 }}>
+                <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 3 }}>
+                  <span style={{ fontSize: "0.6rem", color: "#64748b", fontWeight: 600 }}>Đã sử dụng</span>
+                  <span style={{ fontSize: "0.6rem", color: budgetUsagePercent > 100 ? "#f43f5e" : "#38bdf8", fontWeight: 700 }}>{budgetUsagePercent.toFixed(1)}%</span>
+                </div>
+                <div className="budget-bar-track" style={{ margin: 0, height: 5 }}>
+                  <div className="budget-bar-fill" style={{
+                    width: `${Math.min(budgetUsagePercent, 100)}%`,
+                    background: budgetUsagePercent > 100
+                      ? "linear-gradient(90deg, #f43f5e, #e11d48)"
+                      : budgetUsagePercent > 80
+                        ? "linear-gradient(90deg, #f59e0b, #ef4444)"
+                        : "linear-gradient(90deg, #38bdf8, #3b82f6)"
+                  }} />
+                </div>
+              </div>
+
+              <div style={{ width: 1, height: 28, background: "rgba(51, 65, 85, 0.6)", flexShrink: 0 }} />
+
+              {/* Equipment */}
+              <div style={{ flexShrink: 0 }}>
+                <div style={{ fontSize: "0.6rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Thiết bị</div>
+                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#38bdf8" }}>{totalEquipment.toLocaleString()}đ</div>
+              </div>
+
+              {/* Investment */}
+              <div style={{ flexShrink: 0 }}>
+                <div style={{ fontSize: "0.6rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Đầu tư khác</div>
+                <div style={{ fontSize: "0.85rem", fontWeight: 700, color: "#a855f7" }}>{totalInvestment.toLocaleString()}đ</div>
+              </div>
+
+              <div style={{ width: 1, height: 28, background: "rgba(51, 65, 85, 0.6)", flexShrink: 0 }} />
+
+              {/* Delta */}
+              <div style={{ flexShrink: 0 }}>
+                <div style={{ fontSize: "0.6rem", color: "#64748b", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 2 }}>Chênh lệch</div>
+                <div style={{ fontSize: "0.95rem", fontWeight: 800, color: delta >= 0 ? "#10b981" : "#f43f5e" }}>
+                  {delta >= 0 ? `+${delta.toLocaleString()}đ` : `${delta.toLocaleString()}đ`}
+                </div>
+              </div>
+            </div>
+
+            {/* Actions */}
+            <div style={{ display: "flex", gap: "0.5rem", flexShrink: 0 }}>
+              <button
+                type="button"
+                onClick={handleClearData}
+                className="submit-btn secondary"
+                style={{ padding: "0.5rem 0.85rem", fontSize: "0.78rem", borderRadius: 8, width: "auto" }}
+                disabled={!selectedSchoolId || selectedSchool?.isLocked || (items.length === 0 && !schoolDetails.oldStudents && !schoolDetails.newStudents && !schoolDetails.investedClassrooms)}
+              >
+                <RefreshCcw size={13} /> Làm sạch
+              </button>
+              <button
+                type="submit"
+                className="submit-btn primary"
+                style={{ padding: "0.5rem 1.25rem", fontSize: "0.85rem", borderRadius: 8, width: "auto" }}
+                disabled={isSubmitting || !selectedSchoolId || selectedSchool?.isLocked || !isDirty || items.length === 0}
+              >
+                {isSubmitting ? (
+                  <>
+                    <span style={{ width: 14, height: 14, border: "2px solid rgba(255,255,255,0.3)", borderTopColor: "#fff", borderRadius: "50%", animation: "spin 0.6s linear infinite", display: "inline-block" }} />
+                    Đang lưu...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle2 size={15} />
+                    Xuất Dự trù
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        )}
       </form>
+
+      {/* ── CATALOG BROWSER MODAL DIALOG (SAAS STANDARD) ── */}
+      {isCatalogModalOpen && (
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(9, 14, 26, 0.85)", backdropFilter: "blur(8px)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
+          padding: "1rem", animation: "fadeIn 0.2s ease"
+        }}>
+          <div style={{
+            background: "#0f172a", border: "1px solid #334155", borderRadius: "16px",
+            width: "100%", maxWidth: "800px", maxHeight: "85vh",
+            display: "flex", flexDirection: "column", overflow: "hidden",
+            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.9)"
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: "1rem 1.25rem", borderBottom: "1px solid #1e293b",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              background: "rgba(15, 23, 42, 0.8)"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <Package size={20} color="#38bdf8" />
+                <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 800, color: "#f8fafc" }}>
+                  Kho Hạng mục Đầu tư & Thiết bị
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCatalogModalOpen(false)}
+                style={{
+                  background: "transparent", border: "none", color: "#94a3b8",
+                  fontSize: "1.25rem", cursor: "pointer", padding: "4px 8px", borderRadius: "6px"
+                }}
+              >
+                ✕
+              </button>
+            </div>
+
+            {/* Modal Filter & Search Toolbar */}
+            <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #1e293b", display: "flex", flexDirection: "column", gap: "0.75rem", background: "rgba(30, 41, 59, 0.3)" }}>
+              <div className="input-with-icon">
+                <Search size={16} className="search-icon" />
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Tìm kiếm thiết bị, thông số hoặc gói đầu tư..."
+                  value={catalogModalSearch}
+                  onChange={(e) => setCatalogModalSearch(e.target.value)}
+                  autoFocus
+                />
+              </div>
+
+              <div style={{ display: "flex", gap: "0.4rem" }}>
+                {[
+                  { key: "ALL", label: `Tất cả (${catalogItems.length + catalogInvestments.length})`, color: "#38bdf8" },
+                  { key: "ITEM", label: `Thiết bị (${catalogItems.length})`, color: "#38bdf8" },
+                  { key: "INVESTMENT", label: `Đầu tư khác (${catalogInvestments.length})`, color: "#a855f7" },
+                ].map(tab => (
+                  <button
+                    key={tab.key}
+                    type="button"
+                    onClick={() => setCatalogModalTab(tab.key as any)}
+                    style={{
+                      padding: "4px 12px", borderRadius: "6px", fontSize: "0.75rem", fontWeight: 700,
+                      border: "1px solid",
+                      borderColor: catalogModalTab === tab.key ? tab.color : "#334155",
+                      background: catalogModalTab === tab.key ? `${tab.color}22` : "transparent",
+                      color: catalogModalTab === tab.key ? tab.color : "#94a3b8",
+                      cursor: "pointer", transition: "all 0.2s"
+                    }}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Modal Body Grid */}
+            <div style={{ padding: "1.25rem", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }}>
+              {(() => {
+                const itemsList = (catalogModalTab === "ALL" || catalogModalTab === "ITEM")
+                  ? catalogItems.filter(i => vietnameseIncludes(i.name, catalogModalSearch) || vietnameseIncludes(i.specifications, catalogModalSearch))
+                  : [];
+                const invsList = (catalogModalTab === "ALL" || catalogModalTab === "INVESTMENT")
+                  ? catalogInvestments.filter(i => vietnameseIncludes(i.name, catalogModalSearch) || vietnameseIncludes(i.description, catalogModalSearch))
+                  : [];
+
+                if (itemsList.length === 0 && invsList.length === 0) {
+                  return (
+                    <div style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}>
+                      <Package size={36} color="#475569" style={{ margin: "0 auto 0.75rem" }} />
+                      <p style={{ margin: 0, fontWeight: 600 }}>Không tìm thấy hạng mục phù hợp</p>
+                    </div>
+                  );
+                }
+
+                return (
+                  <>
+                    {/* Items Section */}
+                    {itemsList.length > 0 && (
+                      <div>
+                        <div style={{ fontSize: "0.75rem", fontWeight: 800, color: "#38bdf8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                          <Package size={14} /> Thiết bị ({itemsList.length})
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "0.75rem" }}>
+                          {itemsList.map(item => {
+                            const added = items.some(i => i.type === "ITEM" && i.name === item.name);
+                            return (
+                              <div
+                                key={item.id}
+                                style={{
+                                  background: "rgba(15, 23, 42, 0.6)", border: "1px solid #334155", borderRadius: "10px",
+                                  padding: "0.75rem 0.85rem", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem"
+                                }}
+                              >
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{ fontWeight: 700, color: "#f8fafc", fontSize: "0.85rem", marginBottom: 3 }}>{item.name}</div>
+                                  {item.specifications && (
+                                    <div style={{ fontSize: "0.725rem", color: "#94a3b8", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                                      {item.specifications}
+                                    </div>
+                                  )}
+                                  <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                                    <span style={{ fontSize: "0.65rem", padding: "1px 5px", borderRadius: 4, background: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", fontWeight: 700 }}>{item.unit || "Bộ"}</span>
+                                    <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#38bdf8" }}>{Number(item.standardPrice).toLocaleString()}đ</span>
+                                  </div>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => addItemByValue(`ITEM_${item.id}`)}
+                                  style={{
+                                    padding: "0.4rem 0.75rem", borderRadius: "8px", fontSize: "0.75rem", fontWeight: 700,
+                                    background: added ? "rgba(16, 185, 129, 0.2)" : "#38bdf8",
+                                    border: added ? "1px solid #10b981" : "none",
+                                    color: added ? "#10b981" : "#0f172a",
+                                    cursor: "pointer", flexShrink: 0, transition: "all 0.2s"
+                                  }}
+                                >
+                                  {added ? "✓ Đã thêm" : "+ Thêm"}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Investments Section */}
+                    {invsList.length > 0 && (
+                      <div style={{ marginTop: itemsList.length > 0 ? "1rem" : 0 }}>
+                        <div style={{ fontSize: "0.75rem", fontWeight: 800, color: "#a855f7", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                          <Building2 size={14} /> Đầu tư khác ({invsList.length})
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "0.75rem" }}>
+                          {invsList.map(inv => {
+                            const added = items.some(i => i.type === "INVESTMENT" && i.name === inv.name);
+                            return (
+                              <div
+                                key={inv.id}
+                                style={{
+                                  background: "rgba(15, 23, 42, 0.6)", border: "1px solid #334155", borderRadius: "10px",
+                                  padding: "0.75rem 0.85rem", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem"
+                                }}
+                              >
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{ fontWeight: 700, color: "#f8fafc", fontSize: "0.85rem", marginBottom: 3 }}>{inv.name}</div>
+                                  {inv.description && (
+                                    <div style={{ fontSize: "0.725rem", color: "#94a3b8", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                                      {inv.description}
+                                    </div>
+                                  )}
+                                  <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                                    <span style={{ fontSize: "0.65rem", padding: "1px 5px", borderRadius: 4, background: "rgba(168, 85, 247, 0.15)", color: "#a855f7", fontWeight: 700 }}>{inv.unit || "Cái"}</span>
+                                    <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#a855f7" }}>{Number(inv.standardPrice).toLocaleString()}đ</span>
+                                  </div>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => addItemByValue(`INV_${inv.id}`)}
+                                  style={{
+                                    padding: "0.4rem 0.75rem", borderRadius: "8px", fontSize: "0.75rem", fontWeight: 700,
+                                    background: added ? "rgba(16, 185, 129, 0.2)" : "#a855f7",
+                                    border: added ? "1px solid #10b981" : "none",
+                                    color: added ? "#10b981" : "#ffffff",
+                                    cursor: "pointer", flexShrink: 0, transition: "all 0.2s"
+                                  }}
+                                >
+                                  {added ? "✓ Đã thêm" : "+ Thêm"}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
+            </div>
+
+            {/* Modal Footer */}
+            <div style={{ padding: "0.75rem 1.25rem", borderTop: "1px solid #1e293b", display: "flex", justifyContent: "flex-end", background: "rgba(15, 23, 42, 0.8)" }}>
+              <button
+                type="button"
+                onClick={() => setIsCatalogModalOpen(false)}
+                style={{
+                  padding: "0.5rem 1.25rem", borderRadius: "8px", fontSize: "0.85rem", fontWeight: 700,
+                  background: "#3b82f6", border: "none", color: "#ffffff", cursor: "pointer"
+                }}
+              >
+                Hoàn tất
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Custom Clear Confirmation Modal */}
       {showClearConfirm && (

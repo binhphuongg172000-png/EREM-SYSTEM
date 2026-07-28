@@ -3,12 +3,13 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/app/actions/auth";
+import { clearCache } from "@/lib/cache";
 
 export async function approveProposal(id: string) {
   try {
     const user = await getCurrentUser();
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return { success: false, message: "Chỉ SYSADMIN mới có quyền thực hiện thao tác này." };
+    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) {
+      return { success: false, message: "Chỉ ADMIN mới có quyền thực hiện thao tác này." };
     }
 
     await prisma.proposal.update({
@@ -16,7 +17,7 @@ export async function approveProposal(id: string) {
       data: { status: "APPROVED" },
     });
 
-    // TODO: Write Audit Log
+    clearCache();
     revalidatePath("/admin/proposals");
     revalidatePath(`/admin/proposals/${id}`);
     return { success: true };
@@ -28,8 +29,8 @@ export async function approveProposal(id: string) {
 export async function rejectProposal(id: string, reason: string) {
   try {
     const user = await getCurrentUser();
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return { success: false, message: "Chỉ SYSADMIN mới có quyền thực hiện thao tác này." };
+    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) {
+      return { success: false, message: "Chỉ ADMIN mới có quyền thực hiện thao tác này." };
     }
 
     await prisma.proposal.update({
@@ -40,7 +41,7 @@ export async function rejectProposal(id: string, reason: string) {
       },
     });
 
-    // TODO: Write Audit Log
+    clearCache();
     revalidatePath("/admin/proposals");
     revalidatePath(`/admin/proposals/${id}`);
     return { success: true };
@@ -52,8 +53,8 @@ export async function rejectProposal(id: string, reason: string) {
 export async function lockProposal(id: string) {
   try {
     const user = await getCurrentUser();
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return { success: false, message: "Chỉ SYSADMIN mới có quyền thay đổi trạng thái dự trù." };
+    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) {
+      return { success: false, message: "Chỉ ADMIN mới có quyền thay đổi trạng thái dự trù." };
     }
 
     const proposal = await prisma.proposal.findUnique({
@@ -73,6 +74,7 @@ export async function lockProposal(id: string) {
       })
     ]);
 
+    clearCache();
     revalidatePath("/admin/proposals");
     revalidatePath("/admin/schools");
     return { success: true };
@@ -84,8 +86,8 @@ export async function lockProposal(id: string) {
 export async function completeProposal(id: string) {
   try {
     const user = await getCurrentUser();
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return { success: false, message: "Chỉ SYSADMIN mới có quyền thay đổi trạng thái dự trù." };
+    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) {
+      return { success: false, message: "Chỉ ADMIN mới có quyền thay đổi trạng thái dự trù." };
     }
 
     const proposal = await prisma.proposal.findUnique({
@@ -93,13 +95,19 @@ export async function completeProposal(id: string) {
       include: { school: true }
     });
     if (!proposal) throw new Error("Không tìm thấy dự trù");
-    if (!proposal.school?.isLocked) throw new Error("Trường chưa được khóa, không thể hoàn thành");
 
-    await prisma.proposal.update({
-      where: { id },
-      data: { status: "COMPLETED" },
-    });
+    await prisma.$transaction([
+      prisma.proposal.update({
+        where: { id },
+        data: { status: "COMPLETED" },
+      }),
+      prisma.school.update({
+        where: { id: proposal.schoolId },
+        data: { isLocked: true },
+      })
+    ]);
 
+    clearCache();
     revalidatePath("/admin/proposals");
     revalidatePath(`/admin/proposals/${id}`);
     revalidatePath("/sale/proposals");
@@ -112,8 +120,8 @@ export async function completeProposal(id: string) {
 export async function unlockProposal(id: string) {
   try {
     const user = await getCurrentUser();
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return { success: false, message: "Chỉ SYSADMIN mới có quyền thay đổi trạng thái dự trù." };
+    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) {
+      return { success: false, message: "Chỉ ADMIN mới có quyền thay đổi trạng thái dự trù." };
     }
 
     const proposal = await prisma.proposal.findUnique({
@@ -133,6 +141,7 @@ export async function unlockProposal(id: string) {
       })
     ]);
 
+    clearCache();
     revalidatePath("/admin/proposals");
     revalidatePath("/admin/schools");
     revalidatePath("/sale/proposals");
@@ -145,8 +154,8 @@ export async function unlockProposal(id: string) {
 export async function revertToLocked(id: string) {
   try {
     const user = await getCurrentUser();
-    if (!user || user.role !== "SUPER_ADMIN") {
-      return { success: false, message: "Chỉ SYSADMIN mới có quyền thay đổi trạng thái dự trù." };
+    if (!user || (user.role !== "SUPER_ADMIN" && user.role !== "ADMIN")) {
+      return { success: false, message: "Chỉ ADMIN mới có quyền thay đổi trạng thái dự trù." };
     }
 
     await prisma.proposal.update({
@@ -154,6 +163,7 @@ export async function revertToLocked(id: string) {
       data: { status: "APPROVED" },
     });
 
+    clearCache();
     revalidatePath("/admin/proposals");
     revalidatePath(`/admin/proposals/${id}`);
     revalidatePath("/sale/proposals");
@@ -167,16 +177,16 @@ export async function deleteProposalAdmin(id: string) {
   try {
     const user = await getCurrentUser();
     if (!user || user.role !== "SUPER_ADMIN") {
-      return { success: false, message: "Chỉ SYSADMIN mới có quyền xóa dự trù." };
+      return { success: false, message: "Chỉ Super Admin mới có quyền xóa dự trù." };
     }
 
     await prisma.proposal.delete({
       where: { id },
     });
+    clearCache();
     revalidatePath("/admin/proposals");
     return { success: true };
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi xóa bản dự trù" };
   }
 }
-

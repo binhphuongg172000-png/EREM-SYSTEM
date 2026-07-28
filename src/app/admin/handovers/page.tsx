@@ -3,6 +3,8 @@ import prisma from "@/lib/prisma";
 import SearchInput from "../SearchInput";
 import HandoverRowActions from "./HandoverRowActions";
 
+import { getCachedData } from "@/lib/cache";
+
 export const dynamic = "force-dynamic";
 
 export default async function AdminHandoversPage({
@@ -22,15 +24,18 @@ export default async function AdminHandoversPage({
     ];
   }
 
-  const handovers = await prisma.handover.findMany({
-    where: whereClause,
-    include: {
-      school: true,
-      sender: true,
-      receiver: true,
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const cacheKey = `admin_handovers_${search}`;
+  const handovers = await getCachedData(cacheKey, async () => {
+    return prisma.handover.findMany({
+      where: whereClause,
+      include: {
+        school: true,
+        sender: true,
+        receiver: true,
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }, 15);
 
   return (
     <div>

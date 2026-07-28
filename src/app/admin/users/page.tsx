@@ -5,7 +5,10 @@ import SearchInput from "../SearchInput";
 
 import UserRowActions from "./UserRowActions";
 import { getCurrentUser } from "@/app/actions/auth";
+import { getCachedData } from "@/lib/cache";
 import { redirect } from "next/navigation";
+
+import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -14,24 +17,28 @@ export default async function UsersPage({
 }: {
   searchParams: Promise<{ search?: string }>;
 }) {
-  const resolvedParams = await searchParams;
-  const currentUser = await getCurrentUser();
+  const cookieStore = await cookies();
+  const userRole = cookieStore.get("userRole")?.value;
 
-  if (!currentUser || currentUser.role !== "SUPER_ADMIN") {
+  if (userRole !== "SUPER_ADMIN") {
     redirect("/admin/dashboard");
   }
 
+  const resolvedParams = await searchParams;
   const search = resolvedParams?.search || "";
 
-  const users = await prisma.user.findMany({
-    where: {
-      OR: [
-        { username: { contains: search, mode: "insensitive" } },
-        { name: { contains: search, mode: "insensitive" } },
-      ]
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  const cacheKey = `admin_users_${search}`;
+  const users = await getCachedData(cacheKey, async () => {
+    return prisma.user.findMany({
+      where: {
+        OR: [
+          { username: { contains: search, mode: "insensitive" } },
+          { name: { contains: search, mode: "insensitive" } },
+        ]
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  }, 15);
 
   return (
     <div>

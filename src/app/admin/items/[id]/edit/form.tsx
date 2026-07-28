@@ -25,7 +25,7 @@ interface Item {
   id: string;
   name: string;
   specifications: string;
-  accessories?: string;
+  accessories?: string | null;
   unit: string;
   standardPrice: unknown;
 }
