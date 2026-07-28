@@ -258,12 +258,12 @@ export default async function AdminProposalsPage({
       <div className="card table-container" style={{ padding: 0, overflow: "visible", borderRadius: "12px" }}>
         <table className="table table-hover" style={{ tableLayout: "fixed", width: "100%", margin: 0 }}>
           <colgroup>
-            <col style={{ width: "24%" }} />
+            <col style={{ width: "26%" }} />
             <col style={{ width: "16%" }} />
-            <col style={{ width: "15%" }} />
+            <col style={{ width: "16%" }} />
             <col style={{ width: "14%" }} />
-            <col style={{ width: "16%" }} />
-            <col style={{ width: "15%" }} />
+            <col style={{ width: "14%" }} />
+            <col style={{ width: "14%" }} />
           </colgroup>
           <thead>
             <tr>
