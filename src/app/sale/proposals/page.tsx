@@ -14,19 +14,27 @@ export default async function SaleProposalsPage() {
   const userId = cookieStore.get("userId")?.value;
   if (!userId) redirect("/login");
 
-  const raw = await prisma.proposal.findMany({
-    where: {
-      school: {
-        saleId: userId,
-      },
+  const raw = await getCachedData(
+    `sale_proposals_list_${userId}`,
+    async () => {
+      const res = await prisma.proposal.findMany({
+        where: {
+          school: {
+            saleId: userId,
+          },
+        },
+        include: {
+          school: true,
+          items: true,
+          investments: true,
+        },
+        orderBy: { updatedAt: "desc" },
+      });
+      return JSON.parse(JSON.stringify(res));
     },
-    include: {
-      school: true,
-      items: true,
-      investments: true,
-    },
-    orderBy: { updatedAt: "desc" },
-  });
+    30,
+    [`sale_proposals_${userId}`]
+  );
 
   // Business rule: Each school has ONLY 1 latest proposal displayed
   const schoolMap = new Map<string, typeof raw[0]>();

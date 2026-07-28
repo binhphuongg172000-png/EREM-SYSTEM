@@ -17,22 +17,30 @@ export default async function SaleDashboardPage() {
   const userId = cookieStore.get("userId")?.value;
   if (!userId) redirect("/login");
 
-  const [schools, catalogInvestments] = await Promise.all([
-    prisma.school.findMany({
-      where: { saleId: userId },
-      include: {
-        proposals: {
-          orderBy: { updatedAt: "desc" },
-          take: 1,
+  const { schools, catalogInvestments } = await getCachedData(
+    `sale_dashboard_data_v3_${userId}`,
+    async () => {
+      const [schools, catalogInvestments] = await Promise.all([
+        prisma.school.findMany({
+          where: { saleId: userId },
           include: {
-            items: true,
-            investments: true,
+            proposals: {
+              orderBy: { updatedAt: "desc" },
+              take: 1,
+              include: {
+                items: true,
+                investments: true,
+              }
+            }
           }
-        }
-      }
-    }),
-    prisma.otherInvestment.findMany({ select: { name: true, category: true } })
-  ]);
+        }),
+        prisma.otherInvestment.findMany({ select: { name: true, category: true } })
+      ]);
+      return { schools, catalogInvestments };
+    },
+    30,
+    [`sale_dashboard_${userId}`]
+  );
 
   const isConstructionItemName = (name: string) => {
     const catalog = catalogInvestments.find(c => c.name === name);

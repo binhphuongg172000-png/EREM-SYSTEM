@@ -58,33 +58,41 @@ export type OverdueSchoolStat = {
 };
 
 export default async function AdminDashboardPage() {
-  const [
-    totalSchools,
-    totalHandovers,
-    rawAllProposals,
-    salesUsers
-  ] = await Promise.all([
-    prisma.school.count(),
-    prisma.handover.count(),
-    prisma.proposal.findMany({ 
-      include: { school: true, sale: true, items: true, investments: true },
-      orderBy: { updatedAt: "desc" }
-    }),
-    prisma.user.findMany({
-      where: { role: "SALE" },
-      include: {
-        schools: {
+  const { totalSchools, totalHandovers, rawAllProposals, salesUsers } = await getCachedData(
+    "admin_dashboard_data_v3",
+    async () => {
+      const [
+        totalSchools,
+        totalHandovers,
+        rawAllProposals,
+        salesUsers
+      ] = await Promise.all([
+        prisma.school.count(),
+        prisma.handover.count(),
+        prisma.proposal.findMany({ 
+          include: { school: true, sale: true, items: true, investments: true },
+          orderBy: { updatedAt: "desc" }
+        }),
+        prisma.user.findMany({
+          where: { role: "SALE" },
           include: {
-            proposals: {
-              select: { id: true, allocatedBudget: true, investedBudget: true, status: true },
-              orderBy: { updatedAt: "desc" },
-              take: 1
+            schools: {
+              include: {
+                proposals: {
+                  select: { id: true, allocatedBudget: true, investedBudget: true, status: true },
+                  orderBy: { updatedAt: "desc" },
+                  take: 1
+                },
+              },
             },
           },
-        },
-      },
-    }),
-  ]);
+        }),
+      ]);
+      return { totalSchools, totalHandovers, rawAllProposals, salesUsers };
+    },
+    30,
+    ["admin_dashboard"]
+  );
 
   // Business rule: Deduplicate proposals so each school only counts its 1 latest proposal
   const latestProposalsMap = new Map<string, typeof rawAllProposals[0]>();
