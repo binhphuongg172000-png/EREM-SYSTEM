@@ -64,7 +64,7 @@ export default async function NewProposalPage({
       isLocked: s.isLocked,
       latestProposal: latestProposal ? {
         id: latestProposal.id,
-        updatedAt: latestProposal.updatedAt.toISOString(),
+        updatedAt: latestProposal.updatedAt instanceof Date ? latestProposal.updatedAt.toISOString() : String(latestProposal.updatedAt),
         items: latestProposal.items.map(i => ({
           name: i.name,
           specifications: i.specifications,

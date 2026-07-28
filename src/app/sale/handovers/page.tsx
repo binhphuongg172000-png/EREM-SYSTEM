@@ -28,7 +28,7 @@ export default async function SaleHandoversPage() {
     senderId: h.senderId,
     receiverId: h.receiverId,
     status: h.status,
-    createdAt: h.createdAt.toISOString(),
+    createdAt: h.createdAt instanceof Date ? h.createdAt.toISOString() : String(h.createdAt),
     school: h.school,
     receiver: h.receiver,
   }));

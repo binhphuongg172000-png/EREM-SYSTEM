@@ -30,28 +30,37 @@ export async function getCachedData<T>(
     return existing.data as T;
   }
 
-  // Use Next.js cache for cross-invocation persistence
-  const cacheTags = tags || [key.split("_")[0] || "data"];
-  keyToTags.set(key, cacheTags);
+  try {
+    const cacheTags = tags || [key.split("_")[0] || "data"];
+    keyToTags.set(key, cacheTags);
 
-  const cachedFetcher = unstable_cache(
-    fetcher,
-    [key],
-    {
-      revalidate: ttlSeconds,
-      tags: cacheTags,
-    }
-  );
+    const cachedFetcher = unstable_cache(
+      fetcher,
+      [key],
+      {
+        revalidate: ttlSeconds,
+        tags: cacheTags,
+      }
+    );
 
-  const freshData = await cachedFetcher();
+    const freshData = await cachedFetcher();
 
-  // Also store in memory for repeat hits in this invocation
-  memStore.set(key, {
-    data: freshData,
-    expiry: now + Math.min(ttlSeconds, 30) * 1000,
-  });
+    // Also store in memory for repeat hits in this invocation
+    memStore.set(key, {
+      data: freshData,
+      expiry: now + Math.min(ttlSeconds, 30) * 1000,
+    });
 
-  return freshData;
+    return freshData;
+  } catch (err) {
+    // Fail-safe fallback if unstable_cache fails or data is non-serializable
+    const freshData = await fetcher();
+    memStore.set(key, {
+      data: freshData,
+      expiry: now + Math.min(ttlSeconds, 30) * 1000,
+    });
+    return freshData;
+  }
 }
 
 export function clearCache(pattern?: string) {
