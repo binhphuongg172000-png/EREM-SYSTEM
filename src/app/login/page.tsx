@@ -60,7 +60,16 @@ export default function LoginPage() {
           ? "/admin/dashboard" 
           : "/sale/dashboard";
         
-        window.location.href = targetUrl;
+        // Fire prewarm & navigate simultaneously - user sees skeleton instantly
+        // while cache warms in background
+        fetch("/api/prewarm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ role: res.user.role, userId: res.user.id }),
+        }).catch(() => {});
+
+        router.replace(targetUrl);
+        router.refresh();
       } else {
         setError(res.message || "Tên đăng nhập hoặc mật khẩu không đúng");
         setIsLoading(false);
@@ -70,6 +79,7 @@ export default function LoginPage() {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="login-3d-page">
