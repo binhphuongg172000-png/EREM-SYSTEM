@@ -352,7 +352,7 @@ body.light .table th {
   letter-spacing: -0.01em;
 }
 
-/* Page Transition Animation */
+/* Page & Component Transition Animations */
 @keyframes pageFadeIn {
   from {
     opacity: 0;
@@ -364,9 +364,44 @@ body.light .table th {
   }
 }
 
-.admin-content {
-  animation: pageFadeIn 0.3s ease-out forwards;
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes chartGlow {
+  0% {
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(56, 189, 248, 0.25);
+  }
+  100% {
+    box-shadow: 0 0 10px rgba(56, 189, 248, 0.1);
+  }
+}
+
+.admin-content, .sale-content {
+  animation: pageFadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
 
 
 

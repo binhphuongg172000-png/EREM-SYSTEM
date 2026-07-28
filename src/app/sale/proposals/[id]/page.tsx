@@ -3,7 +3,7 @@ import prisma from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Package, Building2, CheckCircle2, XCircle, FileText } from "lucide-react";
+import { ArrowLeft, Package, Building2, CheckCircle2, XCircle, FileText, Wrench } from "lucide-react";
 import PrintButton from "./PrintButton";
 import ExportHandoverButton from "@/components/ExportHandoverButton";
 
@@ -18,7 +18,7 @@ export default async function ViewProposalPage({ params }: { params: Promise<{ i
 
   const resolvedParams = await params;
   const { id } = resolvedParams;
-  
+
   const cacheKey = `sale_proposal_detail_${id}`;
   const { proposal, catalogItems, catalogInvestments } = await getCachedData(cacheKey, async () => {
     const [proposal, catalogItems, catalogInvestments] = await Promise.all([
@@ -76,10 +76,24 @@ export default async function ViewProposalPage({ params }: { params: Promise<{ i
       const catalogInv = catalogInvestments.find(c => c.name === curr.name);
       const unit = catalogInv?.unit || "Cái";
       const description = curr.description || catalogInv?.description || "";
-      acc.set(curr.name, { ...curr, quantity: Number(curr.quantity), totalPrice: Number(curr.totalPrice), unit, description });
+      const category = (catalogInv as any)?.category || "INVESTMENT";
+      acc.set(curr.name, { ...curr, quantity: Number(curr.quantity), totalPrice: Number(curr.totalPrice), unit, description, category });
     }
     return acc;
   }, new Map<string, any>()).values());
+
+  const isConstructionItemName = (inv: any) => {
+    if (inv.category === "CONSTRUCTION") return true;
+    const lower = (inv.name || "").toLowerCase();
+    return lower.startsWith("gói thi công") || lower.startsWith("gói bảo trì") || lower.startsWith("gói hệ thống");
+  };
+
+  const groupedConstructions = groupedInvestments.filter(inv => isConstructionItemName(inv));
+  const groupedOtherInvestments = groupedInvestments.filter(inv => !isConstructionItemName(inv));
+
+  const totalItemCost = groupedItems.reduce((s: number, i: any) => s + Number(i.totalPrice), 0);
+  const totalConstrCost = groupedConstructions.reduce((s: number, i: any) => s + Number(i.totalPrice), 0);
+  const totalOtherCost = groupedOtherInvestments.reduce((s: number, i: any) => s + Number(i.totalPrice), 0);
 
   return (
     <div style={{ animation: "fadeIn 0.3s ease" }}>
@@ -127,10 +141,10 @@ export default async function ViewProposalPage({ params }: { params: Promise<{ i
             </span>
           </div>
         </div>
-        
+
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
           {proposal.school.isLocked && (
-            <ExportHandoverButton 
+            <ExportHandoverButton
               proposalId={proposal.id}
               schoolId={proposal.schoolId}
               senderId={userId}
@@ -175,9 +189,16 @@ export default async function ViewProposalPage({ params }: { params: Promise<{ i
             <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#38bdf8" }}>{allocated.toLocaleString()}<span style={{ fontSize: "0.75rem", fontWeight: 500, color: "#64748b", marginLeft: "4px" }}>VNĐ</span></div>
           </div>
           {/* Tổng đầu tư */}
-          <div className="card" style={{ padding: "1rem 1.25rem", borderLeft: "3px solid #a78bfa" }}>
-            <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.35rem" }}>Tổng Đầu tư</div>
-            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#a78bfa" }}>{invested.toLocaleString()}<span style={{ fontSize: "0.75rem", fontWeight: 500, color: "#64748b", marginLeft: "4px" }}>VNĐ</span></div>
+          <div className="card" style={{ padding: "0.85rem 1.15rem", borderLeft: "3px solid #a78bfa" }}>
+            <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.2rem" }}>Tổng Đầu tư</div>
+            <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#a78bfa", marginBottom: "0.35rem" }}>
+              {invested.toLocaleString()}<span style={{ fontSize: "0.7rem", fontWeight: 500, color: "#64748b", marginLeft: "3px" }}>VNĐ</span>
+            </div>
+            <div style={{ fontSize: "0.68rem", display: "flex", flexDirection: "column", gap: "2px", borderTop: "1px solid #1e293b", paddingTop: "0.35rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#38bdf8" }}>• Thiết bị:</span><strong style={{ color: "#f8fafc" }}>{totalItemCost.toLocaleString()} đ</strong></div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#06b6d4" }}>• Thi công:</span><strong style={{ color: "#f8fafc" }}>{totalConstrCost.toLocaleString()} đ</strong></div>
+              <div style={{ display: "flex", justifyContent: "space-between" }}><span style={{ color: "#a78bfa" }}>• Đầu tư khác:</span><strong style={{ color: "#f8fafc" }}>{totalOtherCost.toLocaleString()} đ</strong></div>
+            </div>
           </div>
           {/* Chênh lệch */}
           <div className="card" style={{ padding: "1rem 1.25rem", borderLeft: `3px solid ${delta >= 0 ? "#34d399" : "#fb7185"}` }}>
@@ -245,11 +266,12 @@ export default async function ViewProposalPage({ params }: { params: Promise<{ i
           </table>
         </div>
 
+        {/* HẠNG MỤC ĐẦU TƯ KHÁC */}
         <div className="card table-container" style={{ padding: 0, marginBottom: "1rem" }}>
           <div style={{ padding: "1rem 1.5rem 0.5rem 1.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-            <FileText size={16} color="#a78bfa" />
+            <Building2 size={16} color="#a78bfa" />
             <h2 style={{ fontSize: "0.95rem", fontWeight: 700, color: "#ffffff", margin: 0 }}>Hạng mục Đầu tư khác</h2>
-            <span style={{ fontSize: "0.75rem", color: "#a78bfa", background: "rgba(167, 139, 250, 0.15)", padding: "0.15rem 0.5rem", borderRadius: "20px", fontWeight: 700 }}>{groupedInvestments.length}</span>
+            <span style={{ fontSize: "0.75rem", color: "#a78bfa", background: "rgba(167, 139, 250, 0.15)", padding: "0.15rem 0.5rem", borderRadius: "20px", fontWeight: 700 }}>{groupedOtherInvestments.length}</span>
           </div>
           <table className="table table-hover">
             <thead>
@@ -263,17 +285,17 @@ export default async function ViewProposalPage({ params }: { params: Promise<{ i
               </tr>
             </thead>
             <tbody>
-              {groupedInvestments.length === 0 ? (
+              {groupedOtherInvestments.length === 0 ? (
                 <tr><td colSpan={6} style={{ padding: "2rem", textAlign: "center", color: "#cbd5e1" }}>Không có hạng mục đầu tư khác</td></tr>
               ) : (
-                groupedInvestments.map((inv: any) => (
+                groupedOtherInvestments.map((inv: any) => (
                   <tr key={inv.id}>
                     <td style={{ fontWeight: 700, color: "#ffffff" }}>{inv.name}</td>
                     <td style={{ fontSize: "0.85rem", color: "#cbd5e1" }}>{inv.description}</td>
                     <td style={{ textAlign: "center" }}>{Number(inv.quantity)}</td>
                     <td style={{ textAlign: "center" }}>{inv.unit}</td>
                     <td style={{ textAlign: "right" }}>{Number(inv.price).toLocaleString()}</td>
-                    <td style={{ textAlign: "right", fontWeight: 700, color: "#ffffff" }}>{Number(inv.totalPrice).toLocaleString()}</td>
+                    <td style={{ textAlign: "right", fontWeight: 700, color: "#a78bfa" }}>{Number(inv.totalPrice).toLocaleString()}</td>
                   </tr>
                 ))
               )}
@@ -281,40 +303,54 @@ export default async function ViewProposalPage({ params }: { params: Promise<{ i
           </table>
         </div>
 
-        {/* Summary Footer */}
-        <div className="card" style={{ padding: "1rem 1.5rem", display: "flex", justifyContent: "space-between", alignItems: "center", background: "linear-gradient(135deg, rgba(56, 189, 248, 0.05), rgba(129, 140, 248, 0.05))", borderTop: "1px solid rgba(56, 189, 248, 0.15)" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "2rem" }}>
-            <div>
-              <div style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Thiết bị</div>
-              <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "#38bdf8" }}>{groupedItems.reduce((s: number, i: any) => s + Number(i.totalPrice), 0).toLocaleString()} đ</div>
-            </div>
-            <div style={{ color: "#334155" }}>+</div>
-            <div>
-              <div style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Đầu tư khác</div>
-              <div style={{ fontSize: "0.9rem", fontWeight: 700, color: "#a78bfa" }}>{groupedInvestments.reduce((s: number, i: any) => s + Number(i.totalPrice), 0).toLocaleString()} đ</div>
-            </div>
-            <div style={{ color: "#334155" }}>=</div>
-            <div>
-              <div style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Tổng cộng</div>
-              <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#ffffff" }}>{invested.toLocaleString()} đ</div>
-            </div>
+        {/* HẠNG MỤC THI CÔNG */}
+        <div className="card table-container" style={{ padding: 0, marginBottom: "1rem" }}>
+          <div style={{ padding: "1rem 1.5rem 0.5rem 1.5rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+            <Wrench size={16} color="#06b6d4" />
+            <h2 style={{ fontSize: "0.95rem", fontWeight: 700, color: "#ffffff", margin: 0 }}>Hạng mục Thi công</h2>
+            <span style={{ fontSize: "0.75rem", color: "#06b6d4", background: "rgba(6, 182, 212, 0.15)", padding: "0.15rem 0.5rem", borderRadius: "20px", fontWeight: 700 }}>{groupedConstructions.length}</span>
           </div>
-          <div style={{ textAlign: "right" }}>
-            <div style={{ fontSize: "0.7rem", color: "#64748b", textTransform: "uppercase", letterSpacing: "0.05em" }}>Chênh lệch</div>
-            <div style={{ fontSize: "1.05rem", fontWeight: 800, color: delta >= 0 ? "#34d399" : "#fb7185" }}>{delta >= 0 ? "+" : ""}{delta.toLocaleString()} đ</div>
-          </div>
+          <table className="table table-hover">
+            <thead>
+              <tr>
+                <th>Tên Hạng mục</th>
+                <th>Mô tả</th>
+                <th style={{ textAlign: "center" }}>Số lượng</th>
+                <th style={{ textAlign: "center" }}>Đơn vị tính</th>
+                <th style={{ textAlign: "right" }}>Đơn giá (đ)</th>
+                <th style={{ textAlign: "right" }}>Thành tiền (đ)</th>
+              </tr>
+            </thead>
+            <tbody>
+              {groupedConstructions.length === 0 ? (
+                <tr><td colSpan={6} style={{ padding: "2rem", textAlign: "center", color: "#cbd5e1" }}>Không có hạng mục thi công</td></tr>
+              ) : (
+                groupedConstructions.map((inv: any) => (
+                  <tr key={inv.id}>
+                    <td style={{ fontWeight: 700, color: "#ffffff" }}>{inv.name}</td>
+                    <td style={{ fontSize: "0.85rem", color: "#cbd5e1" }}>{inv.description}</td>
+                    <td style={{ textAlign: "center" }}>{Number(inv.quantity)}</td>
+                    <td style={{ textAlign: "center" }}>{inv.unit}</td>
+                    <td style={{ textAlign: "right" }}>{Number(inv.price).toLocaleString()}</td>
+                    <td style={{ textAlign: "right", fontWeight: 700, color: "#06b6d4" }}>{Number(inv.totalPrice).toLocaleString()}</td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
         </div>
+
       </div>
 
       {/* PRINT ONLY SECTION - OPTIMIZED FOR EXACT 1 PAGE A4 LANDSCAPE */}
       <div className="print-only" style={{ fontSize: "11px", lineHeight: 1.25 }}>
         <div style={{ fontSize: "10px" }}>Công ty cổ phần Giáo dục iSmart</div>
         <div style={{ fontSize: "10px" }}>Lầu 3, Tòa nhà Quỳnh Lan, 60 Hai Bà Trưng, Phường Sài Gòn, TP Hồ Chí Minh, VN</div>
-        
+
         <h2 style={{ textAlign: "center", margin: "6px 0 10px 0", fontSize: "16px", fontWeight: "bold", textTransform: "uppercase" }}>
           BẢNG DỰ TRÙ KINH PHÍ
         </h2>
-        
+
         <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: "6px" }}>
           <tbody>
             <tr>
@@ -366,35 +402,56 @@ export default async function ViewProposalPage({ params }: { params: Promise<{ i
               <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fef0e5" }}></td>
               <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fef0e5" }}></td>
               <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fef0e5" }}></td>
-              <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold", textAlign: "right", backgroundColor: "#fef0e5" }}>{proposal.items.reduce((sum, item) => sum + Number(item.totalPrice), 0).toLocaleString()}</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold", textAlign: "right", backgroundColor: "#fef0e5" }}>{totalItemCost.toLocaleString()}</td>
               <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fef0e5" }}></td>
             </tr>
-            {proposal.items.map((item, idx) => (
-              <tr key={item.id}>
+            {groupedItems.map((item, idx) => (
+              <tr key={item.id || idx}>
                 <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>{idx + 1}</td>
                 <td style={{ border: "1px solid black", padding: "3px 6px" }}>{item.name}</td>
-                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>Cái</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>{item.unit || "Bộ"}</td>
                 <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{Number(item.price).toLocaleString()}</td>
                 <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>{Number(item.quantity)}</td>
                 <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{Number(item.totalPrice).toLocaleString()}</td>
                 <td style={{ border: "1px solid black", padding: "3px 6px" }}></td>
               </tr>
             ))}
-            
+
             <tr className="print-bg-lightorange">
               <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center", fontWeight: "bold", backgroundColor: "#fef0e5" }}>B</td>
               <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold", backgroundColor: "#fef0e5" }}>ĐẦU TƯ KHÁC</td>
               <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fef0e5" }}></td>
               <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fef0e5" }}></td>
               <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fef0e5" }}></td>
-              <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold", textAlign: "right", backgroundColor: "#fef0e5" }}>{proposal.investments.reduce((sum, inv) => sum + Number(inv.totalPrice), 0).toLocaleString()}</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold", textAlign: "right", backgroundColor: "#fef0e5" }}>{totalOtherCost.toLocaleString()}</td>
               <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fef0e5" }}></td>
             </tr>
-            {proposal.investments.map((inv, idx) => (
-              <tr key={inv.id}>
+            {groupedOtherInvestments.map((inv, idx) => (
+              <tr key={inv.id || idx}>
                 <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>{idx + 1}</td>
                 <td style={{ border: "1px solid black", padding: "3px 6px" }}>{inv.name}</td>
-                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>Gói</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>{inv.unit || "Cái"}</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{Number(inv.price).toLocaleString()}</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>{Number(inv.quantity)}</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{Number(inv.totalPrice).toLocaleString()}</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px" }}></td>
+              </tr>
+            ))}
+
+            <tr className="print-bg-lightorange">
+              <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center", fontWeight: "bold", backgroundColor: "#fef0e5" }}>C</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold", backgroundColor: "#fef0e5" }}>THI CÔNG</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fef0e5" }}></td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fef0e5" }}></td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fef0e5" }}></td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold", textAlign: "right", backgroundColor: "#fef0e5" }}>{totalConstrCost.toLocaleString()}</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", backgroundColor: "#fef0e5" }}></td>
+            </tr>
+            {groupedConstructions.map((inv, idx) => (
+              <tr key={inv.id || idx}>
+                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>{idx + 1}</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px" }}>{inv.name}</td>
+                <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>{inv.unit || "Gói"}</td>
                 <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{Number(inv.price).toLocaleString()}</td>
                 <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>{Number(inv.quantity)}</td>
                 <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{Number(inv.totalPrice).toLocaleString()}</td>
@@ -448,4 +505,4 @@ export default async function ViewProposalPage({ params }: { params: Promise<{ i
     </div>
   );
 }
- 
+

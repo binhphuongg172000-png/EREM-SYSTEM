@@ -80,6 +80,7 @@ model OtherInvestment {
   description    String   @db.Text
   unit           String
   standardPrice  Decimal  @db.Decimal(15, 2)
+  category       String   @default("INVESTMENT") // INVESTMENT / CONSTRUCTION
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }

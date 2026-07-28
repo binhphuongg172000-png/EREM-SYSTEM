@@ -73,6 +73,8 @@ export async function createProposal(data: any) {
     await prisma.$transaction(ops);
 
     clearCache();
+    revalidatePath("/sale/dashboard");
+    revalidatePath("/admin/dashboard");
     revalidatePath("/sale/proposals");
     revalidatePath("/admin/proposals");
     
@@ -112,7 +114,7 @@ export async function updateProposal(id: string, data: any) {
             accessories: i.accessories || "",
             quantity: i.quantity,
             price: i.price,
-            totalPrice: i.quantity * i.price,
+ totalPrice: i.quantity * i.price,
           })),
         });
       }
@@ -131,6 +133,9 @@ export async function updateProposal(id: string, data: any) {
       }
     });
 
+    clearCache();
+    revalidatePath("/sale/dashboard");
+    revalidatePath("/admin/dashboard");
     revalidatePath("/sale/proposals");
     revalidatePath("/admin/proposals");
     return { success: true };
@@ -150,6 +155,9 @@ export async function deleteProposalSale(id: string) {
 
     await prisma.proposal.delete({ where: { id } });
 
+    clearCache();
+    revalidatePath("/sale/dashboard");
+    revalidatePath("/admin/dashboard");
     revalidatePath("/sale/proposals");
     revalidatePath("/admin/proposals");
     return { success: true };

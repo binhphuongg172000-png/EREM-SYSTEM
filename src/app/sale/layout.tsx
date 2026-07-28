@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, logoutAction } from "@/app/actions/auth";
-import { LayoutDashboard, FileText, ClipboardCheck, LogOut, Plus, Sparkles } from "lucide-react";
+import { Home, LayoutDashboard, FileText, ClipboardCheck, LogOut, Laptop, Coins, Wrench, Sparkles } from "lucide-react";
 import ToastContainer from "@/components/Toast";
 import "./sale.css";
 
@@ -47,11 +47,31 @@ export default function SaleLayout({
       {/* Sidebar for Desktop */}
       <aside className="sale-sidebar">
         <div className="sidebar-brand">
-          <div className="sidebar-brand-row">
-            <div className="sidebar-brand-icon">E</div>
-            <div>
-              <h2>EREM OS</h2>
-              <span className="badge-sale">SALE WORKSPACE</span>
+          <div className="sidebar-brand-row" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <div 
+              className="sidebar-brand-icon"
+              style={{
+                width: "38px",
+                height: "38px",
+                borderRadius: "12px",
+                background: "linear-gradient(135deg, #0284c7 0%, #3b82f6 50%, #6366f1 100%)",
+                boxShadow: "0 0 15px rgba(56, 189, 248, 0.4)",
+                border: "1px solid rgba(255, 255, 255, 0.2)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#ffffff",
+                fontWeight: "900",
+                fontSize: "1.2rem",
+                flexShrink: 0
+              }}
+            >
+              E
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+              <h2 style={{ fontSize: "1.1rem", fontWeight: "900", color: "#ffffff", margin: 0, letterSpacing: "0.5px", whiteSpace: "nowrap" }}>
+                EREM <span style={{ color: "#38bdf8" }}>SYSTEM</span>
+              </h2>
             </div>
           </div>
         </div>
@@ -78,7 +98,8 @@ export default function SaleLayout({
             <FileText className="nav-item-icon" style={{ color: "#818cf8" }} size={18} />
             <span>Kho Dự trù</span>
           </Link>
-          <Link
+          {/* Tạm thời ẩn Kho Biên bản theo yêu cầu */}
+          {/* <Link
             href="/sale/handovers"
             prefetch={true}
             onMouseEnter={() => router.prefetch("/sale/handovers")}
@@ -86,6 +107,35 @@ export default function SaleLayout({
           >
             <ClipboardCheck className="nav-item-icon" style={{ color: "#2dd4bf" }} size={18} />
             <span>Kho Biên bản</span>
+          </Link> */}
+
+          <div className="nav-group-label">DANH MỤC THAM KHẢO</div>
+          <Link
+            href="/sale/items"
+            prefetch={true}
+            onMouseEnter={() => router.prefetch("/sale/items")}
+            className={`nav-item ${pathname?.startsWith("/sale/items") ? "active" : ""}`}
+          >
+            <Laptop className="nav-item-icon" style={{ color: "#c084fc" }} size={18} />
+            <span>Danh mục Thiết bị</span>
+          </Link>
+          <Link
+            href="/sale/investments"
+            prefetch={true}
+            onMouseEnter={() => router.prefetch("/sale/investments")}
+            className={`nav-item ${pathname?.startsWith("/sale/investments") ? "active" : ""}`}
+          >
+            <Coins className="nav-item-icon" style={{ color: "#f472b6" }} size={18} />
+            <span>Danh mục Đầu tư khác</span>
+          </Link>
+          <Link
+            href="/sale/constructions"
+            prefetch={true}
+            onMouseEnter={() => router.prefetch("/sale/constructions")}
+            className={`nav-item ${pathname?.startsWith("/sale/constructions") ? "active" : ""}`}
+          >
+            <Wrench className="nav-item-icon" style={{ color: "#38bdf8" }} size={18} />
+            <span>Danh mục Thi công</span>
           </Link>
         </nav>
       </aside>

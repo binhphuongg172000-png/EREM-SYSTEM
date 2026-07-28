@@ -71,42 +71,48 @@ export default function ProposalRowActions({
   };
 
 return (
-    <div ref={popoverRef} style={{ display: "flex", gap: "0.4rem", justifyContent: "flex-end", alignItems: "center", position: "relative" }}>
-      {/* Nút Xem */}
-      <Link
-        href={`/admin/proposals/${proposal.id}`}
-        prefetch={true}
-        onMouseEnter={() => router.prefetch(`/admin/proposals/${proposal.id}`)}
-        style={{
-          ...btnBase,
-          width: "auto",
-          background: "rgba(56, 189, 248, 0.08)",
-          borderColor: "rgba(56, 189, 248, 0.4)",
-          color: "#38bdf8",
-        }}
-      >
-        <Eye size={13} /> Xem
-      </Link>
-
-      {/* Nút Xuất BBBG (Chỉ khi hoàn thành và là Super Admin) */}
-      {isCompleted && isSuperAdmin && (
-        <ExportHandoverButton
-          proposalId={proposal.id}
-          schoolId={proposal.schoolId}
-          senderId={proposal.saleId}
-          btnStyle={{
+    <div ref={popoverRef} style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", alignItems: "center", position: "relative" }}>
+      {/* SLOT 1: Nút Xem (Cố định vị trí) */}
+      <div style={{ flexShrink: 0 }}>
+        <Link
+          href={`/admin/proposals/${proposal.id}`}
+          prefetch={true}
+          onMouseEnter={() => router.prefetch(`/admin/proposals/${proposal.id}`)}
+          style={{
             ...btnBase,
             width: "auto",
-            background: "rgba(168, 85, 247, 0.1)",
-            borderColor: "rgba(168, 85, 247, 0.5)",
-            color: "#c084fc",
+            background: "rgba(56, 189, 248, 0.08)",
+            borderColor: "rgba(56, 189, 248, 0.4)",
+            color: "#38bdf8",
           }}
-        />
+        >
+          <Eye size={13} /> Xem
+        </Link>
+      </div>
+
+      {/* SLOT 2: Nút Xuất BBBG (Dành khung 104px cố định để nút không bị nhảy khi đổi trạng thái) */}
+      {isSuperAdmin && (
+        <div style={{ width: "104px", display: "flex", justifyContent: "center", flexShrink: 0 }}>
+          {isCompleted ? (
+            <ExportHandoverButton
+              proposalId={proposal.id}
+              schoolId={proposal.schoolId}
+              senderId={proposal.saleId}
+              btnStyle={{
+                ...btnBase,
+                width: "100%",
+                background: "rgba(168, 85, 247, 0.1)",
+                borderColor: "rgba(168, 85, 247, 0.5)",
+                color: "#c084fc",
+              }}
+            />
+          ) : null}
+        </div>
       )}
 
-      {/* Nút Xóa (Dành cho Super Admin) */}
+      {/* SLOT 3: Nút Xóa (Cố định vị trí) */}
       {isSuperAdmin && (
-        <div style={{ position: "relative" }}>
+        <div style={{ position: "relative", flexShrink: 0 }}>
           <button
             type="button"
             onClick={() => setShowConfirm(!showConfirm)}

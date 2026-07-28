@@ -14,46 +14,47 @@ export default async function SaleProposalsPage() {
   const userId = cookieStore.get("userId")?.value;
   if (!userId) redirect("/login");
 
-  const { proposals, counts } = await getCachedData(
-    `sale_proposals_list_${userId}`,
-    async () => {
-      const raw = await prisma.proposal.findMany({
-        where: {
-          school: {
-            saleId: userId,
-          },
-        },
-        include: {
-          school: true,
-          items: true,
-        },
-        orderBy: { updatedAt: "desc" },
-      });
-
-      const proposals = raw.map((p) => {
-        let allocatedBudget = Number(p.allocatedBudget);
-        let investedBudget = 0;
-
-        p.items.forEach((pi) => {
-          investedBudget += Number(pi.totalPrice);
-        });
-
-        return {
-          ...p,
-          allocatedBudget,
-          investedBudget,
-        };
-      });
-
-      const totalProposals = proposals.length;
-      const completedCount = proposals.filter(p => p.status === "COMPLETED").length;
-      const lockedCount = proposals.filter(p => !["COMPLETED"].includes(p.status) && (p.school?.isLocked || p.status === "APPROVED")).length;
-      const initCount = totalProposals - completedCount - lockedCount;
-
-      return { proposals, counts: { totalProposals, initCount, lockedCount, completedCount } };
+  const raw = await prisma.proposal.findMany({
+    where: {
+      school: {
+        saleId: userId,
+      },
     },
-    30
-  );
+    include: {
+      school: true,
+      items: true,
+      investments: true,
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+
+  // Business rule: Each school has ONLY 1 latest proposal displayed
+  const schoolMap = new Map<string, typeof raw[0]>();
+  for (const p of raw) {
+    if (!p.schoolId) continue;
+    if (!schoolMap.has(p.schoolId)) {
+      schoolMap.set(p.schoolId, p);
+    }
+  }
+  const uniqueRaw = Array.from(schoolMap.values());
+
+  const proposals = JSON.parse(JSON.stringify(uniqueRaw)).map((p: any) => {
+    let allocatedBudget = Number(p.allocatedBudget || 0);
+    let investedBudget = Number(p.investedBudget || 0);
+
+    return {
+      ...p,
+      allocatedBudget,
+      investedBudget,
+    };
+  });
+
+  const totalProposals = proposals.length;
+  const completedCount = proposals.filter((p: any) => p.status === "COMPLETED").length;
+  const lockedCount = proposals.filter((p: any) => !["COMPLETED"].includes(p.status) && (p.school?.isLocked || p.status === "APPROVED")).length;
+  const initCount = totalProposals - completedCount - lockedCount;
+
+  const counts = { totalProposals, initCount, lockedCount, completedCount };
 
   return (
     <div style={{ animation: "fadeIn 0.25s ease-out" }}>

@@ -31,10 +31,11 @@ export default async function ItemsPage({
   
   const cacheKey = `admin_items_${search}`;
   const items = await getCachedData(cacheKey, async () => {
-    return prisma.item.findMany({
+    const res = await prisma.item.findMany({
       where: search ? { name: { contains: search, mode: "insensitive" } } : {},
-      orderBy: { createdAt: "desc" },
+      orderBy: { name: "asc" },
     });
+    return res.sort((a, b) => a.name.localeCompare(b.name, "vi", { sensitivity: "base" }));
   }, 15);
 
   return (

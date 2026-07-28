@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, logoutAction } from "@/app/actions/auth";
 import { 
-  LayoutDashboard, Users, School as SchoolIcon, 
-  Laptop, Coins, FileText, 
+  Home, LayoutDashboard, Users, School as SchoolIcon, 
+  Laptop, Coins, Wrench, FileText, 
   ClipboardCheck, LogOut 
 } from "lucide-react";
 import ToastContainer from "@/components/Toast";
@@ -19,8 +19,8 @@ export default function AdminLayout({
 }) {
   const pathname = usePathname();
   const router = useRouter();
-  const [userName, setUserName] = useState("Super Admin");
-  const [userRole, setUserRole] = useState("ADMIN");
+  const [userName, setUserName] = useState("Quản trị viên");
+  const [userRole, setUserRole] = useState<string>("ADMIN");
 
   useEffect(() => {
     // Ensure clean dark mode at all times
@@ -29,22 +29,15 @@ export default function AdminLayout({
 
     const cachedName = localStorage.getItem("userName");
     const cachedRole = localStorage.getItem("userRole");
-    if (cachedRole === "ADMIN") setUserName("Admin");
-    else if (cachedName && cachedName !== "System Administrator") setUserName(cachedName);
-    else setUserName("Super Admin");
+    
+    if (cachedName) setUserName(cachedName);
     if (cachedRole) setUserRole(cachedRole);
 
     getCurrentUser().then((user) => {
       if (user) {
-        let displayName = user.name;
-        if (user.role === "ADMIN") {
-          displayName = "Admin";
-        } else if (user.role === "SUPER_ADMIN" || user.name === "System Administrator") {
-          displayName = "Super Admin";
-        }
-        setUserName(displayName);
+        setUserName(user.name);
         setUserRole(user.role);
-        localStorage.setItem("userName", displayName);
+        localStorage.setItem("userName", user.name);
         localStorage.setItem("userRole", user.role);
       } else {
         router.push("/login");
@@ -65,11 +58,31 @@ export default function AdminLayout({
       {/* Sidebar */}
       <aside className="admin-sidebar">
         <div className="sidebar-brand">
-          <div className="sidebar-brand-row">
-            <div className="sidebar-brand-icon">E</div>
-            <div>
-              <h2>EREM OS</h2>
-              <span className="badge-admin">ADMIN SYSTEM</span>
+          <div className="sidebar-brand-row" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+            <div 
+              className="sidebar-brand-icon"
+              style={{
+                width: "38px",
+                height: "38px",
+                borderRadius: "12px",
+                background: "linear-gradient(135deg, #0284c7 0%, #3b82f6 50%, #6366f1 100%)",
+                boxShadow: "0 0 15px rgba(56, 189, 248, 0.4)",
+                border: "1px solid rgba(255, 255, 255, 0.2)",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                color: "#ffffff",
+                fontWeight: "900",
+                fontSize: "1.2rem",
+                flexShrink: 0
+              }}
+            >
+              E
+            </div>
+            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
+              <h2 style={{ fontSize: "1.1rem", fontWeight: "900", color: "#ffffff", margin: 0, letterSpacing: "0.5px", whiteSpace: "nowrap" }}>
+                EREM <span style={{ color: "#38bdf8" }}>SYSTEM</span>
+              </h2>
             </div>
           </div>
         </div>
@@ -126,6 +139,15 @@ export default function AdminLayout({
               >
                 <Coins className="nav-item-icon" style={{ color: "#f472b6" }} size={18} />
                 <span>Danh mục Đầu tư khác</span>
+              </Link>
+              <Link
+                href="/admin/constructions"
+                prefetch={true}
+                onMouseEnter={() => router.prefetch("/admin/constructions")}
+                className={`nav-item ${pathname?.startsWith("/admin/constructions") ? "active" : ""}`}
+              >
+                <Wrench className="nav-item-icon" style={{ color: "#38bdf8" }} size={18} />
+                <span>Danh mục Thi công</span>
               </Link>
             </>
           )}

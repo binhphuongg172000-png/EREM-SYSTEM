@@ -17,73 +17,89 @@ export default async function SaleDashboardPage() {
   const userId = cookieStore.get("userId")?.value;
   if (!userId) redirect("/login");
 
-  const { 
-    totalSchools, totalProposals, initCount, lockedCount, completedCount,
-    totalAllocated, totalInvested, delta, negativeSchools, positiveSchools, schoolBudgets 
-  } = await getCachedData(
-    `sale_dashboard_${userId}`,
-    async () => {
-      const schools = await prisma.school.findMany({
-        where: { saleId: userId },
-        include: {
-          proposals: {
-            orderBy: { updatedAt: "desc" },
-            take: 1,
+  const [schools, catalogInvestments] = await Promise.all([
+    prisma.school.findMany({
+      where: { saleId: userId },
+      include: {
+        proposals: {
+          orderBy: { updatedAt: "desc" },
+          take: 1,
+          include: {
+            items: true,
+            investments: true,
           }
         }
-      });
+      }
+    }),
+    prisma.otherInvestment.findMany({ select: { name: true, category: true } })
+  ]);
 
-      const proposals = schools
-        .map(s => s.proposals[0] ? { ...s.proposals[0], school: s } : null)
-        .filter(Boolean) as NonNullable<any>[];
+  const isConstructionItemName = (name: string) => {
+    const catalog = catalogInvestments.find(c => c.name === name);
+    if (catalog?.category === "CONSTRUCTION") return true;
+    const lower = (name || "").toLowerCase();
+    return lower.startsWith("gói thi công") || lower.startsWith("gói bảo trì") || lower.startsWith("gói hệ thống");
+  };
 
-      const totalSchools = schools.length;
-      const totalProposals = proposals.length;
+  const proposals = schools
+    .map(s => s.proposals[0] ? { ...s.proposals[0], school: s } : null)
+    .filter(Boolean) as NonNullable<any>[];
 
-      let initCount = 0;
-      let lockedCount = 0;
-      let completedCount = 0;
+  const totalSchools = schools.length;
+  const totalProposals = proposals.length;
+  const totalNewStudents = schools.reduce((sum, s) => sum + Number(s.newStudents || 0), 0);
 
-      let totalAllocated = 0;
-      let totalInvested = 0;
+  let initCount = 0;
+  let lockedCount = 0;
+  let completedCount = 0;
 
-      const schoolBudgets: Array<{ name: string; allocated: number; invested: number; delta: number }> = [];
+  let totalAllocated = 0;
+  let totalInvested = 0;
+  let totalItemCost = 0;
+  let totalConstrCost = 0;
+  let totalOtherCost = 0;
 
-      proposals.forEach(p => {
-        const allocated = Number(p.allocatedBudget);
-        const invested = Number(p.investedBudget);
+  const schoolBudgets: Array<{ name: string; allocated: number; invested: number; delta: number }> = [];
 
-        totalAllocated += allocated;
-        totalInvested += invested;
+  proposals.forEach(p => {
+    const allocated = Number(p.allocatedBudget);
+    const invested = Number(p.investedBudget);
 
-        if (p.status === "COMPLETED") {
-          completedCount++;
-        } else if (p.school?.isLocked || p.status === "APPROVED") {
-          lockedCount++;
-        } else {
-          initCount++;
-        }
+    totalAllocated += allocated;
+    totalInvested += invested;
 
-        schoolBudgets.push({
-          name: p.school.name,
-          allocated,
-          invested,
-          delta: allocated - invested,
-        });
-      });
+    (p.items || []).forEach((item: any) => {
+      totalItemCost += Number(item.totalPrice || 0);
+    });
 
-      const delta = totalAllocated - totalInvested;
+    (p.investments || []).forEach((inv: any) => {
+      if (isConstructionItemName(inv.name)) {
+        totalConstrCost += Number(inv.totalPrice || 0);
+      } else {
+        totalOtherCost += Number(inv.totalPrice || 0);
+      }
+    });
 
-      const negativeSchools = proposals.filter(p => Number(p.allocatedBudget) < Number(p.investedBudget));
-      const positiveSchools = proposals.filter(p => Number(p.allocatedBudget) >= Number(p.investedBudget));
+    if (p.status === "COMPLETED") {
+      completedCount++;
+    } else if (p.school?.isLocked || p.status === "APPROVED") {
+      lockedCount++;
+    } else {
+      initCount++;
+    }
 
-      return { 
-        totalSchools, totalProposals, initCount, lockedCount, completedCount,
-        totalAllocated, totalInvested, delta, negativeSchools, positiveSchools, schoolBudgets 
-      };
-    },
-    30
-  );
+    schoolBudgets.push({
+      name: p.school.name,
+      allocated,
+      invested,
+      delta: allocated - invested,
+    });
+  });
+
+  const delta = totalAllocated - totalInvested;
+
+  const negativeSchools = proposals.filter(p => Number(p.allocatedBudget) < Number(p.investedBudget));
+  const positiveSchools = proposals.filter(p => Number(p.allocatedBudget) >= Number(p.investedBudget));
 
   return (
     <div style={{ animation: "fadeIn 0.25s ease-out" }}>
@@ -203,7 +219,7 @@ export default async function SaleDashboardPage() {
       <SaleDashboardCharts 
         stats={{
           totalSchools, totalProposals, initCount, lockedCount, completedCount,
-          totalAllocated, totalInvested, delta
+          totalAllocated, totalInvested, totalItemCost, totalConstrCost, totalOtherCost, totalNewStudents, delta
         }}
         schoolBudgets={schoolBudgets}
       />
@@ -241,8 +257,27 @@ export default async function SaleDashboardPage() {
             <div className="metric-value" style={{ color: "#fbbf24", fontSize: "1.25rem", whiteSpace: "nowrap" }}>
               {totalInvested.toLocaleString()} đ
             </div>
-            <div className="metric-sub" style={{ color: "#fbbf24", whiteSpace: "nowrap" }}>
-              Tổng kinh phí dự kiến sử dụng
+            
+            {/* Explicit 3 Cost Breakdown Sub-Lines */}
+            <div style={{ marginTop: "0.6rem", paddingTop: "0.5rem", borderTop: "1px solid rgba(255, 255, 255, 0.08)", display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.72rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: "#38bdf8", fontWeight: 600 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#38bdf8" }}></span> Thiết bị:
+                </span>
+                <strong style={{ color: "#ffffff" }}>{totalItemCost.toLocaleString()} đ</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: "#a855f7", fontWeight: 600 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#a855f7" }}></span> Đầu tư khác:
+                </span>
+                <strong style={{ color: "#ffffff" }}>{totalOtherCost.toLocaleString()} đ</strong>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: "#f59e0b", fontWeight: 600 }}>
+                  <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#f59e0b" }}></span> Thi công:
+                </span>
+                <strong style={{ color: "#ffffff" }}>{totalConstrCost.toLocaleString()} đ</strong>
+              </div>
             </div>
           </div>
 

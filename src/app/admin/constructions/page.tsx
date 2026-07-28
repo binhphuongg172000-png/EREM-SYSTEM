@@ -3,19 +3,15 @@ import prisma from "@/lib/prisma";
 import Link from "next/link";
 import SearchInput from "../SearchInput";
 
-import DeleteInvestmentButton from "./DeleteInvestmentButton";
-import InvestmentHeaderActions from "./InvestmentHeaderActions";
-
+import DeleteInvestmentButton from "../investments/DeleteInvestmentButton";
 import { getCachedData } from "@/lib/cache";
-
-import { getCurrentUser } from "@/app/actions/auth";
 import { redirect } from "next/navigation";
-
 import { cookies } from "next/headers";
+import { Wrench } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
-export default async function InvestmentsPage({
+export default async function ConstructionsPage({
   searchParams,
 }: {
   searchParams: Promise<{ search?: string }>;
@@ -29,11 +25,11 @@ export default async function InvestmentsPage({
   const resolvedParams = await searchParams;
   const search = resolvedParams?.search || "";
 
-  const cacheKey = `admin_investments_${search}`;
-  const investments = await getCachedData(cacheKey, async () => {
+  const cacheKey = `admin_constructions_${search}`;
+  const constructions = await getCachedData(cacheKey, async () => {
     const res = await prisma.otherInvestment.findMany({
       where: {
-        category: "INVESTMENT",
+        category: "CONSTRUCTION",
         ...(search ? { name: { contains: search, mode: "insensitive" } } : {})
       },
       orderBy: { name: "asc" }
@@ -44,19 +40,22 @@ export default async function InvestmentsPage({
   return (
     <div>
       <div className="page-title-bar">
-        <h1>Danh mục Đầu tư khác</h1>
+        <h1 className="flex items-center gap-2">
+          <Wrench className="text-sky-400" size={24} />
+          Danh mục Thi công
+        </h1>
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", gap: "1rem", flexWrap: "wrap" }}>
-        <SearchInput placeholder="Tìm theo tên hạng mục..." />
-        <Link href="/admin/investments/new" className="btn btn-primary">+ Thêm Hạng mục</Link>
+        <SearchInput placeholder="Tìm theo tên gói thi công..." />
+        <Link href="/admin/constructions/new" className="btn btn-primary">+ Thêm Hạng mục Thi công</Link>
       </div>
 
       <div className="card table-container" style={{ padding: 0 }}>
         <table className="table table-hover">
           <thead>
             <tr>
-              <th>Tên Hạng mục</th>
+              <th>Tên Hạng mục Thi công</th>
               <th>Mô tả chi tiết</th>
               <th>ĐVT</th>
               <th>Đơn giá chuẩn (VNĐ)</th>
@@ -64,14 +63,14 @@ export default async function InvestmentsPage({
             </tr>
           </thead>
           <tbody>
-            {investments.length === 0 ? (
+            {constructions.length === 0 ? (
               <tr>
                 <td colSpan={5} style={{ padding: "2rem", textAlign: "center", color: "#64748b" }}>
-                  Chưa có hạng mục nào.
+                  Chưa có hạng mục thi công nào.
                 </td>
               </tr>
             ) : (
-              investments.map(inv => (
+              constructions.map(inv => (
                 <tr key={inv.id}>
                   <td style={{ fontWeight: 600 }}>{inv.name}</td>
                   <td style={{ fontSize: "0.85rem", color: "#64748b" }}>{inv.description}</td>
@@ -79,7 +78,7 @@ export default async function InvestmentsPage({
                   <td style={{ fontWeight: 600 }}>{Number(inv.standardPrice).toLocaleString()} đ</td>
                   <td style={{ textAlign: "right" }}>
                     <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", alignItems: "center" }}>
-                      <Link href={`/admin/investments/${inv.id}/edit`} className="btn btn-secondary" style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem" }}>
+                      <Link href={`/admin/constructions/${inv.id}/edit`} className="btn btn-secondary" style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem" }}>
                         Sửa
                       </Link>
                       <DeleteInvestmentButton id={inv.id} />
@@ -94,4 +93,3 @@ export default async function InvestmentsPage({
     </div>
   );
 }
-

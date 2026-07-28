@@ -7,15 +7,34 @@ import { warmAdminSystem } from "@/lib/prewarmer";
 
 export const dynamic = "force-dynamic";
 
+export type SaleSchoolDetail = {
+  id: string;
+  proposalId?: string;
+  schoolName: string;
+  studentsCount: number;
+  allocatedBudget: number;
+  investedBudget: number;
+  itemBudget: number;
+  otherBudget: number;
+  constructionBudget: number;
+  variance: number;
+  status: string;
+};
+
 export type SaleStat = {
   id: string;
   name: string;
   username: string;
   schoolCount: number;
   proposalCount: number;
+  totalStudents: number;
   totalAllocated: number;
   totalInvested: number;
+  totalItemBudget: number;
+  totalOtherBudget: number;
+  totalConstructionBudget: number;
   budgetVariance: number;
+  schools: SaleSchoolDetail[];
 };
 
 export type AllocatedSchoolStat = {
@@ -39,51 +58,58 @@ export type OverdueSchoolStat = {
 };
 
 export default async function AdminDashboardPage() {
-  const {
+  const [
     totalSchools,
     totalHandovers,
-    budgetAggregate,
-    allProposals,
+    rawAllProposals,
     salesUsers
-  } = await getCachedData("admin_dashboard_data", async () => {
-    const [
-      totalSchools,
-      totalHandovers,
-      budgetAggregate,
-      allProposals,
-      salesUsers
-    ] = await Promise.all([
-      prisma.school.count(),
-      prisma.handover.count(),
-      prisma.proposal.aggregate({
-        _sum: { allocatedBudget: true, investedBudget: true },
-      }),
-      prisma.proposal.findMany({ include: { school: true, sale: true, items: true, investments: true } }),
-      prisma.user.findMany({
-        where: { role: "SALE" },
-        include: {
-          schools: {
-            include: {
-              proposals: {
-                select: { id: true, allocatedBudget: true, investedBudget: true, status: true },
-              },
+  ] = await Promise.all([
+    prisma.school.count(),
+    prisma.handover.count(),
+    prisma.proposal.findMany({ 
+      include: { school: true, sale: true, items: true, investments: true },
+      orderBy: { updatedAt: "desc" }
+    }),
+    prisma.user.findMany({
+      where: { role: "SALE" },
+      include: {
+        schools: {
+          include: {
+            proposals: {
+              select: { id: true, allocatedBudget: true, investedBudget: true, status: true },
+              orderBy: { updatedAt: "desc" },
+              take: 1
             },
           },
         },
-      }),
-    ]);
-    return { totalSchools, totalHandovers, budgetAggregate, allProposals, salesUsers };
-  }, 15);
+      },
+    }),
+  ]);
 
-  const totalAllocated = Number(budgetAggregate._sum.allocatedBudget || 0);
-  const totalInvested = Number(budgetAggregate._sum.investedBudget || 0);
+  // Business rule: Deduplicate proposals so each school only counts its 1 latest proposal
+  const latestProposalsMap = new Map<string, typeof rawAllProposals[0]>();
+  for (const p of rawAllProposals) {
+    if (p.schoolId && !latestProposalsMap.has(p.schoolId)) {
+      latestProposalsMap.set(p.schoolId, p);
+    }
+  }
+  const allProposals = Array.from(latestProposalsMap.values());
+
+  // Calculate live real-time budget totals across all unique school latest proposals
+  let totalAllocated = 0;
+  let totalInvested = 0;
+  allProposals.forEach(p => {
+    totalAllocated += Number(p.allocatedBudget || 0);
+    totalInvested += Number(p.investedBudget || 0);
+  });
+
   const usagePercentage = totalAllocated > 0 ? Math.round((totalInvested / totalAllocated) * 100) : 0;
   const remainingBudget = totalAllocated - totalInvested;
 
   let pendingAllocated = 0, pendingInvested = 0;
-  let pendingItemBudget = 0, pendingOtherBudget = 0;
+  let pendingItemBudget = 0, pendingOtherBudget = 0, pendingConstructionBudget = 0;
   let completedAllocated = 0, completedInvested = 0;
-  let completedItemBudget = 0, completedOtherBudget = 0;
+  let completedItemBudget = 0, completedOtherBudget = 0, completedConstructionBudget = 0;
 
   const pendingSchoolSet = new Set<string>();
   const completedSchoolSet = new Set<string>();
@@ -92,45 +118,122 @@ export default async function AdminDashboardPage() {
   let inProgressProposalCount = 0;
   let completedProposalCount = 0;
 
+  const isConstructionItemName = (name: string) => {
+    const lower = (name || "").toLowerCase();
+    return lower.startsWith("gói thi công") || lower.startsWith("gói bảo trì") || lower.startsWith("gói hệ thống");
+  };
+
   allProposals.forEach(p => {
-    const alloc = Number(p.allocatedBudget);
-    const inv = Number(p.investedBudget);
+    const alloc = Number(p.allocatedBudget || 0);
+    const inv = Number(p.investedBudget || 0);
     
     let pItemBudget = 0;
-    p.items.forEach((item: any) => pItemBudget += Number(item.totalPrice));
+    p.items.forEach((item: any) => pItemBudget += Number(item.totalPrice || 0));
     let pOtherBudget = 0;
-    p.investments.forEach((invItem: any) => pOtherBudget += Number(invItem.totalPrice));
+    let pConstrBudget = 0;
+    p.investments.forEach((invItem: any) => {
+      if (isConstructionItemName(invItem.name)) {
+        pConstrBudget += Number(invItem.totalPrice || 0);
+      } else {
+        pOtherBudget += Number(invItem.totalPrice || 0);
+      }
+    });
 
     if (p.status === "DRAFT") {
       draftProposalCount++;
     } else if (p.status === "PENDING" || p.status === "APPROVED") {
       inProgressProposalCount++;
-      pendingAllocated += alloc;
-      pendingInvested += inv;
-      pendingItemBudget += pItemBudget;
-      pendingOtherBudget += pOtherBudget;
-      pendingSchoolSet.add(p.schoolId);
     } else if (p.status === "COMPLETED") {
       completedProposalCount++;
       completedAllocated += alloc;
       completedInvested += inv;
       completedItemBudget += pItemBudget;
       completedOtherBudget += pOtherBudget;
+      completedConstructionBudget += pConstrBudget;
       completedSchoolSet.add(p.schoolId);
     }
+
+    // TÍNH TỔNG BẤT KỂ TRẠNG THÁI DỰ TRÙ (DRAFT, PENDING, APPROVED, COMPLETED)
+    pendingAllocated += alloc;
+    pendingInvested += inv;
+    pendingItemBudget += pItemBudget;
+    pendingOtherBudget += pOtherBudget;
+    pendingConstructionBudget += pConstrBudget;
+    pendingSchoolSet.add(p.schoolId);
   });
 
   const pendingSchoolCount = pendingSchoolSet.size;
   const completedSchoolCount = completedSchoolSet.size;
 
+  const proposalMapBySchool = new Map<string, any>();
+  allProposals.forEach(p => {
+    if (p.schoolId) proposalMapBySchool.set(p.schoolId, p);
+  });
+
   const saleLeaderboard: SaleStat[] = salesUsers.map(sale => {
-    let proposalCount = 0, totalAllocatedBudget = 0, totalInvestedBudget = 0;
+    let proposalCount = 0;
+    let totalAllocatedBudget = 0;
+    let totalInvestedBudget = 0;
+    let totalItemBudget = 0;
+    let totalOtherBudget = 0;
+    let totalConstructionBudget = 0;
+    let totalStudents = 0;
+
+    const schoolsDetail: SaleSchoolDetail[] = [];
 
     sale.schools.forEach(school => {
-      school.proposals.forEach(p => {
+      const p = proposalMapBySchool.get(school.id);
+      let allocated = 0;
+      let invested = 0;
+      let itemB = 0;
+      let otherB = 0;
+      let constructionB = 0;
+      let status = "NONE";
+      let proposalId = undefined;
+      const students = school.newStudents || 0;
+
+      totalStudents += students;
+
+      if (p) {
         proposalCount++;
-        totalAllocatedBudget += Number(p.allocatedBudget);
-        totalInvestedBudget += Number(p.investedBudget);
+        proposalId = p.id;
+        status = p.status;
+        allocated = Number(p.allocatedBudget || 0);
+        invested = Number(p.investedBudget || 0);
+
+        p.items?.forEach((item: any) => itemB += Number(item.totalPrice || 0));
+        
+        p.investments?.forEach((invItem: any) => {
+          const invPrice = Number(invItem.totalPrice || 0);
+          const nameLower = (invItem.name || "").toLowerCase();
+          const descLower = (invItem.description || "").toLowerCase();
+
+          if (nameLower.includes("thi công") || nameLower.includes("lắp đặt") || nameLower.includes("xây dựng") || descLower.includes("thi công")) {
+            constructionB += invPrice;
+          } else {
+            otherB += invPrice;
+          }
+        });
+
+        totalAllocatedBudget += allocated;
+        totalInvestedBudget += invested;
+        totalItemBudget += itemB;
+        totalOtherBudget += otherB;
+        totalConstructionBudget += constructionB;
+      }
+
+      schoolsDetail.push({
+        id: school.id,
+        proposalId,
+        schoolName: school.name,
+        studentsCount: students,
+        allocatedBudget: allocated,
+        investedBudget: invested,
+        itemBudget: itemB,
+        otherBudget: otherB,
+        constructionBudget: constructionB,
+        variance: allocated - invested,
+        status
       });
     });
 
@@ -140,9 +243,14 @@ export default async function AdminDashboardPage() {
       username: sale.username,
       schoolCount: sale.schools.length,
       proposalCount,
+      totalStudents,
       totalAllocated: totalAllocatedBudget,
       totalInvested: totalInvestedBudget,
+      totalItemBudget,
+      totalOtherBudget,
+      totalConstructionBudget,
       budgetVariance: totalAllocatedBudget - totalInvestedBudget,
+      schools: schoolsDetail.sort((a, b) => a.variance - b.variance)
     };
   }).sort((a, b) => b.totalAllocated - a.totalAllocated);
 
@@ -193,15 +301,18 @@ export default async function AdminDashboardPage() {
       pendingInvested={pendingInvested}
       pendingItemBudget={pendingItemBudget}
       pendingOtherBudget={pendingOtherBudget}
+      pendingConstructionBudget={pendingConstructionBudget}
       pendingSchoolCount={pendingSchoolCount}
       completedAllocated={completedAllocated}
       completedInvested={completedInvested}
       completedItemBudget={completedItemBudget}
       completedOtherBudget={completedOtherBudget}
+      completedConstructionBudget={completedConstructionBudget}
       completedSchoolCount={completedSchoolCount}
       draftProposalCount={draftProposalCount}
       inProgressProposalCount={inProgressProposalCount}
       completedProposalCount={completedProposalCount}
+      allProposalsCount={allProposals.length}
       saleLeaderboard={saleLeaderboard}
       allocatedBreakdown={allocatedBreakdown}
       overdueProposals={overdueProposals}

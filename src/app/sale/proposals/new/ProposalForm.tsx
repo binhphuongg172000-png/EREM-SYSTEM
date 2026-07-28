@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { createProposal } from "@/app/actions/proposal-sale";
 import { vietnameseIncludes } from "@/lib/vietnamese";
-import { AlertCircle, AlertTriangle, RefreshCcw, Search, Plus, Trash2, Package, Building2, ChevronDown, CheckCircle2, FileText, TrendingUp, GraduationCap, DoorOpen } from "lucide-react";
+import { AlertCircle, AlertTriangle, RefreshCcw, Search, Plus, Trash2, Package, Building2, ChevronDown, CheckCircle2, FileText, TrendingUp, GraduationCap, DoorOpen, Wrench } from "lucide-react";
 import CurrencyInput from "@/components/CurrencyInput";
 
 type ProposalItemInput = {
@@ -40,9 +40,19 @@ type School = {
 };
 
 type CatalogItem = { id: string; name: string; specifications: string; standardPrice: number; unit: string };
-type CatalogInvestment = { id: string; name: string; description: string; standardPrice: number; unit: string };
+type CatalogInvestment = { id: string; name: string; description: string; standardPrice: number; unit: string; category?: string };
 
-type ProposalItem = { tempId: number; name: string; specifications: string; quantity: number; price: number; type: "ITEM" | "INVESTMENT"; unit: string };
+type ProposalItem = { tempId: number; name: string; specifications: string; quantity: number; price: number; type: "ITEM" | "INVESTMENT"; unit: string; category?: string };
+
+const isConstructionItem = (item: { name: string; category?: string }) => {
+  if (item.category === "CONSTRUCTION") return true;
+  const nameLower = (item.name || "").toLowerCase();
+  return (
+    nameLower.startsWith("gói thi công") ||
+    nameLower.startsWith("gói bảo trì") ||
+    nameLower.startsWith("gói hệ thống")
+  );
+};
 
 export default function ProposalForm({
   schools,
@@ -72,7 +82,7 @@ export default function ProposalForm({
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [schoolFilter, setSchoolFilter] = useState<"ALL" | "NONE" | "INIT" | "LOCKED" | "COMPLETED">("ALL");
   const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
-  const [catalogModalTab, setCatalogModalTab] = useState<"ALL" | "ITEM" | "INVESTMENT">("ALL");
+  const [catalogModalTab, setCatalogModalTab] = useState<"ALL" | "ITEM" | "INVESTMENT" | "CONSTRUCTION">("ALL");
   const [catalogModalSearch, setCatalogModalSearch] = useState("");
 
   const getSchoolStatus = (s: any) => {
@@ -247,7 +257,8 @@ export default function ProposalForm({
             specifications: inv.description,
             quantity: 1,
             price: Number(inv.standardPrice),
-            unit: inv.unit
+            unit: inv.unit,
+            category: inv.category
           }];
         });
       }
@@ -1083,8 +1094,78 @@ export default function ProposalForm({
                   </div>
                 )}
 
-                {/* GROUP 2: HẠNG MỤC ĐẦU TƯ KHÁC */}
-                {items.filter(i => i.type === "INVESTMENT").length > 0 && (
+                {/* GROUP 2: HẠNG MỤC THI CÔNG */}
+                {items.filter(i => i.type === "INVESTMENT" && isConstructionItem(i)).length > 0 && (
+                  <div style={{ background: "rgba(15, 23, 42, 0.4)", border: "1px solid rgba(6, 182, 212, 0.3)", borderRadius: "12px", overflow: "hidden" }}>
+                    <div style={{
+                      display: "flex", justifyContent: "space-between", alignItems: "center",
+                      padding: "0.55rem 0.85rem", background: "rgba(6, 182, 212, 0.08)",
+                      borderBottom: "1px solid rgba(6, 182, 212, 0.25)"
+                    }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#06b6d4", fontWeight: 700, fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                        <Wrench size={14} />
+                        Thi công ({items.filter(i => i.type === "INVESTMENT" && isConstructionItem(i)).length})
+                      </div>
+                      <div style={{ fontSize: "0.825rem", fontWeight: 700, color: "#06b6d4" }}>
+                        Tổng thi công: {items.filter(i => i.type === "INVESTMENT" && isConstructionItem(i)).reduce((acc, curr) => acc + (curr.quantity * curr.price), 0).toLocaleString()}đ
+                      </div>
+                    </div>
+
+                    <div style={{ padding: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                      {items.filter(i => i.type === "INVESTMENT" && isConstructionItem(i)).map((item) => (
+                        <div key={item.tempId} className="item-row">
+                          <div>
+                            <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.875rem", marginBottom: 3 }}>{item.name}</div>
+                            {item.specifications && (
+                              <div style={{ fontSize: "0.75rem", color: "#94a3b8", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                                {item.specifications}
+                              </div>
+                            )}
+                          </div>
+                          
+                          <div>
+                            <div style={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 700, marginBottom: 4 }}>SỐ LƯỢNG</div>
+                            <input 
+                              type="number" 
+                              min="0"
+                              step="0.01" 
+                              className="form-input" 
+                              style={{ textAlign: "center", padding: "6px", borderRadius: 8, fontSize: "0.85rem", fontWeight: 600 }}
+                              value={item.quantity === 0 ? "" : item.quantity} 
+                              onChange={e => updateItemQuantity(item.tempId, e.target.value === "" ? 0 : parseFloat(e.target.value) || 0)}
+                              disabled={selectedSchool?.isLocked}
+                              title="Số lượng"
+                            />
+                          </div>
+                          
+                          <div>
+                            <div style={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 700, marginBottom: 4 }}>ĐƠN GIÁ (đ/{item.unit || "Gói"})</div>
+                            <CurrencyInput 
+                              value={item.price} 
+                              onChange={val => updateItemPrice(item.tempId, parseInt(val) || 0)}
+                              style={{ padding: "6px", borderRadius: 8, fontSize: "0.85rem", fontWeight: 600 }}
+                              disabled={selectedSchool?.isLocked}
+                            />
+                          </div>
+                          
+                          <div style={{ textAlign: "right" }}>
+                            <div style={{ fontSize: "0.65rem", color: "#64748b", fontWeight: 700, marginBottom: 4 }}>THÀNH TIỀN</div>
+                            <div style={{ padding: "6px 0", fontSize: "0.875rem", fontWeight: 700, color: "#06b6d4", whiteSpace: "nowrap" }}>
+                              {(item.quantity * item.price).toLocaleString()}đ
+                            </div>
+                          </div>
+                          
+                          <button type="button" onClick={() => removeItem(item.tempId)} disabled={selectedSchool?.isLocked} className="remove-btn" title="Xóa">
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* GROUP 3: HẠNG MỤC ĐẦU TƯ KHÁC */}
+                {items.filter(i => i.type === "INVESTMENT" && !isConstructionItem(i)).length > 0 && (
                   <div style={{ background: "rgba(15, 23, 42, 0.4)", border: "1px solid rgba(168, 85, 247, 0.25)", borderRadius: "12px", overflow: "hidden" }}>
                     <div style={{
                       display: "flex", justifyContent: "space-between", alignItems: "center",
@@ -1093,15 +1174,15 @@ export default function ProposalForm({
                     }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#a855f7", fontWeight: 700, fontSize: "0.78rem", textTransform: "uppercase", letterSpacing: "0.05em" }}>
                         <Building2 size={14} />
-                        Đầu tư khác ({items.filter(i => i.type === "INVESTMENT").length})
+                        Đầu tư khác ({items.filter(i => i.type === "INVESTMENT" && !isConstructionItem(i)).length})
                       </div>
                       <div style={{ fontSize: "0.825rem", fontWeight: 700, color: "#a855f7" }}>
-                        Tổng đầu tư: {items.filter(i => i.type === "INVESTMENT").reduce((acc, curr) => acc + (curr.quantity * curr.price), 0).toLocaleString()}đ
+                        Tổng đầu tư khác: {items.filter(i => i.type === "INVESTMENT" && !isConstructionItem(i)).reduce((acc, curr) => acc + (curr.quantity * curr.price), 0).toLocaleString()}đ
                       </div>
                     </div>
 
                     <div style={{ padding: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                      {items.filter(i => i.type === "INVESTMENT").map((item) => (
+                      {items.filter(i => i.type === "INVESTMENT" && !isConstructionItem(i)).map((item) => (
                         <div key={item.tempId} className="item-row">
                           <div>
                             <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.875rem", marginBottom: 3 }}>{item.name}</div>
@@ -1257,16 +1338,16 @@ export default function ProposalForm({
       {/* ── CATALOG BROWSER MODAL DIALOG (SAAS STANDARD) ── */}
       {isCatalogModalOpen && (
         <div style={{
-          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
-          background: "rgba(9, 14, 26, 0.85)", backdropFilter: "blur(8px)",
-          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000,
-          padding: "1rem", animation: "fadeIn 0.2s ease"
+          position: "fixed", top: 0, left: 0, width: "100vw", height: "100vh",
+          background: "rgba(9, 14, 26, 0.88)", backdropFilter: "blur(10px)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 9999,
+          padding: "1.5rem", animation: "fadeIn 0.2s ease"
         }}>
           <div style={{
             background: "#0f172a", border: "1px solid #334155", borderRadius: "16px",
-            width: "100%", maxWidth: "800px", maxHeight: "85vh",
+            width: "100%", maxWidth: "780px", maxHeight: "80vh", margin: "auto",
             display: "flex", flexDirection: "column", overflow: "hidden",
-            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.9)"
+            boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.95)"
           }}>
             {/* Modal Header */}
             <div style={{
@@ -1307,41 +1388,52 @@ export default function ProposalForm({
               </div>
 
               <div style={{ display: "flex", gap: "0.4rem" }}>
-                {[
-                  { key: "ALL", label: `Tất cả (${catalogItems.length + catalogInvestments.length})`, color: "#38bdf8" },
-                  { key: "ITEM", label: `Thiết bị (${catalogItems.length})`, color: "#38bdf8" },
-                  { key: "INVESTMENT", label: `Đầu tư khác (${catalogInvestments.length})`, color: "#a855f7" },
-                ].map(tab => (
-                  <button
-                    key={tab.key}
-                    type="button"
-                    onClick={() => setCatalogModalTab(tab.key as any)}
-                    style={{
-                      padding: "4px 12px", borderRadius: "6px", fontSize: "0.75rem", fontWeight: 700,
-                      border: "1px solid",
-                      borderColor: catalogModalTab === tab.key ? tab.color : "#334155",
-                      background: catalogModalTab === tab.key ? `${tab.color}22` : "transparent",
-                      color: catalogModalTab === tab.key ? tab.color : "#94a3b8",
-                      cursor: "pointer", transition: "all 0.2s"
-                    }}
-                  >
-                    {tab.label}
-                  </button>
-                ))}
+                {(() => {
+                  const constrCatalog = catalogInvestments.filter(i => isConstructionItem(i));
+                  const pureInvCatalog = catalogInvestments.filter(i => !isConstructionItem(i));
+                  return [
+                    { key: "ALL", label: `Tất cả (${catalogItems.length + catalogInvestments.length})`, color: "#38bdf8" },
+                    { key: "ITEM", label: `Thiết bị (${catalogItems.length})`, color: "#38bdf8" },
+                    { key: "CONSTRUCTION", label: `Thi công (${constrCatalog.length})`, color: "#06b6d4" },
+                    { key: "INVESTMENT", label: `Đầu tư khác (${pureInvCatalog.length})`, color: "#a855f7" },
+                  ].map(tab => (
+                    <button
+                      key={tab.key}
+                      type="button"
+                      onClick={() => setCatalogModalTab(tab.key as any)}
+                      style={{
+                        padding: "4px 12px", borderRadius: "6px", fontSize: "0.75rem", fontWeight: 700,
+                        border: "1px solid",
+                        borderColor: catalogModalTab === tab.key ? tab.color : "#334155",
+                        background: catalogModalTab === tab.key ? `${tab.color}22` : "transparent",
+                        color: catalogModalTab === tab.key ? tab.color : "#94a3b8",
+                        cursor: "pointer", transition: "all 0.2s"
+                      }}
+                    >
+                      {tab.label}
+                    </button>
+                  ));
+                })()}
               </div>
             </div>
 
             {/* Modal Body Grid */}
             <div style={{ padding: "1.25rem", overflowY: "auto", flex: 1, display: "flex", flexDirection: "column", gap: "1rem" }}>
               {(() => {
+                const constrCatalog = catalogInvestments.filter(i => isConstructionItem(i));
+                const pureInvCatalog = catalogInvestments.filter(i => !isConstructionItem(i));
+
                 const itemsList = (catalogModalTab === "ALL" || catalogModalTab === "ITEM")
                   ? catalogItems.filter(i => vietnameseIncludes(i.name, catalogModalSearch) || vietnameseIncludes(i.specifications, catalogModalSearch))
                   : [];
+                const constrsList = (catalogModalTab === "ALL" || catalogModalTab === "CONSTRUCTION")
+                  ? constrCatalog.filter(i => vietnameseIncludes(i.name, catalogModalSearch) || vietnameseIncludes(i.description, catalogModalSearch))
+                  : [];
                 const invsList = (catalogModalTab === "ALL" || catalogModalTab === "INVESTMENT")
-                  ? catalogInvestments.filter(i => vietnameseIncludes(i.name, catalogModalSearch) || vietnameseIncludes(i.description, catalogModalSearch))
+                  ? pureInvCatalog.filter(i => vietnameseIncludes(i.name, catalogModalSearch) || vietnameseIncludes(i.description, catalogModalSearch))
                   : [];
 
-                if (itemsList.length === 0 && invsList.length === 0) {
+                if (itemsList.length === 0 && constrsList.length === 0 && invsList.length === 0) {
                   return (
                     <div style={{ padding: "3rem", textAlign: "center", color: "#64748b" }}>
                       <Package size={36} color="#475569" style={{ margin: "0 auto 0.75rem" }} />
@@ -1438,6 +1530,56 @@ export default function ProposalForm({
                                   style={{
                                     padding: "0.4rem 0.75rem", borderRadius: "8px", fontSize: "0.75rem", fontWeight: 700,
                                     background: added ? "rgba(16, 185, 129, 0.2)" : "#a855f7",
+                                    border: added ? "1px solid #10b981" : "none",
+                                    color: added ? "#10b981" : "#ffffff",
+                                    cursor: "pointer", flexShrink: 0, transition: "all 0.2s"
+                                  }}
+                                >
+                                  {added ? "✓ Đã thêm" : "+ Thêm"}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Construction Section */}
+                    {constrsList.length > 0 && (
+                      <div style={{ marginTop: (itemsList.length > 0 || invsList.length > 0) ? "1rem" : 0 }}>
+                        <div style={{ fontSize: "0.75rem", fontWeight: 800, color: "#06b6d4", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.5rem", display: "flex", alignItems: "center", gap: "0.3rem" }}>
+                          <Wrench size={14} /> Thi công ({constrsList.length})
+                        </div>
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: "0.75rem" }}>
+                          {constrsList.map(inv => {
+                            const added = items.some(i => i.type === "INVESTMENT" && i.name === inv.name);
+                            return (
+                              <div
+                                key={inv.id}
+                                style={{
+                                  background: "rgba(15, 23, 42, 0.6)", border: "1px solid rgba(6, 182, 212, 0.4)", borderRadius: "10px",
+                                  padding: "0.75rem 0.85rem", display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.75rem"
+                                }}
+                              >
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                  <div style={{ fontWeight: 700, color: "#f8fafc", fontSize: "0.85rem", marginBottom: 3 }}>{inv.name}</div>
+                                  {inv.description && (
+                                    <div style={{ fontSize: "0.725rem", color: "#94a3b8", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                                      {inv.description}
+                                    </div>
+                                  )}
+                                  <div style={{ marginTop: 4, display: "flex", alignItems: "center", gap: "0.4rem" }}>
+                                    <span style={{ fontSize: "0.65rem", padding: "1px 5px", borderRadius: 4, background: "rgba(6, 182, 212, 0.15)", color: "#06b6d4", fontWeight: 700 }}>{inv.unit || "Gói"}</span>
+                                    <span style={{ fontSize: "0.8rem", fontWeight: 800, color: "#06b6d4" }}>{Number(inv.standardPrice).toLocaleString()}đ</span>
+                                  </div>
+                                </div>
+
+                                <button
+                                  type="button"
+                                  onClick={() => addItemByValue(`INV_${inv.id}`)}
+                                  style={{
+                                    padding: "0.4rem 0.75rem", borderRadius: "8px", fontSize: "0.75rem", fontWeight: 700,
+                                    background: added ? "rgba(16, 185, 129, 0.2)" : "#06b6d4",
                                     border: added ? "1px solid #10b981" : "none",
                                     color: added ? "#10b981" : "#ffffff",
                                     cursor: "pointer", flexShrink: 0, transition: "all 0.2s"

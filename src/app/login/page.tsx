@@ -115,7 +115,7 @@ export default function LoginPage() {
               <div className="brand-3d-icon-box">
                 <Sparkles size={42} color="#ffffff" className="sparkle-spin" />
               </div>
-              <h1 className="brand-3d-title">EREM OS</h1>
+              <h1 className="brand-3d-title">EREM SYSTEM</h1>
               <p className="brand-3d-tagline">Quản Lý Dự Trù & Bàn Giao Thiết Bị</p>
             </div>
 

@@ -47,18 +47,19 @@ export default async function AdminProposalsPage({
         orderBy: { createdAt: "desc" },
       })
     ]);
-    return { sales, rawProposals };
+    const cleanProposals = JSON.parse(JSON.stringify(rawProposals));
+    return { sales, rawProposals: cleanProposals };
   }, 30);
 
   // Count total overdue proposals across system (>5 days not in progress/completed)
-  const overdueCount = allProposals.filter(p => {
+  const overdueCount = allProposals.filter((p: any) => {
     if (p.status === "COMPLETED" || p.status === "APPROVED") return false;
     const createdTime = new Date(p.createdAt).getTime();
     return (nowTime - createdTime) >= FIVE_DAYS_MS;
   }).length;
 
   // Filter in memory for instant status/sale/search switching
-  const rawProposals = allProposals.filter(p => {
+  const rawProposals = allProposals.filter((p: any) => {
     if (saleId && p.saleId !== saleId) return false;
     if (search && !(
       vietnameseIncludes(p.school?.name, search) ||
@@ -83,7 +84,7 @@ export default async function AdminProposalsPage({
   let displayProposals = rawProposals;
   if (latest === "true") {
     const seenSchoolIds = new Set<string>();
-    displayProposals = rawProposals.filter((p) => {
+    displayProposals = rawProposals.filter((p: any) => {
       if (seenSchoolIds.has(p.schoolId)) return false;
       seenSchoolIds.add(p.schoolId);
       return true;
@@ -92,15 +93,15 @@ export default async function AdminProposalsPage({
 
   // Budget filter (client-side since it needs calculation)
   if (budget === "positive") {
-    displayProposals = displayProposals.filter(p => Number(p.allocatedBudget) - Number(p.investedBudget) >= 0);
+    displayProposals = displayProposals.filter((p: any) => Number(p.allocatedBudget) - Number(p.investedBudget) >= 0);
   } else if (budget === "negative") {
-    displayProposals = displayProposals.filter(p => Number(p.allocatedBudget) - Number(p.investedBudget) < 0);
+    displayProposals = displayProposals.filter((p: any) => Number(p.allocatedBudget) - Number(p.investedBudget) < 0);
   }
 
   // System Total Stats (Fixed metrics from total dataset, unchanged by filters)
   const totalProposals = allProposals.length;
-  const completedCount = allProposals.filter(p => p.status === "COMPLETED").length;
-  const lockedCount = allProposals.filter(p => p.status !== "COMPLETED" && (p.school?.isLocked || p.status === "APPROVED")).length;
+  const completedCount = allProposals.filter((p: any) => p.status === "COMPLETED").length;
+  const lockedCount = allProposals.filter((p: any) => p.status !== "COMPLETED" && (p.school?.isLocked || p.status === "APPROVED")).length;
   const initCount = totalProposals - completedCount - lockedCount;
 
   return (
@@ -258,12 +259,12 @@ export default async function AdminProposalsPage({
       <div className="card table-container" style={{ padding: 0, overflow: "visible", borderRadius: "12px" }}>
         <table className="table table-hover" style={{ tableLayout: "fixed", width: "100%", margin: 0 }}>
           <colgroup>
-            <col style={{ width: "26%" }} />
-            <col style={{ width: "16%" }} />
-            <col style={{ width: "16%" }} />
+            <col style={{ width: "22%" }} />
             <col style={{ width: "14%" }} />
+            <col style={{ width: "12%" }} />
             <col style={{ width: "14%" }} />
-            <col style={{ width: "14%" }} />
+            <col style={{ width: "13%" }} />
+            <col style={{ width: "25%" }} />
           </colgroup>
           <thead>
             <tr>
@@ -287,7 +288,7 @@ export default async function AdminProposalsPage({
                 </td>
               </tr>
             ) : (
-              displayProposals.map((p) => {
+              displayProposals.map((p: any) => {
                 const delta = Number(p.allocatedBudget) - Number(p.investedBudget);
                 
                 const createdTime = new Date(p.createdAt).getTime();

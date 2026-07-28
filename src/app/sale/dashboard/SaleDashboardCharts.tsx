@@ -16,6 +16,10 @@ interface SaleDashboardChartsProps {
     completedCount: number;
     totalAllocated: number;
     totalInvested: number;
+    totalItemCost?: number;
+    totalConstrCost?: number;
+    totalOtherCost?: number;
+    totalNewStudents?: number;
     delta: number;
   };
   schoolBudgets: Array<{
@@ -27,6 +31,12 @@ interface SaleDashboardChartsProps {
 }
 
 export default function SaleDashboardCharts({ stats, schoolBudgets }: SaleDashboardChartsProps) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   // Data for Chart 1: Donut Chart (General Info Status Distribution)
   const statusData = [
     { name: "Khởi tạo", value: stats.initCount, color: "#fb923c" },
@@ -61,183 +71,298 @@ export default function SaleDashboardCharts({ stats, schoolBudgets }: SaleDashbo
     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: "1.5rem", marginBottom: "1.75rem" }}>
       
       {/* CHART 1: BIỂU ĐỒ PHÂN BỔ THÔNG TIN CHUNG & TRẠNG THÁI */}
-      <div className="sale-table-card" style={{ padding: "1.35rem 1.5rem", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+      <div className="sale-table-card" style={{ padding: "1rem 1.25rem", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
-              <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "rgba(99, 102, 241, 0.15)", color: "#818cf8", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <PieIcon size={18} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <div style={{ width: "30px", height: "30px", borderRadius: "8px", background: "rgba(99, 102, 241, 0.15)", color: "#818cf8", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <PieIcon size={16} />
               </div>
               <div>
-                <h3 style={{ fontSize: "0.95rem", fontWeight: 800, color: "#ffffff", margin: 0 }}>
+                <h3 style={{ fontSize: "0.9rem", fontWeight: 800, color: "#ffffff", margin: 0 }}>
                   Biểu đồ Phân bổ Hồ sơ Dự trù
                 </h3>
-                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Tỷ lệ hồ sơ theo từng giai đoạn xử lý</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginTop: "0.2rem", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "0.7rem", color: "#fb923c", fontWeight: 700, display: "flex", alignItems: "center", gap: "0.2rem" }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#fb923c" }}></span> Khởi tạo: {stats.initCount}
+                  </span>
+                  <span style={{ fontSize: "0.7rem", color: "#fb7185", fontWeight: 700, display: "flex", alignItems: "center", gap: "0.2rem" }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#fb7185" }}></span> Đang thực hiện: {stats.lockedCount}
+                  </span>
+                  <span style={{ fontSize: "0.7rem", color: "#34d399", fontWeight: 700, display: "flex", alignItems: "center", gap: "0.2rem" }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#34d399" }}></span> Hoàn thành: {stats.completedCount}
+                  </span>
+                </div>
               </div>
             </div>
-            <span style={{ fontSize: "0.72rem", background: "rgba(99, 102, 241, 0.12)", color: "#818cf8", padding: "0.2rem 0.6rem", borderRadius: "6px", fontWeight: 700 }}>
+            <span style={{ fontSize: "0.7rem", background: "rgba(99, 102, 241, 0.12)", color: "#818cf8", padding: "0.15rem 0.5rem", borderRadius: "6px", fontWeight: 700 }}>
               Tổng: {stats.totalProposals} hồ sơ
             </span>
           </div>
 
-          <div style={{ height: "200px", width: "100%", position: "relative" }}>
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie
-                  data={chartStatusData}
-                  cx="50%"
-                  cy="50%"
-                  innerRadius={55}
-                  outerRadius={80}
-                  paddingAngle={4}
-                  dataKey="value"
-                >
-                  {chartStatusData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={entry.color} stroke="rgba(15, 23, 42, 0.8)" strokeWidth={2} />
-                  ))}
-                </Pie>
-                <Tooltip 
-                  contentStyle={{ background: "#0f172a", borderColor: "#334155", borderRadius: "10px", color: "#fff", fontSize: "0.825rem" }}
-                  formatter={(val: any) => [`${val} hồ sơ`, "Số lượng"]}
-                />
-              </PieChart>
-            </ResponsiveContainer>
+          <div style={{ height: "140px", width: "100%", position: "relative" }}>
+            {mounted && (
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart margin={{ top: 0, bottom: 0, left: 0, right: 0 }}>
+                  <Pie
+                    data={chartStatusData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={38}
+                    outerRadius={58}
+                    paddingAngle={3}
+                    dataKey="value"
+                    isAnimationActive={true}
+                    animationBegin={100}
+                    animationDuration={1200}
+                    animationEasing="ease-out"
+                  >
+                    {chartStatusData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} stroke="rgba(15, 23, 42, 0.8)" strokeWidth={2} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ background: "#0f172a", borderColor: "#334155", borderRadius: "10px", color: "#fff", fontSize: "0.825rem" }}
+                    formatter={(val: any) => [`${val} hồ sơ`, "Số lượng"]}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            )}
 
             {/* Center Summary Label */}
             <div style={{
               position: "absolute", top: "50%", left: "50%", transform: "translate(-50%, -50%)",
               textAlign: "center", pointerEvents: "none"
             }}>
-              <div style={{ fontSize: "1.35rem", fontWeight: 900, color: "#ffffff", lineHeight: 1 }}>
+              <div style={{ fontSize: "1.15rem", fontWeight: 900, color: "#ffffff", lineHeight: 1 }}>
                 {stats.totalProposals}
               </div>
-              <div style={{ fontSize: "0.68rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 700, marginTop: "0.25rem" }}>
+              <div style={{ fontSize: "0.62rem", color: "#94a3b8", textTransform: "uppercase", fontWeight: 700, marginTop: "0.15rem" }}>
                 Hồ sơ
               </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Status Legend Breakdown */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "0.75rem", marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid var(--sale-card-border)" }}>
-          <div style={{ background: "rgba(251, 146, 60, 0.08)", border: "1px solid rgba(251, 146, 60, 0.2)", borderRadius: "10px", padding: "0.6rem 0.75rem", textAlign: "center" }}>
-            <div style={{ fontSize: "0.7rem", color: "#fb923c", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.3rem" }}>
-              <Clock size={12} /> Khởi tạo
-            </div>
-            <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#ffffff", marginTop: "0.2rem" }}>
-              {stats.initCount}
-            </div>
-          </div>
-
-          <div style={{ background: "rgba(244, 63, 94, 0.08)", border: "1px solid rgba(244, 63, 94, 0.2)", borderRadius: "10px", padding: "0.6rem 0.75rem", textAlign: "center" }}>
-            <div style={{ fontSize: "0.7rem", color: "#fb7185", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.3rem" }}>
-              <Lock size={12} /> Đang thực hiện
-            </div>
-            <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#ffffff", marginTop: "0.2rem" }}>
-              {stats.lockedCount}
-            </div>
-          </div>
-
-          <div style={{ background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: "10px", padding: "0.6rem 0.75rem", textAlign: "center" }}>
-            <div style={{ fontSize: "0.7rem", color: "#34d399", fontWeight: 700, display: "flex", alignItems: "center", justifyContent: "center", gap: "0.3rem" }}>
-              <CheckCircle2 size={12} /> Hoàn thành
-            </div>
-            <div style={{ fontSize: "1.1rem", fontWeight: 800, color: "#ffffff", marginTop: "0.2rem" }}>
-              {stats.completedCount}
             </div>
           </div>
         </div>
       </div>
 
       {/* CHART 2: BIỂU ĐỒ TỔNG QUAN VÀ CÂN ĐỐI NGÂN SÁCH HỆ THỐNG */}
-      <div className="sale-table-card" style={{ padding: "1.35rem 1.5rem", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
+      <div className="sale-table-card" style={{ padding: "1rem 1.25rem", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>
         <div>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1.25rem" }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
-              <div style={{ width: "32px", height: "32px", borderRadius: "8px", background: "rgba(16, 185, 129, 0.15)", color: "#10b981", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <BarChart3 size={18} />
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "0.5rem" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <div style={{ width: "30px", height: "30px", borderRadius: "8px", background: "rgba(16, 185, 129, 0.15)", color: "#10b981", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <BarChart3 size={16} />
               </div>
               <div>
-                <h3 style={{ fontSize: "0.95rem", fontWeight: 800, color: "#ffffff", margin: 0 }}>
+                <h3 style={{ fontSize: "0.9rem", fontWeight: 800, color: "#ffffff", margin: 0 }}>
                   Biểu đồ Cân đối Ngân sách Tổng hợp
                 </h3>
-                <span style={{ fontSize: "0.75rem", color: "#94a3b8" }}>Tổng hợp Định mức Cấp vs Đã Đầu Tư Toàn Bộ Hệ Thống</span>
+                <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginTop: "0.2rem", flexWrap: "wrap" }}>
+                  <span style={{ fontSize: "0.7rem", color: "#10b981", fontWeight: 700, display: "flex", alignItems: "center", gap: "0.2rem" }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#10b981" }}></span> Ngân sách cấp
+                  </span>
+                  <span style={{ fontSize: "0.7rem", color: "#38bdf8", fontWeight: 700, display: "flex", alignItems: "center", gap: "0.2rem" }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#38bdf8" }}></span> Thiết bị
+                  </span>
+                  <span style={{ fontSize: "0.7rem", color: "#a855f7", fontWeight: 700, display: "flex", alignItems: "center", gap: "0.2rem" }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#a855f7" }}></span> Đầu tư khác
+                  </span>
+                  <span style={{ fontSize: "0.7rem", color: "#f59e0b", fontWeight: 700, display: "flex", alignItems: "center", gap: "0.2rem" }}>
+                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#f59e0b" }}></span> Thi công
+                  </span>
+                </div>
               </div>
             </div>
 
             <div style={{ textAlign: "right" }}>
-              <div style={{ fontSize: "0.72rem", color: "#94a3b8", fontWeight: 600 }}>Tỷ lệ sử dụng</div>
-              <div style={{ fontSize: "0.95rem", fontWeight: 800, color: utilizationRate <= 100 ? "#34d399" : "#fb7185" }}>
+              <div style={{ fontSize: "0.68rem", color: "#94a3b8", fontWeight: 600 }}>Tỷ lệ sử dụng</div>
+              <div style={{ fontSize: "0.9rem", fontWeight: 800, color: utilizationRate <= 100 ? "#34d399" : "#fb7185" }}>
                 {utilizationRate}%
               </div>
             </div>
           </div>
 
-          {/* Aggregate Budget Visualizer Bars */}
-          <div style={{ display: "flex", flexDirection: "column", gap: "1rem", margin: "1rem 0" }}>
-            {/* Bar 1: Ngân sách cấp */}
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: "0.35rem" }}>
-                <span style={{ color: "#94a3b8", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                  <Coins size={14} color="#10b981" /> Ngân Sách Cấp (Định mức)
-                </span>
-                <strong style={{ color: "#34d399", fontWeight: 800 }}>{stats.totalAllocated.toLocaleString()} VNĐ</strong>
-              </div>
-              <div style={{ height: "10px", background: "rgba(30, 41, 59, 0.8)", borderRadius: "999px", overflow: "hidden" }}>
-                <div style={{ height: "100%", width: "100%", background: "#10b981", borderRadius: "999px" }} />
-              </div>
-            </div>
+          {/* Recharts Stacked Horizontal Bar Chart visualizer */}
+          <div style={{ height: "140px", width: "100%" }}>
+            {mounted && (
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  layout="vertical"
+                  data={(() => {
+                    const itemV = stats.totalItemCost || 0;
+                    const otherV = stats.totalOtherCost || 0;
+                    const constrV = stats.totalConstrCost || 0;
+                    const realInvested = stats.totalInvested || (itemV + otherV + constrV);
 
-            {/* Bar 2: Ngân sách đã đầu tư */}
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: "0.35rem" }}>
-                <span style={{ color: "#94a3b8", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                  <Wallet size={14} color="#fbbf24" /> Ngân Sách Đã Đầu Tư
-                </span>
-                <strong style={{ color: "#fbbf24", fontWeight: 800 }}>{stats.totalInvested.toLocaleString()} VNĐ</strong>
-              </div>
-              <div style={{ height: "10px", background: "rgba(30, 41, 59, 0.8)", borderRadius: "999px", overflow: "hidden" }}>
-                <div style={{ height: "100%", width: `${utilizationRate}%`, background: "#fbbf24", borderRadius: "999px" }} />
-              </div>
-            </div>
+                    let itemCost = itemV;
+                    let otherCost = otherV;
+                    let constrCost = constrV;
 
-            {/* Bar 3: Chênh lệch ngân sách */}
-            <div>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", marginBottom: "0.35rem" }}>
-                <span style={{ color: "#94a3b8", fontWeight: 600, display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                  <TrendingUp size={14} color={stats.delta >= 0 ? "#34d399" : "#fb7185"} /> 
-                  {stats.delta >= 0 ? "Chênh Lệch Dư (Tiết kiệm)" : "Chênh Lệch Vượt (Thiếu)"}
-                </span>
-                <strong style={{ color: stats.delta >= 0 ? "#34d399" : "#fb7185", fontWeight: 800 }}>
-                  {stats.delta >= 0 ? "+" : ""}{stats.delta.toLocaleString()} VNĐ
-                </strong>
-              </div>
-              <div style={{ height: "10px", background: "rgba(30, 41, 59, 0.8)", borderRadius: "999px", overflow: "hidden" }}>
-                <div style={{ 
-                  height: "100%", 
-                  width: stats.totalAllocated > 0 ? `${Math.min(100, Math.round((Math.abs(stats.delta) / stats.totalAllocated) * 100))}%` : "0%", 
-                  background: stats.delta >= 0 ? "#06b6d4" : "#f43f5e", 
-                  borderRadius: "999px" 
-                }} />
-              </div>
-            </div>
-          </div>
-        </div>
+                    if (realInvested > 0) {
+                      const minPct = 0.06; // 6% visual width for 0-value items inside the bar
+                      let zeroCount = 0;
+                      if (itemV === 0) zeroCount++;
+                      if (otherV === 0) zeroCount++;
+                      if (constrV === 0) zeroCount++;
 
-        {/* School Budget Status Counts */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "0.75rem", marginTop: "0.75rem", paddingTop: "0.85rem", borderTop: "1px solid var(--sale-card-border)" }}>
-          <div style={{ background: "rgba(16, 185, 129, 0.08)", border: "1px solid rgba(16, 185, 129, 0.2)", borderRadius: "10px", padding: "0.6rem 0.85rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ fontSize: "0.75rem", color: "#34d399", fontWeight: 700, display: "flex", alignItems: "center", gap: "0.35rem" }}>
-              <ShieldCheck size={14} /> Ngân sách an toàn
-            </div>
-            <strong style={{ fontSize: "1rem", color: "#ffffff" }}>{positiveCount} trường</strong>
-          </div>
+                      if (zeroCount > 0 && zeroCount < 3) {
+                        const reservedForZero = realInvested * minPct * zeroCount;
+                        const posSum = (itemV > 0 ? itemV : 0) + (otherV > 0 ? otherV : 0) + (constrV > 0 ? constrV : 0);
+                        
+                        itemCost = itemV > 0 ? (itemV / posSum) * (realInvested - reservedForZero) : realInvested * minPct;
+                        otherCost = otherV > 0 ? (otherV / posSum) * (realInvested - reservedForZero) : realInvested * minPct;
+                        constrCost = constrV > 0 ? (constrV / posSum) * (realInvested - reservedForZero) : realInvested * minPct;
+                      }
+                    }
 
-          <div style={{ background: "rgba(244, 63, 94, 0.08)", border: "1px solid rgba(244, 63, 94, 0.2)", borderRadius: "10px", padding: "0.6rem 0.85rem", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-            <div style={{ fontSize: "0.75rem", color: "#fb7185", fontWeight: 700, display: "flex", alignItems: "center", gap: "0.35rem" }}>
-              <AlertTriangle size={14} /> Vượt định mức
-            </div>
-            <strong style={{ fontSize: "1rem", color: "#ffffff" }}>{negativeCount} trường</strong>
+                    return [
+                      {
+                        name: "Ngân sách cấp",
+                        allocated: stats.totalAllocated,
+                        itemCost: 0,
+                        otherCost: 0,
+                        constrCost: 0,
+                        realAllocated: stats.totalAllocated,
+                      },
+                      {
+                        name: "Đã đầu tư",
+                        allocated: 0,
+                        itemCost,
+                        otherCost,
+                        constrCost,
+                        realItemCost: itemV,
+                        realOtherCost: otherV,
+                        realConstrCost: constrV,
+                      }
+                    ];
+                  })()}
+                  margin={{ top: 5, right: 20, left: 30, bottom: 5 }}
+                  barCategoryGap="15%"
+                >
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.06)" horizontal={false} />
+                  <XAxis 
+                    type="number" 
+                    stroke="#64748b" 
+                    fontSize={11} 
+                    tickFormatter={(v) => v >= 1e6 ? `${(v / 1e6).toFixed(0)}M` : `${v}`}
+                  />
+                  <YAxis 
+                    type="category" 
+                    dataKey="name" 
+                    stroke="#94a3b8" 
+                    fontSize={12} 
+                    fontWeight={700}
+                    width={95}
+                  />
+                  <Tooltip
+                    content={({ active, payload, label }) => {
+                      if (!active || !payload || !payload.length) return null;
+
+                      const data = payload[0]?.payload;
+                      const isAllocated = label === "Ngân sách cấp";
+
+                      if (isAllocated) {
+                        return (
+                          <div style={{
+                            background: "#0f172a",
+                            border: "1px solid #334155",
+                            borderRadius: "10px",
+                            padding: "0.65rem 0.9rem",
+                            color: "#ffffff",
+                            fontSize: "0.825rem",
+                            boxShadow: "0 10px 25px rgba(0,0,0,0.5)"
+                          }}>
+                            <div style={{ fontWeight: 800, color: "#34d399", marginBottom: "0.25rem" }}>
+                              Ngân sách cấp
+                            </div>
+                            <div style={{ fontSize: "0.9rem", fontWeight: 800, color: "#ffffff" }}>
+                              {data.realAllocated?.toLocaleString()} VNĐ
+                            </div>
+                            {stats.totalNewStudents !== undefined && stats.totalNewStudents > 0 && (
+                              <div style={{ color: "#94a3b8", fontSize: "0.75rem", marginTop: "0.35rem", paddingTop: "0.35rem", borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+                                • Tổng số học sinh mới: <strong style={{ color: "#38bdf8" }}>{stats.totalNewStudents.toLocaleString()} học sinh</strong>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      }
+
+                      return (
+                        <div style={{
+                          background: "#0f172a",
+                          border: "1px solid #334155",
+                          borderRadius: "10px",
+                          padding: "0.65rem 0.9rem",
+                          color: "#ffffff",
+                          fontSize: "0.825rem",
+                          boxShadow: "0 10px 25px rgba(0,0,0,0.5)"
+                        }}>
+                          <div style={{ fontWeight: 800, color: "#fbbf24", marginBottom: "0.35rem" }}>
+                            Đã đầu tư: {stats.totalInvested?.toLocaleString()} VNĐ
+                          </div>
+                          <div style={{ display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.78rem" }}>
+                            <div style={{ color: "#38bdf8" }}>
+                              • Thiết bị: <strong>{(data.realItemCost || 0).toLocaleString()} VNĐ</strong>
+                            </div>
+                            <div style={{ color: "#a855f7" }}>
+                              • Đầu tư khác: <strong>{(data.realOtherCost || 0).toLocaleString()} VNĐ</strong>
+                            </div>
+                            <div style={{ color: "#f59e0b" }}>
+                              • Thi công: <strong>{(data.realConstrCost || 0).toLocaleString()} VNĐ</strong>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    }}
+                  />
+                  <Bar 
+                    dataKey="allocated" 
+                    name="Ngân sách cấp" 
+                    fill="#10b981" 
+                    radius={[0, 6, 6, 0]} 
+                    barSize={28} 
+                    isAnimationActive={true}
+                    animationDuration={1400}
+                    animationEasing="ease-out"
+                    animationBegin={100}
+                  />
+                  <Bar 
+                    dataKey="itemCost" 
+                    stackId="invested" 
+                    name="• Thiết bị" 
+                    fill="#38bdf8" 
+                    barSize={28} 
+                    isAnimationActive={true}
+                    animationDuration={1400}
+                    animationEasing="ease-out"
+                    animationBegin={250}
+                  />
+                  <Bar 
+                    dataKey="otherCost" 
+                    stackId="invested" 
+                    name="• Đầu tư khác" 
+                    fill="#a855f7" 
+                    barSize={28} 
+                    isAnimationActive={true}
+                    animationDuration={1400}
+                    animationEasing="ease-out"
+                    animationBegin={350}
+                  />
+                  <Bar 
+                    dataKey="constrCost" 
+                    stackId="invested" 
+                    name="• Thi công" 
+                    fill="#f59e0b" 
+                    radius={[0, 6, 6, 0]} 
+                    barSize={28} 
+                    isAnimationActive={true}
+                    animationDuration={1400}
+                    animationEasing="ease-out"
+                    animationBegin={450}
+                  />
+                </BarChart>
+              </ResponsiveContainer>
+            )}
           </div>
         </div>
       </div>

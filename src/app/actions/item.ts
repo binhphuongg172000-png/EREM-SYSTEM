@@ -40,8 +40,9 @@ export async function createOtherInvestment(data: any) {
     if (!data.name || !data.description || !data.unit || !data.standardPrice) {
       throw new Error("Vui lòng điền đầy đủ thông tin hạng mục (Tên, Mô tả, Đơn vị tính, Đơn giá)");
     }
+    const category = data.category || "INVESTMENT";
     const existingName = await prisma.otherInvestment.findFirst({
-      where: { name: { equals: data.name, mode: "insensitive" } }
+      where: { name: { equals: data.name, mode: "insensitive" }, category }
     });
     if (existingName) {
       throw new Error(`Tên hạng mục "${data.name}" đã tồn tại! Vui lòng chọn tên khác.`);
@@ -53,14 +54,16 @@ export async function createOtherInvestment(data: any) {
         description: data.description,
         unit: data.unit,
         standardPrice: Number(data.standardPrice) || 0,
+        category,
       },
     });
 
     revalidatePath("/admin/items");
     revalidatePath("/admin/investments");
+    revalidatePath("/admin/constructions");
     return { success: true, investment: newInv };
   } catch (error: any) {
-    return { success: false, message: error.message || "Lỗi tạo hạng mục đầu tư khác" };
+    return { success: false, message: error.message || "Lỗi tạo hạng mục" };
   }
 }
 
@@ -70,10 +73,11 @@ export async function deleteOtherInvestment(id: string) {
       where: { id },
     });
     revalidatePath("/admin/investments");
+    revalidatePath("/admin/constructions");
     revalidatePath("/admin/items");
     return { success: true };
   } catch (error: any) {
-    return { success: false, message: error.message || "Lỗi xóa hạng mục đầu tư khác" };
+    return { success: false, message: error.message || "Lỗi xóa hạng mục" };
   }
 }
 
@@ -128,8 +132,9 @@ export async function updateOtherInvestment(id: string, data: any) {
     if (!data.name || !data.description || !data.unit || !data.standardPrice) {
       throw new Error("Vui lòng điền đầy đủ thông tin hạng mục (Tên, Mô tả, Đơn vị tính, Đơn giá)");
     }
+    const category = data.category || "INVESTMENT";
     const existingName = await prisma.otherInvestment.findFirst({
-      where: { name: { equals: data.name, mode: "insensitive" }, id: { not: id } }
+      where: { name: { equals: data.name, mode: "insensitive" }, id: { not: id }, category }
     });
     if (existingName) {
       throw new Error(`Tên hạng mục "${data.name}" đã tồn tại! Vui lòng chọn tên khác.`);
@@ -142,14 +147,16 @@ export async function updateOtherInvestment(id: string, data: any) {
         description: data.description,
         unit: data.unit,
         standardPrice: Number(data.standardPrice) || 0,
+        category,
       },
     });
 
     revalidatePath("/admin/investments");
+    revalidatePath("/admin/constructions");
     revalidatePath("/admin/items");
     return { success: true, investment: updated };
   } catch (error: any) {
-    return { success: false, message: error.message || "Lỗi cập nhật hạng mục đầu tư khác" };
+    return { success: false, message: error.message || "Lỗi cập nhật hạng mục" };
   }
 }
 
@@ -175,13 +182,17 @@ export async function importItemsBulk(records: { code?: string; name: string; sp
   }
 }
 
-export async function importOtherInvestmentsBulk(records: { name: string; description?: string; unit?: string; standardPrice: number }[]) {
+export async function importOtherInvestmentsBulk(
+  records: { name: string; description?: string; unit?: string; standardPrice: number }[],
+  category: string = "INVESTMENT"
+) {
   try {
     const dataToCreate = records.map(r => ({
       name: r.name,
       description: r.description || "",
       unit: r.unit || "Gói",
       standardPrice: Number(r.standardPrice) || 0,
+      category,
     }));
 
     const result = await prisma.otherInvestment.createMany({
@@ -189,10 +200,11 @@ export async function importOtherInvestmentsBulk(records: { name: string; descri
     });
 
     revalidatePath("/admin/investments");
+    revalidatePath("/admin/constructions");
     revalidatePath("/admin/items");
     return { success: true, count: result.count };
   } catch (error: any) {
-    return { success: false, message: error.message || "Lỗi nhập danh sách đầu tư khác từ Excel" };
+    return { success: false, message: error.message || "Lỗi nhập danh sách từ Excel" };
   }
 }
 
