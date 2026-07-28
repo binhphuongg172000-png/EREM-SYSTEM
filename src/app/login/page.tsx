@@ -29,6 +29,10 @@ export default function LoginPage() {
     router.prefetch("/admin/dashboard");
     router.prefetch("/sale/dashboard");
 
+    // Pre-warm the serverless function + DB connection immediately on page load
+    // So when user submits, cold-start penalty is already paid
+    fetch("/api/ping").catch(() => {});
+
     const handleMouseMove = (e: MouseEvent) => {
       const { innerWidth, innerHeight } = window;
       const x = (e.clientX / innerWidth - 0.5) * 50; // -25deg to 25deg
