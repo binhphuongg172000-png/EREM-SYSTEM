@@ -65,8 +65,8 @@ export default function LoginPage() {
         setError(res.message || "Tên đăng nhập hoặc mật khẩu không đúng");
         setIsLoading(false);
       }
-    } catch {
-      setError("Có lỗi hệ thống xảy ra. Vui lòng thử lại.");
+    } catch (err: any) {
+      setError("Có lỗi hệ thống xảy ra: " + (err?.message || String(err)));
       setIsLoading(false);
     }
   };

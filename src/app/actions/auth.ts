@@ -56,7 +56,8 @@ export async function loginAction(data: any) {
 
     return { success: true, user: { id: user.id, role: user.role, name: user.name } };
   } catch (error: any) {
-    return { success: false, message: "Lỗi hệ thống: " + error.message };
+    console.error("Login action error:", error);
+    return { success: false, message: "Lỗi hệ thống: " + (error?.message || String(error)) };
   }
 }
 
