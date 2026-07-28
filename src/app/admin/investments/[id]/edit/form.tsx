@@ -23,9 +23,9 @@ type InvFormValues = z.infer<typeof invSchema>;
 interface Investment {
   id: string;
   name: string;
-  description: string;
+  description: string | null;
   unit: string;
-  standardPrice: unknown;
+  standardPrice: any;
 }
 
 export default function EditInvestmentForm({ investment }: { investment: Investment }) {

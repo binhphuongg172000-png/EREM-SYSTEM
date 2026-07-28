@@ -24,10 +24,10 @@ type ItemFormValues = z.infer<typeof itemSchema>;
 interface Item {
   id: string;
   name: string;
-  specifications: string;
+  specifications: string | null;
   accessories?: string | null;
   unit: string;
-  standardPrice: unknown;
+  standardPrice: any;
 }
 
 export default function EditItemForm({ item }: { item: Item }) {
