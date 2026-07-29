@@ -60,7 +60,7 @@ export default async function ProposalDetailPage({
   const schoolName = proposal.school?.name || "";
   const isThcs = schoolName.toUpperCase().includes("THCS") || schoolName.toLowerCase().includes("trung học cơ sở");
   const schoolYearLabel = isThcs ? "2029 - 2030" : "2030 - 2031";
-  const depreciationLabel = isThcs ? "4 năm THCS (2030)" : "5 năm tiểu học (2031)";
+  const depreciationLabel = isThcs ? "4 năm THCS (2029-2030)" : "5 năm tiểu học (2030-2031)";
 
   let badgeClass = "badge-orange";
   let statusText = "Khởi tạo";
