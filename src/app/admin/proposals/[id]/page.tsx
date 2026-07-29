@@ -56,6 +56,12 @@ export default async function ProposalDetailPage({
   const invested = Number(proposal.investedBudget);
   const delta = allocated - invested;
 
+  // Auto-detect school type for year label & depreciation
+  const schoolName = proposal.school?.name || "";
+  const isThcs = schoolName.toUpperCase().includes("THCS") || schoolName.toLowerCase().includes("trung học cơ sở");
+  const schoolYearLabel = isThcs ? "2029 - 2030" : "2030 - 2031";
+  const depreciationLabel = isThcs ? "4 năm THCS (2030)" : "5 năm tiểu học (2031)";
+
   let badgeClass = "badge-orange";
   let statusText = "Khởi tạo";
   if (proposal.status === "COMPLETED") { badgeClass = "badge-success"; statusText = "Hoàn thành"; }
@@ -368,19 +374,19 @@ export default async function ProposalDetailPage({
             <tr>
               <td style={{ border: "1px solid black", padding: "3px 6px", width: "15%" }}>Trường:</td>
               <td style={{ border: "1px solid black", padding: "3px 6px", width: "35%", fontWeight: "bold" }}>{proposal.school.name}</td>
-              <td style={{ border: "1px solid black", padding: "3px 6px", width: "30%" }}>Tổng số học sinh năm học 2026-2027</td>
-              <td style={{ border: "1px solid black", padding: "3px 6px", width: "20%", textAlign: "right" }}>{proposal.school.oldStudents + proposal.school.newStudents}</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", width: "30%" }}>Tổng số học sinh năm học {schoolYearLabel}</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", width: "20%", textAlign: "right" }}>{proposalOldStudents + proposalNewStudents}</td>
             </tr>
             <tr>
               <td style={{ border: "1px solid black", padding: "3px 6px" }}>Sales:</td>
               <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold" }}>{proposal.sale?.name || ""}</td>
               <td style={{ border: "1px solid black", padding: "3px 6px" }}>Số học sinh mới</td>
-              <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{proposal.school.newStudents}</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{proposalNewStudents}</td>
             </tr>
             <tr>
               <td colSpan={2} style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>Thời gian đầu tư: 2026 - 2027</td>
               <td style={{ border: "1px solid black", padding: "3px 6px" }}>Số học sinh cũ</td>
-              <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{proposal.school.oldStudents}</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{proposalOldStudents}</td>
             </tr>
             <tr>
               <td colSpan={2} style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}></td>
@@ -389,7 +395,7 @@ export default async function ProposalDetailPage({
             </tr>
             <tr>
               <td colSpan={2} style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>
-                Thời gian khấu hao: {proposal.school?.name?.toUpperCase().includes("THCS") || proposal.school?.name?.toLowerCase().includes("trung học cơ sở") ? "4 năm THCS (2030)" : "5 năm tiểu học (2031)"}
+                Thời gian khấu hao: {depreciationLabel}
               </td>
               <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold", textAlign: "center", textTransform: "uppercase" }}>TỔNG NGÂN SÁCH TỐI ĐA ĐƯỢC ĐẦU TƯ</td>
               <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold", textAlign: "right" }}>{allocated.toLocaleString()}</td>
