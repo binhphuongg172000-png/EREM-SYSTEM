@@ -20,8 +20,8 @@ export default async function UsersPage({
   const cookieStore = await cookies();
   const userRole = cookieStore.get("userRole")?.value;
 
-  if (userRole !== "SUPER_ADMIN") {
-    redirect("/admin/dashboard");
+  if (userRole !== "ADMIN" && userRole !== "SUPER_ADMIN") {
+    redirect("/login");
   }
 
   const resolvedParams = await searchParams;

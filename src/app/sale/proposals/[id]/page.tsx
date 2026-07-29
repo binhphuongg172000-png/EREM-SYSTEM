@@ -48,7 +48,13 @@ export default async function ViewProposalPage({ params }: { params: Promise<{ i
     );
   }
 
-  const allocated = Number(proposal.allocatedBudget);
+  const proposalNewStudents = (proposal as any).newStudents ?? proposal.school?.newStudents ?? 0;
+  const proposalOldStudents = (proposal as any).oldStudents ?? proposal.school?.oldStudents ?? 0;
+  const proposalInvestedClassrooms = (proposal as any).investedClassrooms ?? proposal.school?.investedClassrooms ?? 0;
+
+  const allocated = (proposal.status !== "CLOSED" && proposalNewStudents > 0)
+    ? Math.floor((proposalNewStudents * 100000000) / 105)
+    : Number(proposal.allocatedBudget || 0);
   const invested = Number(proposal.investedBudget);
   const delta = allocated - invested;
 
@@ -143,16 +149,6 @@ export default async function ViewProposalPage({ params }: { params: Promise<{ i
         </div>
 
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          {proposal.school.isLocked && (
-            <ExportHandoverButton
-              proposalId={proposal.id}
-              schoolId={proposal.schoolId}
-              senderId={userId}
-              isDetailView={true}
-              className="btn btn-primary"
-              btnStyle={{ display: "flex", alignItems: "center", gap: "0.5rem", height: "fit-content", padding: "0.4rem 0.85rem" }}
-            />
-          )}
           <div style={{ height: "fit-content" }}><PrintButton fileName={`DuTruKinhPhi_${proposal.school?.name || "Truong"}.doc`} /></div>
         </div>
       </div>
@@ -208,17 +204,17 @@ export default async function ViewProposalPage({ params }: { params: Promise<{ i
           {/* Số học sinh mới */}
           <div className="card" style={{ padding: "1rem 1.25rem", borderLeft: "3px solid #fbbf24" }}>
             <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.35rem" }}>Số học sinh mới</div>
-            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#fbbf24" }}>{proposal.school.newStudents}</div>
+            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#fbbf24" }}>{proposalNewStudents}</div>
           </div>
           {/* Số học sinh cũ */}
           <div className="card" style={{ padding: "1rem 1.25rem", borderLeft: "3px solid #94a3b8" }}>
             <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.35rem" }}>Số học sinh cũ</div>
-            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#e2e8f0" }}>{proposal.school.oldStudents}</div>
+            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#e2e8f0" }}>{proposalOldStudents}</div>
           </div>
           {/* Số phòng học đầu tư */}
           <div className="card" style={{ padding: "1rem 1.25rem", borderLeft: "3px solid #f97316" }}>
             <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "0.35rem" }}>Số phòng học đầu tư</div>
-            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#fb923c" }}>{proposal.school.investedClassrooms}</div>
+            <div style={{ fontSize: "1.15rem", fontWeight: 800, color: "#fb923c" }}>{proposalInvestedClassrooms}</div>
           </div>
         </div>
 
@@ -376,7 +372,9 @@ export default async function ViewProposalPage({ params }: { params: Promise<{ i
               <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{proposal.school.investedClassrooms}</td>
             </tr>
             <tr>
-              <td colSpan={2} style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>Thời gian khấu hao: 5 năm tiểu học (2030/2031)</td>
+              <td colSpan={2} style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>
+                Thời gian khấu hao: {proposal.school?.name?.toUpperCase().includes("THCS") || proposal.school?.name?.toLowerCase().includes("trung học cơ sở") ? "4 năm THCS (2030)" : "5 năm tiểu học (2031)"}
+              </td>
               <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold", textAlign: "center", textTransform: "uppercase" }}>TỔNG NGÂN SÁCH TỐI ĐA ĐƯỢC ĐẦU TƯ</td>
               <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold", textAlign: "right" }}>{allocated.toLocaleString()}</td>
             </tr>

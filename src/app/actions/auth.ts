@@ -51,17 +51,19 @@ export async function loginAction(data: any) {
       return { success: false, message: "Tên đăng nhập hoặc mật khẩu không đúng." };
     }
 
-    // Set cookies for session
+    // Set cookies for session (Explicit sameSite: "lax" for mobile Safari / Android Chrome over LAN IP)
     const cookieStore = await cookies();
     cookieStore.set("userId", user.id, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: false,
+      sameSite: "lax",
       maxAge: 60 * 60 * 24 * 7, // 1 week
       path: "/",
     });
     cookieStore.set("userRole", user.role, {
       httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
+      secure: false,
+      sameSite: "lax",
       maxAge: 60 * 60 * 24 * 7,
       path: "/",
     });

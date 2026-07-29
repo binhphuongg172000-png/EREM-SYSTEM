@@ -32,27 +32,40 @@ export default async function AdminProposalsPage({
   const nowTime = Date.now();
   const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
 
-  const { sales, rawProposals: allProposals } = await getCachedData("admin_all_proposals_data", async () => {
-    const [sales, rawProposals] = await Promise.all([
-      prisma.user.findMany({
-        where: { role: "SALE" },
-        select: { id: true, name: true, username: true },
-        orderBy: { name: "asc" },
-      }),
-      prisma.proposal.findMany({
-        include: {
-          school: true,
-          sale: true,
-        },
-        orderBy: { createdAt: "desc" },
-      })
-    ]);
-    const cleanProposals = JSON.parse(JSON.stringify(rawProposals));
-    return { sales, rawProposals: cleanProposals };
-  }, 30);
+  const [sales, dbProposals] = await Promise.all([
+    prisma.user.findMany({
+      where: { role: "SALE" },
+      select: { id: true, name: true, username: true },
+      orderBy: { name: "asc" },
+    }),
+    prisma.proposal.findMany({
+      include: {
+        school: true,
+        sale: true,
+      },
+      orderBy: { createdAt: "desc" },
+    })
+  ]);
+  const allProposals = JSON.parse(JSON.stringify(dbProposals)).map((p: any) => {
+    if (p.status === "CLOSED") {
+      return {
+        ...p,
+        allocatedBudget: Number(p.allocatedBudget || 0),
+      };
+    }
+    const newStudents = Number(p.school?.newStudents) || 0;
+    const allocatedBudget = newStudents > 0 ? Math.floor((newStudents * 100000000) / 105) : Number(p.allocatedBudget || 0);
+    return {
+      ...p,
+      allocatedBudget
+    };
+  });
 
-  // Count total overdue proposals across system (>5 days not in progress/completed)
-  const overdueCount = allProposals.filter((p: any) => {
+  // Active proposals dataset for top header stat cards (excludes CLOSED history proposals)
+  const activeProposals = allProposals.filter((p: any) => p.status !== "CLOSED");
+
+  // Count total overdue proposals across system (>5 days not in progress/completed/closed)
+  const overdueCount = activeProposals.filter((p: any) => {
     if (p.status === "COMPLETED" || p.status === "APPROVED") return false;
     const createdTime = new Date(p.createdAt).getTime();
     return (nowTime - createdTime) >= FIVE_DAYS_MS;
@@ -67,13 +80,15 @@ export default async function AdminProposalsPage({
       vietnameseIncludes(p.sale?.name, search)
     )) return false;
     if (statusFilter === "init") {
-      if (p.status === "COMPLETED" || p.school?.isLocked) return false;
+      if (p.status === "COMPLETED" || p.status === "CLOSED" || p.school?.isLocked) return false;
     } else if (statusFilter === "locked") {
-      if (p.status === "COMPLETED" || !p.school?.isLocked) return false;
+      if (p.status === "COMPLETED" || p.status === "CLOSED" || !p.school?.isLocked) return false;
     } else if (statusFilter === "completed") {
       if (p.status !== "COMPLETED") return false;
+    } else if (statusFilter === "closed") {
+      if (p.status !== "CLOSED") return false;
     } else if (statusFilter === "overdue") {
-      if (p.status === "COMPLETED" || p.status === "APPROVED") return false;
+      if (p.status === "COMPLETED" || p.status === "APPROVED" || p.status === "CLOSED") return false;
       const createdTime = new Date(p.createdAt).getTime();
       if ((nowTime - createdTime) < FIVE_DAYS_MS) return false;
     }
@@ -98,10 +113,10 @@ export default async function AdminProposalsPage({
     displayProposals = displayProposals.filter((p: any) => Number(p.allocatedBudget) - Number(p.investedBudget) < 0);
   }
 
-  // System Total Stats (Fixed metrics from total dataset, unchanged by filters)
-  const totalProposals = allProposals.length;
-  const completedCount = allProposals.filter((p: any) => p.status === "COMPLETED").length;
-  const lockedCount = allProposals.filter((p: any) => p.status !== "COMPLETED" && (p.school?.isLocked || p.status === "APPROVED")).length;
+  // System Total Stats (Excludes CLOSED proposals so metrics reflect active work)
+  const totalProposals = activeProposals.length;
+  const completedCount = activeProposals.filter((p: any) => p.status === "COMPLETED").length;
+  const lockedCount = activeProposals.filter((p: any) => p.status !== "COMPLETED" && (p.school?.isLocked || p.status === "APPROVED")).length;
   const initCount = totalProposals - completedCount - lockedCount;
 
   return (

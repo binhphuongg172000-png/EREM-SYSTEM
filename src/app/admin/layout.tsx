@@ -7,9 +7,12 @@ import { getCurrentUser, logoutAction } from "@/app/actions/auth";
 import { 
   Home, LayoutDashboard, Users, School as SchoolIcon, 
   Laptop, Coins, Wrench, FileText, 
-  ClipboardCheck, LogOut 
+  ClipboardCheck, LogOut, Sparkles 
 } from "lucide-react";
 import ToastContainer from "@/components/Toast";
+import BrandLogo from "@/components/BrandLogo";
+import NotificationBell from "@/components/NotificationBell";
+import { getSmartGreeting, GreetingInfo } from "@/lib/greetings";
 import "./admin.css";
 
 export default function AdminLayout({
@@ -21,6 +24,11 @@ export default function AdminLayout({
   const router = useRouter();
   const [userName, setUserName] = useState("Quản trị viên");
   const [userRole, setUserRole] = useState<string>("ADMIN");
+  const [greetingInfo, setGreetingInfo] = useState<GreetingInfo>({
+    greeting: "Xin chào,",
+    humorTag: "Chào mừng đến trung tâm quản trị EREM!",
+    icon: "👋",
+  });
 
   useEffect(() => {
     // Ensure clean dark mode at all times
@@ -30,7 +38,10 @@ export default function AdminLayout({
     const cachedName = localStorage.getItem("userName");
     const cachedRole = localStorage.getItem("userRole");
     
-    if (cachedName) setUserName(cachedName);
+    if (cachedName) {
+      setUserName(cachedName);
+      setGreetingInfo(getSmartGreeting(cachedName));
+    }
     if (cachedRole) setUserRole(cachedRole);
 
     getCurrentUser().then((user) => {
@@ -39,6 +50,7 @@ export default function AdminLayout({
         setUserRole(user.role);
         localStorage.setItem("userName", user.name);
         localStorage.setItem("userRole", user.role);
+        setGreetingInfo(getSmartGreeting(user.name));
       } else {
         router.push("/login");
       }
@@ -58,37 +70,11 @@ export default function AdminLayout({
       {/* Sidebar */}
       <aside className="admin-sidebar">
         <div className="sidebar-brand">
-          <div className="sidebar-brand-row" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <div 
-              className="sidebar-brand-icon"
-              style={{
-                width: "38px",
-                height: "38px",
-                borderRadius: "12px",
-                background: "linear-gradient(135deg, #0284c7 0%, #3b82f6 50%, #6366f1 100%)",
-                boxShadow: "0 0 15px rgba(56, 189, 248, 0.4)",
-                border: "1px solid rgba(255, 255, 255, 0.2)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#ffffff",
-                fontWeight: "900",
-                fontSize: "1.2rem",
-                flexShrink: 0
-              }}
-            >
-              E
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-              <h2 style={{ fontSize: "1.1rem", fontWeight: "900", color: "#ffffff", margin: 0, letterSpacing: "0.5px", whiteSpace: "nowrap" }}>
-                EREM <span style={{ color: "#38bdf8" }}>SYSTEM</span>
-              </h2>
-            </div>
-          </div>
+          <BrandLogo badge="ADMIN CONTROL" />
         </div>
         
         <nav className="sidebar-nav">
-          <div className="nav-group-label">HỆ THỐNG</div>
+          <div className="nav-group-label">TỔNG QUAN</div>
           <Link
             href="/admin/dashboard"
             prefetch={true}
@@ -98,59 +84,26 @@ export default function AdminLayout({
             <LayoutDashboard className="nav-item-icon" style={{ color: "#38bdf8" }} size={18} />
             <span>Dashboard</span>
           </Link>
-          {userRole === "SUPER_ADMIN" && (
-            <Link
-              href="/admin/users"
-              prefetch={true}
-              onMouseEnter={() => router.prefetch("/admin/users")}
-              className={`nav-item ${pathname?.startsWith("/admin/users") ? "active" : ""}`}
-            >
-              <Users className="nav-item-icon" style={{ color: "#34d399" }} size={18} />
-              <span>Quản lý Người dùng</span>
-            </Link>
-          )}
 
-          <div className="nav-group-label">DANH MỤC</div>
+          <div className="nav-group-label">QUẢN LÝ THỰC THỂ</div>
           <Link
             href="/admin/schools"
             prefetch={true}
             onMouseEnter={() => router.prefetch("/admin/schools")}
             className={`nav-item ${pathname?.startsWith("/admin/schools") ? "active" : ""}`}
           >
-            <SchoolIcon className="nav-item-icon" style={{ color: "#fbbf24" }} size={18} />
-            <span>Danh mục Trường học</span>
+            <SchoolIcon className="nav-item-icon" style={{ color: "#34d399" }} size={18} />
+            <span>Danh sách Trường học</span>
           </Link>
-          {userRole === "SUPER_ADMIN" && (
-            <>
-              <Link
-                href="/admin/items"
-                prefetch={true}
-                onMouseEnter={() => router.prefetch("/admin/items")}
-                className={`nav-item ${pathname?.startsWith("/admin/items") ? "active" : ""}`}
-              >
-                <Laptop className="nav-item-icon" style={{ color: "#c084fc" }} size={18} />
-                <span>Danh mục Thiết bị</span>
-              </Link>
-              <Link
-                href="/admin/investments"
-                prefetch={true}
-                onMouseEnter={() => router.prefetch("/admin/investments")}
-                className={`nav-item ${pathname?.startsWith("/admin/investments") ? "active" : ""}`}
-              >
-                <Coins className="nav-item-icon" style={{ color: "#f472b6" }} size={18} />
-                <span>Danh mục Đầu tư khác</span>
-              </Link>
-              <Link
-                href="/admin/constructions"
-                prefetch={true}
-                onMouseEnter={() => router.prefetch("/admin/constructions")}
-                className={`nav-item ${pathname?.startsWith("/admin/constructions") ? "active" : ""}`}
-              >
-                <Wrench className="nav-item-icon" style={{ color: "#38bdf8" }} size={18} />
-                <span>Danh mục Thi công</span>
-              </Link>
-            </>
-          )}
+          <Link
+            href="/admin/users"
+            prefetch={true}
+            onMouseEnter={() => router.prefetch("/admin/users")}
+            className={`nav-item ${pathname?.startsWith("/admin/users") ? "active" : ""}`}
+          >
+            <Users className="nav-item-icon" style={{ color: "#fbbf24" }} size={18} />
+            <span>Tài khoản Hệ thống</span>
+          </Link>
 
           <div className="nav-group-label">HỒ SƠ & GIAO DỊCH</div>
           <Link
@@ -163,6 +116,34 @@ export default function AdminLayout({
             <span>Kho Dự trù</span>
           </Link>
           <Link
+            href="/admin/items"
+            prefetch={true}
+            onMouseEnter={() => router.prefetch("/admin/items")}
+            className={`nav-item ${pathname?.startsWith("/admin/items") ? "active" : ""}`}
+          >
+            <Laptop className="nav-item-icon" style={{ color: "#38bdf8" }} size={18} />
+            <span>Danh mục Thiết bị</span>
+          </Link>
+          <Link
+            href="/admin/investments"
+            prefetch={true}
+            onMouseEnter={() => router.prefetch("/admin/investments")}
+            className={`nav-item ${pathname?.startsWith("/admin/investments") ? "active" : ""}`}
+          >
+            <Coins className="nav-item-icon" style={{ color: "#fbbf24" }} size={18} />
+            <span>Danh mục Đầu tư khác</span>
+          </Link>
+          <Link
+            href="/admin/constructions"
+            prefetch={true}
+            onMouseEnter={() => router.prefetch("/admin/constructions")}
+            className={`nav-item ${pathname?.startsWith("/admin/constructions") ? "active" : ""}`}
+          >
+            <Wrench className="nav-item-icon" style={{ color: "#38bdf8" }} size={18} />
+            <span>Danh mục Thi công</span>
+          </Link>
+          {/* Tạm thời ẩn Kho Biên bản theo yêu cầu */}
+          {/* <Link
             href="/admin/handovers"
             prefetch={true}
             onMouseEnter={() => router.prefetch("/admin/handovers")}
@@ -170,52 +151,58 @@ export default function AdminLayout({
           >
             <ClipboardCheck className="nav-item-icon" style={{ color: "#2dd4bf" }} size={18} />
             <span>Kho Biên bản</span>
-          </Link>
+          </Link> */}
         </nav>
       </aside>
 
       {/* Main Content */}
       <main className="admin-main">
         <header className="admin-header">
-          <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
-            <span className="status-dot"></span>
-            <span style={{ fontSize: "0.775rem", color: "#34d399", letterSpacing: "0.05em", fontWeight: 700 }}>
-              SYSTEM ONLINE • 256-BIT SECURE
-            </span>
+          {/* Left/Middle Space: Time-of-Day Greeting & Weather Status Pill */}
+          <div className="header-left-space">
+            <div className="header-greeting-pill">
+              <Sparkles size={15} style={{ color: "#38bdf8", flexShrink: 0 }} />
+              <span className="greeting-main-text">
+                {greetingInfo.greeting}
+              </span>
+              <span className="greeting-separator">•</span>
+              <span className="greeting-humor-tag">
+                {greetingInfo.humorTag}
+              </span>
+            </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "1.25rem" }}>
-            <button 
-              onClick={handleLogout}
-              className="btn"
-              style={{ 
-                padding: "0.4rem 0.85rem", 
-                borderRadius: "8px", 
-                border: "1px solid #f43f5e", 
-                display: "flex", 
-                alignItems: "center", 
-                gap: "0.4rem", 
-                cursor: "pointer", 
-                background: "rgba(244, 63, 94, 0.15)",
-                color: "#ff3355",
-                fontSize: "0.8rem",
-                fontWeight: 700
-              }}
-              title="Đăng xuất"
-            >
-              <LogOut size={15} style={{ color: "#f43f5e" }} />
-              Đăng xuất
-            </button>
+          {/* Right Space: Standard SaaS User Control (Notification Bell -> Profile Capsule -> Logout Button) */}
+          <div className="header-right-space">
+            {/* Realtime Notification Bell */}
+            <NotificationBell />
 
-            <div className="header-user">
-              <div className="header-user-info">
-                <span style={{ color: "#cbd5e1" }}>Xin chào,</span>
-                <strong style={{ color: "#ffffff", fontSize: "0.9rem" }}>{userName}</strong>
+            {/* User Profile Capsule */}
+            <div className="user-profile-capsule">
+              <div style={{
+                width: "34px", height: "34px", borderRadius: "9px",
+                background: "linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontWeight: 800, color: "#ffffff", fontSize: "0.9rem",
+                boxShadow: "0 0 12px rgba(6, 182, 212, 0.3)", flexShrink: 0
+              }}>
+                <span>{userName ? userName.charAt(0).toUpperCase() : "A"}</span>
               </div>
-              <div className="header-user-avatar">
-                {userName.charAt(0).toUpperCase()}
+              <div className="user-info-stack" style={{ display: "flex", flexDirection: "column", gap: "2px", justifyContent: "center" }}>
+                <strong style={{ color: "#ffffff", fontSize: "0.825rem", lineHeight: 1.2, whiteSpace: "nowrap" }}>{userName}</strong>
+                <span style={{ color: "#34d399", fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.05em", whiteSpace: "nowrap" }}>{userRole}</span>
               </div>
             </div>
+
+            {/* Logout Button on Far Right */}
+            <button 
+              onClick={handleLogout}
+              className="btn-logout-saas"
+              title="Đăng xuất khỏi hệ thống"
+            >
+              <LogOut size={15} />
+              <span className="logout-text">Đăng xuất</span>
+            </button>
           </div>
         </header>
         <div className="admin-content">

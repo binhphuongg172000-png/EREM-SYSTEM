@@ -35,6 +35,9 @@ export async function createProposal(data: any) {
           status: "PENDING",
           allocatedBudget: data.allocatedBudget,
           investedBudget: data.investedBudget,
+          investedClassrooms: Number(data.schoolDetails?.investedClassrooms) || 0,
+          oldStudents: Number(data.schoolDetails?.oldStudents) || 0,
+          newStudents: Number(data.schoolDetails?.newStudents) || 0,
         },
       })
     ];
@@ -77,6 +80,8 @@ export async function createProposal(data: any) {
     revalidatePath("/admin/dashboard");
     revalidatePath("/sale/proposals");
     revalidatePath("/admin/proposals");
+    revalidatePath("/sale/proposals/new");
+    revalidatePath("/", "layout");
     
     return { success: true, id: proposalId };
   } catch (error: any) {

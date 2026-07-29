@@ -70,22 +70,36 @@ export default async function AdminDashboardPage() {
         prisma.school.count(),
         prisma.handover.count(),
         prisma.proposal.findMany({ 
-          include: { school: true, sale: true, items: true, investments: true },
+          select: {
+            id: true,
+            schoolId: true,
+            saleId: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+            allocatedBudget: true,
+            investedBudget: true,
+            school: { select: { id: true, name: true, newStudents: true, isLocked: true } },
+            sale: { select: { id: true, name: true, username: true } },
+            items: { select: { totalPrice: true } },
+            investments: { select: { name: true, description: true, totalPrice: true } },
+          },
           orderBy: { updatedAt: "desc" }
         }),
         prisma.user.findMany({
           where: { role: "SALE" },
-          include: {
+          select: {
+            id: true,
+            name: true,
+            username: true,
             schools: {
-              include: {
-                proposals: {
-                  select: { id: true, allocatedBudget: true, investedBudget: true, status: true },
-                  orderBy: { updatedAt: "desc" },
-                  take: 1
-                },
-              },
-            },
-          },
+              select: {
+                id: true,
+                name: true,
+                newStudents: true,
+              }
+            }
+          }
         }),
       ]);
       return { totalSchools, totalHandovers, rawAllProposals, salesUsers };

@@ -7,6 +7,7 @@ import * as z from "zod";
 import { useRouter } from "next/navigation";
 import { loginAction, warmupAction } from "@/app/actions/auth";
 import { User, Lock, Eye, EyeOff, Sparkles, ShieldCheck, TrendingUp, Layers, ArrowRight, Loader2 } from "lucide-react";
+import EremLogo from "@/components/EremLogo";
 import "./login.css";
 
 const loginSchema = z.object({
@@ -22,6 +23,10 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPass, setShowPass] = useState(false);
   
+  // Quantum 3D Warp Portal Transition State
+  const [isWarping, setIsWarping] = useState(false);
+  const [warpUser, setWarpUser] = useState<{ name: string; role: string } | null>(null);
+
   // 3D Tilt Mouse tracking state
   const [tilt, setTilt] = useState({ x: 0, y: 0 });
 
@@ -30,9 +35,7 @@ export default function LoginPage() {
     router.prefetch("/sale/dashboard");
 
     // Pre-warm the SAME serverless function that handles loginAction
-    // This establishes the DB connection before user submits
     warmupAction().catch(() => {});
-
 
     const handleMouseMove = (e: MouseEvent) => {
       const { innerWidth, innerHeight } = window;
@@ -65,16 +68,19 @@ export default function LoginPage() {
           ? "/admin/dashboard" 
           : "/sale/dashboard";
         
-        // Fire prewarm & navigate simultaneously - user sees skeleton instantly
-        // while cache warms in background
+        // Trigger 3D Quantum Warp Portal Effect
+        setWarpUser({ name: res.user.name, role: res.user.role });
+        setIsWarping(true);
+
         fetch("/api/prewarm", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ role: res.user.role, userId: res.user.id }),
         }).catch(() => {});
 
-        router.replace(targetUrl);
-        router.refresh();
+        setTimeout(() => {
+          window.location.href = targetUrl;
+        }, 850);
       } else {
         setError(res.message || "Tên đăng nhập hoặc mật khẩu không đúng");
         setIsLoading(false);
@@ -85,9 +91,32 @@ export default function LoginPage() {
     }
   };
 
-
   return (
     <div className="login-3d-page">
+      {/* ⚡ Quantum 3D Warp Portal Transition on Success */}
+      {isWarping && (
+        <div className="quantum-warp-overlay">
+          <div className="warp-tunnel-ring ring-wave-1" />
+          <div className="warp-tunnel-ring ring-wave-2" />
+          <div className="warp-laser-beam" />
+          
+          <div className="warp-content-card">
+            <EremLogo
+              variant="vertical"
+              size={90}
+              badge="ACCESS GRANTED"
+              subtitle={`XIN CHÀO, ${warpUser?.name?.toUpperCase() || "USER"}`}
+            />
+            <div className="warp-progress-wrap">
+              <div className="warp-progress-bar" />
+            </div>
+            <div className="warp-status-text">
+              <span>⚡ 100% SECURE CONNECTION • ĐANG VÀO HỆ THỐNG</span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Dynamic Ambient 3D Glowing Orbs in Background */}
       <div className="bg-glow-orb orb-cyan" />
       <div className="bg-glow-orb orb-indigo" />
@@ -96,33 +125,49 @@ export default function LoginPage() {
       <div className="login-3d-container">
         
         {/* ===================================================
-           LEFT 3D HERO PANEL (3D Perspective Showcase)
+           LEFT 3D HERO PANEL (8D Hyper-Dimensional Showcase)
            =================================================== */}
         <div className="login-3d-hero">
-          {/* 3D Isometric Floating Stage */}
+          {/* 8D Isometric Floating Stage */}
           <div 
-            className="hero-3d-stage"
+            className="hero-3d-stage stage-8d"
             style={{
-              transform: `perspective(1000px) rotateX(${tilt.y}deg) rotateY(${tilt.x}deg)`
+              transform: `perspective(1200px) rotateX(${tilt.y * 0.8}deg) rotateY(${tilt.x * 0.8}deg)`
             }}
           >
+            {/* 8D Hyper-Dimensional Quantum Atmosphere */}
+            <div className="hologram-core-8d" />
+            <div className="orbital-ring-8d ring-8d-alpha" />
+            <div className="orbital-ring-8d ring-8d-beta" />
+            <div className="orbital-ring-8d ring-8d-gamma" />
+            <div className="laser-beam-8d beam-1" />
+            <div className="laser-beam-8d beam-2" />
+
+            {/* Floating 8D Quantum Energy Dust */}
+            <div className="quantum-particle p1" />
+            <div className="quantum-particle p2" />
+            <div className="quantum-particle p3" />
+            <div className="quantum-particle p4" />
+
             {/* Holographic 3D Rings */}
             <div className="ring-3d ring-1" />
             <div className="ring-3d ring-2" />
 
             {/* Main Brand Floating 3D Badge */}
-            <div className="brand-3d-badge">
-              <div className="brand-3d-icon-box">
-                <Sparkles size={42} color="#ffffff" className="sparkle-spin" />
-              </div>
-              <h1 className="brand-3d-title">EREM SYSTEM</h1>
-              <p className="brand-3d-tagline">Quản Lý Dự Trù & Bàn Giao Thiết Bị</p>
+            <div className="brand-3d-badge badge-8d">
+              <EremLogo
+                variant="vertical"
+                size={72}
+                badge="SYSTEM v2.5 • 8D CORE"
+                subtitle="Quản Lý Dự Trù & Bàn Giao Thiết Bị"
+              />
             </div>
 
-            {/* 3D Floating Feature Cards */}
-            <div className="features-3d-stack">
+            {/* 3D Floating Feature Cards with 8D Neon Light Traces */}
+            <div className="features-3d-stack stack-8d">
               {/* Card 1 */}
-              <div className="card-3d float-delay-1">
+              <div className="card-3d card-8d float-delay-1">
+                <div className="card-8d-light-bar" />
                 <div className="card-3d-icon icon-cyan">
                   <Layers size={20} />
                 </div>
@@ -133,7 +178,8 @@ export default function LoginPage() {
               </div>
 
               {/* Card 2 */}
-              <div className="card-3d float-delay-2">
+              <div className="card-3d card-8d float-delay-2">
+                <div className="card-8d-light-bar" />
                 <div className="card-3d-icon icon-emerald">
                   <ShieldCheck size={20} />
                 </div>
@@ -144,7 +190,8 @@ export default function LoginPage() {
               </div>
 
               {/* Card 3 */}
-              <div className="card-3d float-delay-3">
+              <div className="card-3d card-8d float-delay-3">
+                <div className="card-8d-light-bar" />
                 <div className="card-3d-icon icon-amber">
                   <TrendingUp size={20} />
                 </div>
@@ -159,14 +206,19 @@ export default function LoginPage() {
         </div>
 
         {/* ===================================================
-           RIGHT 3D FORM PANEL (Glassmorphism Login Box)
+           RIGHT 3D FORM PANEL (Glassmorphism Login Box with Smooth Assembly)
            =================================================== */}
         <div className="login-3d-form-panel">
           <div className="form-3d-card">
             
+            {/* Mobile 3D Brand Badge (Visible on Mobile & Tablets) */}
+            <div className="mobile-brand-3d-header">
+              <EremLogo variant="vertical" size={56} badge="v2.5 CORE" />
+            </div>
+
             {/* Header Title */}
             <div className="form-header">
-              <div className="version-pill">EREM EDUCATION v2.5</div>
+              <div className="version-pill">EREM SYSTEM v2.5</div>
               <h2>Đăng Nhập System 👋</h2>
               <p>Nhập thông tin tài khoản để truy cập hệ thống</p>
             </div>
@@ -181,7 +233,7 @@ export default function LoginPage() {
             {/* Form Fields */}
             <form onSubmit={handleSubmit(onSubmit)}>
               {/* Username */}
-              <div className="field-3d">
+              <div className="field-3d field-username">
                 <label>Tên đăng nhập</label>
                 <div className="input-wrap-3d">
                   <User size={18} className="input-icon-3d" />
@@ -199,7 +251,7 @@ export default function LoginPage() {
               </div>
 
               {/* Password */}
-              <div className="field-3d">
+              <div className="field-3d field-password">
                 <label>Mật khẩu</label>
                 <div className="input-wrap-3d">
                   <Lock size={18} className="input-icon-3d" />

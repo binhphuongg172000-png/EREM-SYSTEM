@@ -68,7 +68,7 @@ export default function SaleDashboardCharts({ stats, schoolBudgets }: SaleDashbo
   const negativeCount = schoolBudgets.filter(s => s.delta < 0).length;
 
   return (
-    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(420px, 1fr))", gap: "1.5rem", marginBottom: "1.75rem" }}>
+    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.25rem", marginBottom: "1.75rem" }}>
       
       {/* CHART 1: BIỂU ĐỒ PHÂN BỔ THÔNG TIN CHUNG & TRẠNG THÁI */}
       <div className="sale-table-card" style={{ padding: "1rem 1.25rem", display: "flex", flexDirection: "column", justifyContent: "space-between" }}>

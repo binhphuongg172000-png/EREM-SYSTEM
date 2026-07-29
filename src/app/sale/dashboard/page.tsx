@@ -7,7 +7,7 @@ import { getCachedData } from "@/lib/cache";
 import SaleDashboardCharts from "./SaleDashboardCharts";
 import { 
   Building2, FileText, Coins, Wallet, TrendingUp, TrendingDown, 
-  AlertTriangle, CheckCircle2, Eye, Pencil, Plus, Clock, Lock 
+  AlertTriangle, CheckCircle2, Eye, Pencil, Plus, Clock, Lock, Sparkles 
 } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -111,46 +111,39 @@ export default async function SaleDashboardPage() {
 
   return (
     <div style={{ animation: "fadeIn 0.25s ease-out" }}>
-      {/* Compact Top Header Banner */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr auto", gap: "1rem", alignItems: "center", marginBottom: "1.25rem" }}>
-        {/* Left: Compact Welcome Header (Sub-text removed as requested) */}
-        <div className="sale-hero-banner" style={{ margin: 0, padding: "0.85rem 1.25rem", display: "flex", alignItems: "center" }}>
-          <h1 className="hero-title" style={{ margin: 0, fontSize: "1.25rem" }}>
-            Dashboard Cá nhân Kinh doanh 🚀
+      {/* Top Welcome & CTA Card */}
+      <div className="dashboard-top-hero-wrap" style={{ marginBottom: "1.25rem" }}>
+        {/* Left: Page Title */}
+        <div className="sale-hero-banner" style={{ margin: 0, padding: "0.85rem 1.15rem", flex: 1 }}>
+          <h1 className="hero-title" style={{ margin: 0, fontSize: "1.2rem", fontWeight: 900, color: "#ffffff" }}>
+            Dashboard Cá Nhân Kinh Doanh 🚀
           </h1>
         </div>
 
-        {/* Right: Compact Dedicated Create Proposal Box */}
-        <div style={{
-          background: "linear-gradient(135deg, rgba(6, 182, 212, 0.15) 0%, rgba(37, 99, 235, 0.15) 100%)",
-          border: "1.5px solid rgba(6, 182, 212, 0.4)",
-          borderRadius: "14px",
-          padding: "0.6rem 1rem",
-          display: "flex",
-          alignItems: "center",
-          boxShadow: "0 6px 20px rgba(6, 182, 212, 0.15)",
-        }}>
+        {/* Right: Primary CTA Button */}
+        <div className="cta-create-wrap">
           <Link 
             href="/sale/proposals/new" 
             prefetch={true} 
-            className="btn-cta-primary" 
+            className="btn-cta-primary"
             style={{ 
-              whiteSpace: "nowrap", 
-              padding: "0.55rem 1.15rem", 
-              fontSize: "0.85rem"
+              whiteSpace: "nowrap",
+              padding: "0.65rem 1.25rem", 
+              fontSize: "0.85rem",
+              fontWeight: 800
             }}
           >
-            <Plus size={17} /> Bắt đầu lập dự trù mới
+            <Plus size={18} /> Bắt đầu lập dự trù mới
           </Link>
         </div>
       </div>
 
-      {/* SECTION 1: THÔNG TIN CHUNG (5 Thẻ mét vuông vức) */}
-      <div style={{ marginBottom: "1.75rem" }}>
-        <h2 style={{ fontSize: "0.8rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.85rem" }}>
+      {/* SECTION 1: THÔNG TIN CHUNG */}
+      <div style={{ marginBottom: "1.25rem" }}>
+        <h2 style={{ fontSize: "0.8rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.65rem" }}>
           Thông tin chung
         </h2>
-        <div className="sale-metric-grid" style={{ gridTemplateColumns: "repeat(5, 1fr)" }}>
+        <div className="sale-metric-grid">
           {/* Metric 1: Trường Quản Lý */}
           <div className="sale-metric-card">
             <div className="metric-header">
@@ -208,7 +201,7 @@ export default async function SaleDashboardPage() {
           </div>
 
           {/* Metric 5: Hoàn Thành */}
-          <div className="sale-metric-card">
+          <div className="sale-metric-card sale-metric-card-full-mobile">
             <div className="metric-header">
               <span className="metric-label">Hoàn Thành</span>
               <div className="metric-icon-box" style={{ background: "rgba(16, 185, 129, 0.12)", color: "#34d399" }}>
@@ -232,12 +225,12 @@ export default async function SaleDashboardPage() {
         schoolBudgets={schoolBudgets}
       />
 
-      {/* SECTION 3: TỔNG QUAN NGÂN SÁCH (Đã đưa xuống bên dưới Biểu đồ) */}
-      <div style={{ marginBottom: "1.75rem" }}>
-        <h2 style={{ fontSize: "0.8rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.85rem" }}>
+      {/* SECTION 3: TỔNG QUAN NGÂN SÁCH */}
+      <div style={{ marginBottom: "1.25rem" }}>
+        <h2 style={{ fontSize: "0.8rem", fontWeight: 800, color: "#64748b", textTransform: "uppercase", letterSpacing: "0.08em", marginBottom: "0.65rem" }}>
           Tổng quan Ngân sách
         </h2>
-        <div className="sale-metric-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+        <div className="sale-metric-grid sale-metric-grid-budget">
           {/* Metric 6: Ngân sách Cấp */}
           <div className="sale-metric-card">
             <div className="metric-header">
@@ -246,7 +239,7 @@ export default async function SaleDashboardPage() {
                 <Coins size={18} />
               </div>
             </div>
-            <div className="metric-value" style={{ color: "#34d399", fontSize: "1.25rem", whiteSpace: "nowrap" }}>
+            <div className="metric-value" style={{ color: "#34d399", fontSize: "1.2rem", whiteSpace: "nowrap" }}>
               {totalAllocated.toLocaleString()} đ
             </div>
             <div className="metric-sub" style={{ color: "#34d399", whiteSpace: "nowrap" }}>
@@ -262,12 +255,12 @@ export default async function SaleDashboardPage() {
                 <Wallet size={18} />
               </div>
             </div>
-            <div className="metric-value" style={{ color: "#fbbf24", fontSize: "1.25rem", whiteSpace: "nowrap" }}>
+            <div className="metric-value" style={{ color: "#fbbf24", fontSize: "1.2rem", whiteSpace: "nowrap" }}>
               {totalInvested.toLocaleString()} đ
             </div>
             
             {/* Explicit 3 Cost Breakdown Sub-Lines */}
-            <div style={{ marginTop: "0.6rem", paddingTop: "0.5rem", borderTop: "1px solid rgba(255, 255, 255, 0.08)", display: "flex", flexDirection: "column", gap: "0.25rem", fontSize: "0.72rem" }}>
+            <div style={{ marginTop: "0.5rem", paddingTop: "0.4rem", borderTop: "1px solid rgba(255, 255, 255, 0.08)", display: "flex", flexDirection: "column", gap: "0.2rem", fontSize: "0.72rem" }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <span style={{ display: "flex", alignItems: "center", gap: "0.3rem", color: "#38bdf8", fontWeight: 600 }}>
                   <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#38bdf8" }}></span> Thiết bị:
@@ -290,7 +283,7 @@ export default async function SaleDashboardPage() {
           </div>
 
           {/* Metric 8: Chênh lệch Ngân sách */}
-          <div className="sale-metric-card">
+          <div className="sale-metric-card sale-metric-card-full-mobile">
             <div className="metric-header">
               <span className="metric-label">Chênh Lệch Ngân Sách</span>
               <div className="metric-icon-box" style={{ 
@@ -300,7 +293,7 @@ export default async function SaleDashboardPage() {
                 {delta >= 0 ? <TrendingUp size={18} /> : <TrendingDown size={18} />}
               </div>
             </div>
-            <div className="metric-value" style={{ color: delta >= 0 ? "#34d399" : "#fb7185", fontSize: "1.25rem", whiteSpace: "nowrap" }}>
+            <div className="metric-value" style={{ color: delta >= 0 ? "#34d399" : "#fb7185", fontSize: "1.2rem", whiteSpace: "nowrap" }}>
               {delta >= 0 ? "+" : ""}{delta.toLocaleString()} đ
             </div>
             <div className="metric-sub" style={{ color: delta >= 0 ? "#34d399" : "#fb7185", whiteSpace: "nowrap" }}>
@@ -311,7 +304,7 @@ export default async function SaleDashboardPage() {
       </div>
 
       {/* Budget Status Split View */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(360px, 1fr))", gap: "1.5rem" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(280px, 1fr))", gap: "1.25rem" }}>
         
         {/* Negative Warning Column */}
         <div className="sale-table-card" style={{ borderTop: "3px solid #f43f5e" }}>

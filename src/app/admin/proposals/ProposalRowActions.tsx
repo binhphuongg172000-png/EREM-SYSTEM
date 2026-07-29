@@ -90,25 +90,7 @@ return (
         </Link>
       </div>
 
-      {/* SLOT 2: Nút Xuất BBBG (Dành khung 104px cố định để nút không bị nhảy khi đổi trạng thái) */}
-      {isSuperAdmin && (
-        <div style={{ width: "104px", display: "flex", justifyContent: "center", flexShrink: 0 }}>
-          {isCompleted ? (
-            <ExportHandoverButton
-              proposalId={proposal.id}
-              schoolId={proposal.schoolId}
-              senderId={proposal.saleId}
-              btnStyle={{
-                ...btnBase,
-                width: "100%",
-                background: "rgba(168, 85, 247, 0.1)",
-                borderColor: "rgba(168, 85, 247, 0.5)",
-                color: "#c084fc",
-              }}
-            />
-          ) : null}
-        </div>
-      )}
+
 
       {/* SLOT 3: Nút Xóa (Cố định vị trí) */}
       {isSuperAdmin && (

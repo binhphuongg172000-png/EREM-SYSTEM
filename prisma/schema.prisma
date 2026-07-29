@@ -96,6 +96,9 @@ model Proposal {
   rejectReason    String?  @db.Text
   allocatedBudget Decimal  @db.Decimal(15, 2) // Ngân sách được cấp
   investedBudget  Decimal  @db.Decimal(15, 2) // Tổng ngân sách đầu tư thực tế
+  investedClassrooms Int?  @default(0)
+  oldStudents        Int?  @default(0)
+  newStudents        Int?  @default(0)
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -145,4 +148,17 @@ model Handover {
   attachmentUrl String?
   createdAt     DateTime  @default(now())
   confirmedAt   DateTime?
+}
+
+// 10. Thông báo hệ thống
+model Notification {
+  id         String   @id @default(uuid())
+  userId     String?
+  title      String
+  message    String   @db.Text
+  type       String   @default("STATUS_CHANGE")
+  proposalId String?
+  schoolName String?
+  read       Boolean  @default(false)
+  createdAt  DateTime @default(now())
 }

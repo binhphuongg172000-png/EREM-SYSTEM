@@ -15,16 +15,15 @@ export default async function EditInvestmentPage({
   const resolvedParams = await params;
   const { id } = resolvedParams;
 
-  const cacheKey = `edit_investment_${id}`;
-  const investment = await getCachedData(cacheKey, async () => {
-    return prisma.otherInvestment.findUnique({
-      where: { id },
-    });
-  }, 30);
+  const investmentData = await prisma.otherInvestment.findUnique({
+    where: { id },
+  });
 
-  if (!investment) {
+  if (!investmentData) {
     notFound();
   }
+
+  const investment = JSON.parse(JSON.stringify(investmentData));
 
   return (
     <div style={{ maxWidth: "680px", margin: "0 auto" }}>

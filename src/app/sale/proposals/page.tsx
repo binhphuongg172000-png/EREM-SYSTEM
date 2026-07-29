@@ -14,27 +14,20 @@ export default async function SaleProposalsPage() {
   const userId = cookieStore.get("userId")?.value;
   if (!userId) redirect("/login");
 
-  const raw = await getCachedData(
-    `sale_proposals_list_${userId}`,
-    async () => {
-      const res = await prisma.proposal.findMany({
-        where: {
-          school: {
-            saleId: userId,
-          },
-        },
-        include: {
-          school: true,
-          items: true,
-          investments: true,
-        },
-        orderBy: { updatedAt: "desc" },
-      });
-      return JSON.parse(JSON.stringify(res));
+  const res = await prisma.proposal.findMany({
+    where: {
+      school: {
+        saleId: userId,
+      },
     },
-    30,
-    [`sale_proposals_${userId}`]
-  );
+    include: {
+      school: true,
+      items: true,
+      investments: true,
+    },
+    orderBy: { updatedAt: "desc" },
+  });
+  const raw = JSON.parse(JSON.stringify(res));
 
   // Business rule: Each school has ONLY 1 latest proposal displayed
   const schoolMap = new Map<string, typeof raw[0]>();
@@ -48,6 +41,12 @@ export default async function SaleProposalsPage() {
 
   const proposals = JSON.parse(JSON.stringify(uniqueRaw)).map((p: any) => {
     let allocatedBudget = Number(p.allocatedBudget || 0);
+    if (p.status !== "CLOSED") {
+      const newStudents = Number(p.school?.newStudents) || 0;
+      if (newStudents > 0) {
+        allocatedBudget = Math.floor((newStudents * 100000000) / 105);
+      }
+    }
     let investedBudget = Number(p.investedBudget || 0);
 
     return {

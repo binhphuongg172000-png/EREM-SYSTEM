@@ -14,7 +14,7 @@ import { toast } from "@/components/Toast";
 
 const itemSchema = z.object({
   name: z.string().min(1, "Tên thiết bị không được để trống"),
-  specifications: z.string().min(1, "Mô tả cấu hình"),
+  specifications: z.string().optional(),
   accessories: z.string().optional(),
   unit: z.string().min(1, "Đơn vị tính"),
   standardPrice: z.string().min(1, "Đơn giá chuẩn"),
@@ -160,7 +160,7 @@ export default function NewItemForm({ type }: { type: string }) {
             </div>
 
             <div className="form-group">
-              <label className="form-label">Cấu hình chi tiết <span style={{ color: "var(--error)" }}>*</span></label>
+              <label className="form-label">Cấu hình chi tiết</label>
               <textarea className="form-input" rows={4} placeholder="VD: Core i7 13700, RAM 16GB, SSD 512GB..." {...formItem.register("specifications")} />
               {formItem.formState.errors.specifications && <p className="form-error">{formItem.formState.errors.specifications.message}</p>}
             </div>

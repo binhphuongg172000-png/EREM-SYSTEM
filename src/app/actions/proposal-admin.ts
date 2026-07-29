@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/app/actions/auth";
 import { clearCache } from "@/lib/cache";
+import { createNotification } from "@/app/actions/notification";
 
 export async function approveProposal(id: string) {
   try {
@@ -12,14 +13,25 @@ export async function approveProposal(id: string) {
       return { success: false, message: "Chỉ ADMIN mới có quyền thực hiện thao tác này." };
     }
 
-    await prisma.proposal.update({
+    const proposal = await prisma.proposal.update({
       where: { id },
       data: { status: "APPROVED" },
+      include: { school: true }
+    });
+
+    await createNotification({
+      userId: proposal.saleId,
+      title: "Dự trù đã được Phê duyệt 🟢",
+      message: `${user.name} đã phê duyệt bản dự trù cho ${proposal.school.name}.`,
+      type: "APPROVED",
+      proposalId: id,
+      schoolName: proposal.school.name
     });
 
     clearCache();
     revalidatePath("/admin/proposals");
     revalidatePath(`/admin/proposals/${id}`);
+    revalidatePath("/sale/proposals");
     return { success: true };
   } catch (error: any) {
     return { success: false, message: error.message };
@@ -33,17 +45,28 @@ export async function rejectProposal(id: string, reason: string) {
       return { success: false, message: "Chỉ ADMIN mới có quyền thực hiện thao tác này." };
     }
 
-    await prisma.proposal.update({
+    const proposal = await prisma.proposal.update({
       where: { id },
       data: { 
         status: "REJECTED",
         rejectReason: reason
       },
+      include: { school: true }
+    });
+
+    await createNotification({
+      userId: proposal.saleId,
+      title: "Dự trù bị Từ chối 🔴",
+      message: `Bản dự trù cho ${proposal.school.name} bị từ chối với lý do: "${reason}".`,
+      type: "REJECTED",
+      proposalId: id,
+      schoolName: proposal.school.name
     });
 
     clearCache();
     revalidatePath("/admin/proposals");
     revalidatePath(`/admin/proposals/${id}`);
+    revalidatePath("/sale/proposals");
     return { success: true };
   } catch (error: any) {
     return { success: false, message: error.message };
@@ -74,9 +97,19 @@ export async function lockProposal(id: string) {
       })
     ]);
 
+    await createNotification({
+      userId: proposal.saleId,
+      title: "Dự trù chuyển sang Đang thực hiện 🔒",
+      message: `${user.name} đã chuyển dự trù của trường ${proposal.school.name} sang trạng thái Đang thực hiện (bạn không được phép chỉnh sửa).`,
+      type: "APPROVED",
+      proposalId: id,
+      schoolName: proposal.school.name
+    });
+
     clearCache();
     revalidatePath("/admin/proposals");
     revalidatePath("/admin/schools");
+    revalidatePath("/sale/proposals");
     return { success: true };
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi đóng băng dự trù" };
@@ -106,6 +139,15 @@ export async function completeProposal(id: string) {
         data: { isLocked: true },
       })
     ]);
+
+    await createNotification({
+      userId: proposal.saleId,
+      title: "Dự trù đã Hoàn thành 🎉",
+      message: `Dự trù của trường ${proposal.school.name} đã chuyển sang trạng thái Hoàn Thành.`,
+      type: "COMPLETED",
+      proposalId: id,
+      schoolName: proposal.school.name
+    });
 
     clearCache();
     revalidatePath("/admin/proposals");
@@ -141,6 +183,15 @@ export async function unlockProposal(id: string) {
       })
     ]);
 
+    await createNotification({
+      userId: proposal.saleId,
+      title: "Dự trù đã Mở khóa 🟡",
+      message: `${user.name} đã mở khóa dự trù của trường ${proposal.school.name} để bạn chỉnh sửa.`,
+      type: "UNLOCKED",
+      proposalId: id,
+      schoolName: proposal.school.name
+    });
+
     clearCache();
     revalidatePath("/admin/proposals");
     revalidatePath("/admin/schools");
@@ -158,9 +209,19 @@ export async function revertToLocked(id: string) {
       return { success: false, message: "Chỉ ADMIN mới có quyền thay đổi trạng thái dự trù." };
     }
 
-    await prisma.proposal.update({
+    const proposal = await prisma.proposal.update({
       where: { id },
       data: { status: "APPROVED" },
+      include: { school: true }
+    });
+
+    await createNotification({
+      userId: proposal.saleId,
+      title: "Dự trù chuyển sang Đang thực hiện 🔵",
+      message: `Dự trù của trường ${proposal.school.name} đã được chuyển lại trạng thái Đang thực hiện.`,
+      type: "APPROVED",
+      proposalId: id,
+      schoolName: proposal.school.name
     });
 
     clearCache();

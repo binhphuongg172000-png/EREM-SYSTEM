@@ -6,6 +6,9 @@ import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, logoutAction } from "@/app/actions/auth";
 import { Home, LayoutDashboard, FileText, ClipboardCheck, LogOut, Laptop, Coins, Wrench, Sparkles } from "lucide-react";
 import ToastContainer from "@/components/Toast";
+import BrandLogo from "@/components/BrandLogo";
+import NotificationBell from "@/components/NotificationBell";
+import { getSmartGreeting, GreetingInfo } from "@/lib/greetings";
 import "./sale.css";
 
 export default function SaleLayout({
@@ -17,16 +20,23 @@ export default function SaleLayout({
   const router = useRouter();
   
   const [userName, setUserName] = useState("Nhân viên Sale");
+  const [greetingInfo, setGreetingInfo] = useState<GreetingInfo>({
+    greeting: "Xin chào,",
+    humorTag: "Chào mừng đến với hệ thống EREM!",
+    icon: "👋",
+  });
 
   useEffect(() => {
     const cachedName = localStorage.getItem("userName");
     if (cachedName) {
       setUserName(cachedName);
+      setGreetingInfo(getSmartGreeting(cachedName));
     } else {
       getCurrentUser().then((user) => {
         if (user) {
           setUserName(user.name);
           localStorage.setItem("userName", user.name);
+          setGreetingInfo(getSmartGreeting(user.name));
         } else {
           router.push("/login");
         }
@@ -47,33 +57,7 @@ export default function SaleLayout({
       {/* Sidebar for Desktop */}
       <aside className="sale-sidebar">
         <div className="sidebar-brand">
-          <div className="sidebar-brand-row" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <div 
-              className="sidebar-brand-icon"
-              style={{
-                width: "38px",
-                height: "38px",
-                borderRadius: "12px",
-                background: "linear-gradient(135deg, #0284c7 0%, #3b82f6 50%, #6366f1 100%)",
-                boxShadow: "0 0 15px rgba(56, 189, 248, 0.4)",
-                border: "1px solid rgba(255, 255, 255, 0.2)",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                color: "#ffffff",
-                fontWeight: "900",
-                fontSize: "1.2rem",
-                flexShrink: 0
-              }}
-            >
-              E
-            </div>
-            <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
-              <h2 style={{ fontSize: "1.1rem", fontWeight: "900", color: "#ffffff", margin: 0, letterSpacing: "0.5px", whiteSpace: "nowrap" }}>
-                EREM <span style={{ color: "#38bdf8" }}>SYSTEM</span>
-              </h2>
-            </div>
-          </div>
+          <BrandLogo badge="SALE PLATFORM" />
         </div>
 
         <nav className="sidebar-nav">
@@ -116,7 +100,7 @@ export default function SaleLayout({
             onMouseEnter={() => router.prefetch("/sale/items")}
             className={`nav-item ${pathname?.startsWith("/sale/items") ? "active" : ""}`}
           >
-            <Laptop className="nav-item-icon" style={{ color: "#c084fc" }} size={18} />
+            <Laptop className="nav-item-icon" style={{ color: "#38bdf8" }} size={18} />
             <span>Danh mục Thiết bị</span>
           </Link>
           <Link
@@ -125,7 +109,7 @@ export default function SaleLayout({
             onMouseEnter={() => router.prefetch("/sale/investments")}
             className={`nav-item ${pathname?.startsWith("/sale/investments") ? "active" : ""}`}
           >
-            <Coins className="nav-item-icon" style={{ color: "#f472b6" }} size={18} />
+            <Coins className="nav-item-icon" style={{ color: "#fbbf24" }} size={18} />
             <span>Danh mục Đầu tư khác</span>
           </Link>
           <Link
@@ -143,51 +127,51 @@ export default function SaleLayout({
       {/* Main Content */}
       <main className="sale-main">
         <header className="sale-header">
-          <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-            <span style={{ fontSize: "0.825rem", color: "#64748b", fontWeight: 500, display: "flex", alignItems: "center", gap: "0.35rem" }}>
-              <Sparkles size={14} color="#06b6d4" /> Workspace Kinh doanh
-            </span>
+          {/* Left/Middle Space: Dynamic Time-of-Day Greeting & Weather Status Pill */}
+          <div className="header-left-space">
+            <div className="header-greeting-pill">
+              <Sparkles size={15} style={{ color: "#38bdf8", flexShrink: 0 }} />
+              <span className="greeting-main-text">
+                {greetingInfo.greeting}
+              </span>
+              <span className="greeting-separator">•</span>
+              <span className="greeting-humor-tag">
+                {greetingInfo.humorTag}
+              </span>
+            </div>
           </div>
 
-          <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginLeft: "auto" }}>
-            <button
-              onClick={handleLogout}
-              className="btn"
-              style={{
-                padding: "0.45rem 0.85rem",
-                borderRadius: "10px",
-                border: "1px solid rgba(244, 63, 94, 0.3)",
-                display: "flex",
-                alignItems: "center",
-                gap: "0.4rem",
-                cursor: "pointer",
-                background: "rgba(244, 63, 94, 0.08)",
-                color: "#f43f5e",
-                fontSize: "0.8rem",
-                fontWeight: 700,
-                transition: "all 0.2s"
-              }}
-              title="Đăng xuất khỏi hệ thống"
-            >
-              <LogOut size={14} />
-              Đăng xuất
-            </button>
+          {/* Right Space: Standard SaaS User Control (Notification Bell -> Profile Capsule -> Logout Button) */}
+          <div className="header-right-space">
+            {/* Realtime Notification Bell */}
+            <NotificationBell />
 
-            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", paddingLeft: "0.5rem", borderLeft: "1px solid rgba(30, 41, 59, 0.8)" }}>
-              <div style={{ display: "flex", flexDirection: "column", textAlign: "right" }}>
-                <span style={{ color: "#94a3b8", fontSize: "0.75rem" }}>Xin chào,</span>
-                <strong style={{ color: "#ffffff", fontSize: "0.85rem" }}>{userName}</strong>
-              </div>
+            {/* User Profile Capsule */}
+            <div className="user-profile-capsule">
               <div style={{
-                width: "36px", height: "36px", borderRadius: "10px",
+                width: "34px", height: "34px", borderRadius: "9px",
                 background: "linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)",
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontWeight: 800, color: "#ffffff", fontSize: "0.9rem",
-                boxShadow: "0 0 12px rgba(6, 182, 212, 0.3)"
+                boxShadow: "0 0 12px rgba(6, 182, 212, 0.3)", flexShrink: 0
               }}>
-                <span style={{ margin: "auto" }}>{userName ? userName.charAt(0).toUpperCase() : "S"}</span>
+                <span>{userName ? userName.charAt(0).toUpperCase() : "S"}</span>
+              </div>
+              <div className="user-info-stack" style={{ display: "flex", flexDirection: "column", gap: "2px", justifyContent: "center" }}>
+                <strong style={{ color: "#ffffff", fontSize: "0.825rem", lineHeight: 1.2, whiteSpace: "nowrap" }}>{userName}</strong>
+                <span style={{ color: "#38bdf8", fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.05em", whiteSpace: "nowrap" }}>SALE MEMBER</span>
               </div>
             </div>
+
+            {/* Logout Button on Far Right */}
+            <button
+              onClick={handleLogout}
+              className="btn-logout-saas"
+              title="Đăng xuất khỏi hệ thống"
+            >
+              <LogOut size={15} />
+              <span className="logout-text">Đăng xuất</span>
+            </button>
           </div>
         </header>
 
@@ -205,10 +189,6 @@ export default function SaleLayout({
         <Link href="/sale/proposals" className={`mobile-nav-item ${pathname?.startsWith("/sale/proposals") ? "active" : ""}`}>
           <FileText size={20} />
           <span>Dự trù</span>
-        </Link>
-        <Link href="/sale/handovers" className={`mobile-nav-item ${pathname?.startsWith("/sale/handovers") ? "active" : ""}`}>
-          <ClipboardCheck size={20} />
-          <span>Biên bản</span>
         </Link>
       </nav>
     </div>

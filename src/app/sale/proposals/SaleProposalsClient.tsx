@@ -107,6 +107,12 @@ export default function SaleProposalsClient({
         }
         .search-wrap input::placeholder { color: #64748b; }
         
+        .filter-select-wrap {
+          display: flex;
+          gap: 0.75rem;
+          align-items: center;
+        }
+
         .filter-select {
           padding: 0.65rem 2rem 0.65rem 2.25rem;
           border-radius: 12px; border: 1px solid var(--sale-card-border);
@@ -123,6 +129,41 @@ export default function SaleProposalsClient({
           background: #0f172a; color: #f8fafc;
           padding: 0.5rem;
         }
+
+        @media (max-width: 640px) {
+          .stat-pill-row {
+            display: grid !important;
+            grid-template-columns: repeat(2, 1fr) !important;
+            gap: 0.5rem !important;
+            margin-bottom: 0.85rem !important;
+          }
+          .stat-pill-btn {
+            justify-content: center;
+            padding: 0.45rem 0.5rem !important;
+            font-size: 0.75rem !important;
+            width: 100% !important;
+          }
+          .filter-bar {
+            flex-direction: column !important;
+            align-items: stretch !important;
+            gap: 0.5rem !important;
+          }
+          .search-wrap {
+            max-width: 100% !important;
+            width: 100% !important;
+          }
+          .filter-select-wrap {
+            display: grid !important;
+            grid-template-columns: 1fr 1fr !important;
+            gap: 0.5rem !important;
+            width: 100% !important;
+          }
+          .filter-select {
+            width: 100% !important;
+            padding: 0.55rem 0.5rem 0.55rem 1.75rem !important;
+            font-size: 0.75rem !important;
+          }
+        }
         
         .school-name {
           font-weight: 700; color: #ffffff; display: flex;
@@ -136,7 +177,7 @@ export default function SaleProposalsClient({
         .delta-chip {
           display: inline-flex; align-items: center; gap: 0.3rem;
           padding: 0.25rem 0.65rem; border-radius: 8px;
-          font-size: 0.8rem; font-weight: 800;
+          font-size: 0.8rem; font-weight: 800; white-space: nowrap;
         }
         .delta-positive { background: rgba(16, 185, 129, 0.12); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.25); }
         .delta-negative { background: rgba(244, 63, 94, 0.12); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.25); }
@@ -145,6 +186,7 @@ export default function SaleProposalsClient({
           display: inline-flex; align-items: center; gap: 0.35rem;
           padding: 0.3rem 0.75rem; border-radius: 999px;
           font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.04em;
+          white-space: nowrap;
         }
         .status-init { background: rgba(251, 146, 60, 0.12); color: #fb923c; border: 1px solid rgba(251, 146, 60, 0.3); }
         .status-locked { background: rgba(244, 63, 94, 0.12); color: #fb7185; border: 1px solid rgba(244, 63, 94, 0.3); }
@@ -152,7 +194,7 @@ export default function SaleProposalsClient({
       `}</style>
 
       {/* Interactive Clickable Stat Filter Pills */}
-      <div style={{ display: "flex", gap: "0.85rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
+      <div className="stat-pill-row" style={{ display: "flex", gap: "0.85rem", marginBottom: "1.5rem", flexWrap: "wrap" }}>
         <button 
           type="button"
           onClick={() => setStatusFilter("ALL")}
@@ -207,33 +249,36 @@ export default function SaleProposalsClient({
           />
         </div>
 
-        {/* Budget Filter */}
-        <div style={{ position: "relative" }}>
-          <Coins size={15} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#10b981", pointerEvents: "none" }} />
-          <select 
-            className="filter-select"
-            value={budgetFilter}
-            onChange={e => setBudgetFilter(e.target.value as any)}
-          >
-            <option value="ALL">Tất cả ngân sách</option>
-            <option value="POSITIVE">Ngân sách dư (+VNĐ)</option>
-            <option value="NEGATIVE">Vượt ngân sách (-VNĐ)</option>
-          </select>
-        </div>
+        {/* Filter Selects Wrapper */}
+        <div className="filter-select-wrap">
+          {/* Budget Filter */}
+          <div style={{ position: "relative" }}>
+            <Coins size={15} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#10b981", pointerEvents: "none" }} />
+            <select 
+              className="filter-select"
+              value={budgetFilter}
+              onChange={e => setBudgetFilter(e.target.value as any)}
+            >
+              <option value="ALL">Tất cả ngân sách</option>
+              <option value="POSITIVE">Ngân sách dư (+VNĐ)</option>
+              <option value="NEGATIVE">Vượt ngân sách (-VNĐ)</option>
+            </select>
+          </div>
 
-        {/* Status Filter Dropdown (Synchronized with Icons) */}
-        <div style={{ position: "relative" }}>
-          {renderStatusFilterIcon()}
-          <select 
-            className="filter-select"
-            value={statusFilter}
-            onChange={e => setStatusFilter(e.target.value as any)}
-          >
-            <option value="ALL">Tất cả trạng thái</option>
-            <option value="INIT">Khởi tạo</option>
-            <option value="LOCKED">Đang thực hiện</option>
-            <option value="COMPLETED">Hoàn thành</option>
-          </select>
+          {/* Status Filter Dropdown */}
+          <div style={{ position: "relative" }}>
+            {renderStatusFilterIcon()}
+            <select 
+              className="filter-select"
+              value={statusFilter}
+              onChange={e => setStatusFilter(e.target.value as any)}
+            >
+              <option value="ALL">Tất cả trạng thái</option>
+              <option value="INIT">Khởi tạo</option>
+              <option value="LOCKED">Đang thực hiện</option>
+              <option value="COMPLETED">Hoàn thành</option>
+            </select>
+          </div>
         </div>
 
         {/* Reset Filter Button */}
@@ -277,16 +322,25 @@ export default function SaleProposalsClient({
             </p>
           </div>
         ) : (
-          <table className="sale-table">
+          <table className="sale-table" style={{ tableLayout: "auto", width: "100%" }}>
+            <colgroup>
+              <col style={{ width: "24%" }} />
+              <col style={{ width: "14%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "13%" }} />
+              <col style={{ width: "14%" }} />
+              <col style={{ width: "11%" }} />
+              <col style={{ width: "11%" }} />
+            </colgroup>
             <thead>
               <tr>
-                <th style={{ paddingLeft: "1.5rem" }}>Trường học</th>
+                <th style={{ paddingLeft: "1rem" }}>Trường học</th>
                 <th>Ngày lập</th>
                 <th>Ngân sách cấp</th>
                 <th>Tổng đầu tư</th>
                 <th>Chênh lệch</th>
                 <th>Trạng thái</th>
-                <th style={{ textAlign: "right", paddingRight: "1.5rem" }}>Thao tác</th>
+                <th style={{ textAlign: "right", paddingRight: "1rem" }}>Thao tác</th>
               </tr>
             </thead>
             <tbody>
@@ -309,7 +363,7 @@ export default function SaleProposalsClient({
 
                 return (
                   <tr key={p.id}>
-                    <td style={{ paddingLeft: "1.5rem" }}>
+                    <td style={{ paddingLeft: "1rem" }}>
                       <div className="school-name">
                         <Building2 size={15} color="#06b6d4" />
                         {p.school?.name}
@@ -344,7 +398,7 @@ export default function SaleProposalsClient({
                         {statusLabel}
                       </span>
                     </td>
-                    <td style={{ textAlign: "right", paddingRight: "1.5rem" }}>
+                    <td style={{ textAlign: "right", paddingRight: "1rem" }}>
                       <SaleProposalRowActions proposal={p} />
                     </td>
                   </tr>

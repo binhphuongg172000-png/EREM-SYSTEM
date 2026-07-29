@@ -15,16 +15,15 @@ export default async function EditItemPage({
   const resolvedParams = await params;
   const { id } = resolvedParams;
 
-  const cacheKey = `edit_item_${id}`;
-  const item = await getCachedData(cacheKey, async () => {
-    return prisma.item.findUnique({
-      where: { id },
-    });
-  }, 30);
+  const itemData = await prisma.item.findUnique({
+    where: { id },
+  });
 
-  if (!item) {
+  if (!itemData) {
     notFound();
   }
+
+  const item = JSON.parse(JSON.stringify(itemData));
 
   return (
     <div style={{ maxWidth: "680px", margin: "0 auto" }}>

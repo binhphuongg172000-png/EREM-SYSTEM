@@ -9,31 +9,28 @@ import { getCachedData } from "@/lib/cache";
 export const dynamic = "force-dynamic";
 
 export async function getNewProposalData(userId: string) {
-  const cacheKey = `sale_new_proposal_${userId}`;
-  return getCachedData(cacheKey, async () => {
-    const [rawSchools, catalogItems, catalogInvestments] = await Promise.all([
-      prisma.school.findMany({
-        where: { saleId: userId },
-        include: {
-          proposals: {
-            orderBy: { updatedAt: "desc" },
-            take: 1,
-            include: {
-              items: true,
-              investments: true,
-            }
+  const [rawSchools, catalogItems, catalogInvestments] = await Promise.all([
+    prisma.school.findMany({
+      where: { saleId: userId },
+      include: {
+        proposals: {
+          orderBy: { updatedAt: "desc" },
+          take: 1,
+          include: {
+            items: true,
+            investments: true,
           }
         }
-      }),
-      prisma.item.findMany({
-        select: { id: true, name: true, specifications: true, standardPrice: true, unit: true }
-      }),
-      prisma.otherInvestment.findMany({
-        select: { id: true, name: true, description: true, standardPrice: true, unit: true }
-      })
-    ]);
-    return { rawSchools, catalogItems, catalogInvestments };
-  }, 60);
+      }
+    }),
+    prisma.item.findMany({
+      select: { id: true, name: true, specifications: true, standardPrice: true, unit: true }
+    }),
+    prisma.otherInvestment.findMany({
+      select: { id: true, name: true, description: true, standardPrice: true, unit: true }
+    })
+  ]);
+  return { rawSchools, catalogItems, catalogInvestments };
 }
 
 export default async function NewProposalPage({
@@ -99,9 +96,9 @@ export default async function NewProposalPage({
 
   return (
     <div>
-      <div style={{ marginBottom: "1rem" }}>
-        <h1 style={{ fontSize: "1.35rem", fontWeight: 800, background: "linear-gradient(135deg, #f1f5f9, #94a3b8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Tạo Dự trù Mới</h1>
-        <p style={{ color: "#64748b", fontSize: "0.8rem", marginTop: "0.15rem" }}>Tìm kiếm trường, nhập chỉ tiêu và chọn hạng mục đầu tư để tính toán ngân sách.</p>
+      <div style={{ marginBottom: "0.5rem" }}>
+        <h1 style={{ fontSize: "1.25rem", fontWeight: 800, background: "linear-gradient(135deg, #f1f5f9, #94a3b8)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent" }}>Tạo Dự trù Mới</h1>
+        <p className="proposal-page-subtitle" style={{ color: "#64748b", fontSize: "0.78rem", marginTop: "0.1rem" }}>Nhập thông tin chỉ tiêu & chọn hạng mục đầu tư.</p>
       </div>
 
       <ProposalForm 

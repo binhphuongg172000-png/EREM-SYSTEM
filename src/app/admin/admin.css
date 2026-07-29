@@ -196,37 +196,74 @@
   box-shadow: 0 0 6px #10b981;
 }
 
-.header-user {
+.header-left-space {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.header-greeting-pill {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.3rem 0.75rem;
+  background: rgba(15, 23, 42, 0.6);
+  border: 1px solid rgba(56, 189, 248, 0.2);
+  border-radius: 20px;
+  font-size: 0.78rem;
+  color: #94a3b8;
+}
+
+.greeting-main-text {
+  color: #f8fafc;
+  font-weight: 700;
+}
+
+.greeting-humor-tag {
+  color: #fbbf24;
+  font-size: 0.75rem;
+}
+
+.header-right-space {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-profile-capsule {
   display: flex;
   align-items: center;
   gap: 0.55rem;
+  padding: 0.25rem 0.65rem;
+  background: rgba(15, 23, 42, 0.5);
+  border: 1px solid #1e293b;
+  border-radius: 10px;
 }
 
-.header-user-avatar {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #0284c7, #38bdf8);
+.user-info-stack {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+}
+
+.btn-logout-saas {
   display: flex;
   align-items: center;
-  justify-content: center;
-  font-size: 0.8rem;
-  font-weight: 800;
-  color: #030712;
-  flex-shrink: 0;
-  border: 1.5px solid #38bdf8;
-}
-
-.header-user-info {
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  border-radius: 8px;
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.3);
+  color: #f43f5e;
   font-size: 0.75rem;
-  color: #cbd5e1;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
 }
 
-.header-user-info strong {
+.btn-logout-saas:hover {
+  background: rgba(244, 63, 94, 0.25);
   color: #ffffff;
-  font-weight: 800;
-  display: block;
-  font-size: 0.8rem;
 }
 
 /* ---- Content Body ---- */
@@ -297,13 +334,89 @@ body.light .stat-title {
 }
 
 /* ---- Responsive Layout ---- */
-@media (max-width: 768px) {
+@media (max-width: 900px) {
   .admin-sidebar {
-    transform: translateX(-100%);
-    transition: transform 0.3s ease;
+    display: none;
   }
   .admin-main {
     margin-left: 0;
+  }
+  .admin-header {
+    padding: 0 0.85rem;
+  }
+  .admin-content {
+    padding: 0.85rem 0.65rem 4rem;
+  }
+  .dashboard-grid {
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-header {
+    padding: 0 0.5rem !important;
+    height: 46px !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+  }
+
+  .header-left-space {
+    display: flex !important;
+    flex: 1 !important;
+    min-width: 0 !important;
+    margin-right: 0.35rem !important;
+  }
+
+  .header-greeting-pill {
+    max-width: 155px !important;
+    padding: 0.2rem 0.45rem !important;
+    font-size: 0.7rem !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    border-radius: 8px !important;
+  }
+
+  .greeting-main-text {
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+  }
+
+  .greeting-humor-tag, .greeting-separator {
+    display: none !important;
+  }
+
+  .header-right-space {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.35rem !important;
+    flex-shrink: 0 !important;
+  }
+
+  .logout-text {
+    display: none !important;
+  }
+
+  .btn-logout-saas {
+    padding: 0.35rem 0.45rem !important;
+    border-radius: 8px !important;
+  }
+
+  .user-info-stack {
+    display: none !important;
+  }
+
+  .user-profile-capsule {
+    padding: 0.15rem !important;
+    background: transparent !important;
+    border: none !important;
+  }
+
+  .dashboard-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem !important;
   }
 }
 

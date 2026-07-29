@@ -6,8 +6,8 @@ import { clearCache } from "@/lib/cache";
 
 export async function createItem(data: any) {
   try {
-    if (!data.name || !data.specifications || !data.standardPrice) {
-      throw new Error("Vui lòng điền đầy đủ thông tin thiết bị (Tên, Quy cách kỹ thuật, Đơn giá)");
+    if (!data.name || !data.standardPrice) {
+      throw new Error("Vui lòng điền đầy đủ thông tin thiết bị (Tên, Đơn giá)");
     }
     const existingName = await prisma.item.findFirst({
       where: { name: { equals: data.name, mode: "insensitive" } }
@@ -95,8 +95,8 @@ export async function deleteItem(id: string) {
 
 export async function updateItem(id: string, data: any) {
   try {
-    if (!data.name || !data.specifications || !data.standardPrice) {
-      throw new Error("Vui lòng điền đầy đủ thông tin thiết bị (Tên, Quy cách kỹ thuật, Đơn giá)");
+    if (!data.name || !data.standardPrice) {
+      throw new Error("Vui lòng điền đầy đủ thông tin thiết bị (Tên, Đơn giá)");
     }
     const existingName = await prisma.item.findFirst({
       where: { name: { equals: data.name, mode: "insensitive" }, id: { not: id } }
