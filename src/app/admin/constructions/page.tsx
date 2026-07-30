@@ -2,11 +2,7 @@ import React from "react";
 import prisma from "@/lib/prisma";
 import Link from "next/link";
 import SearchInput from "../SearchInput";
-
 import DeleteInvestmentButton from "../investments/DeleteInvestmentButton";
-import { getCachedData } from "@/lib/cache";
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 import { Wrench } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -16,17 +12,11 @@ export default async function ConstructionsPage({
 }: {
   searchParams: Promise<{ search?: string }>;
 }) {
-  const cookieStore = await cookies();
-  const userRole = cookieStore.get("userRole")?.value;
-  if (userRole !== "ADMIN" && userRole !== "SUPER_ADMIN") {
-    redirect("/login");
-  }
-
   const resolvedParams = await searchParams;
   const search = resolvedParams?.search || "";
 
-  const cacheKey = `admin_constructions_${search}`;
-  const constructions = await getCachedData(cacheKey, async () => {
+  let constructions: any[] = [];
+  try {
     const res = await prisma.otherInvestment.findMany({
       where: {
         category: "CONSTRUCTION",
@@ -34,8 +24,10 @@ export default async function ConstructionsPage({
       },
       orderBy: { name: "asc" }
     });
-    return res.sort((a, b) => a.name.localeCompare(b.name, "vi", { sensitivity: "base" }));
-  }, 15);
+    constructions = res.sort((a, b) => (a.name || "").localeCompare(b.name || "", "vi", { sensitivity: "base" }));
+  } catch (err) {
+    console.error("ConstructionsPage findMany error:", err);
+  }
 
   return (
     <div>
@@ -64,24 +56,20 @@ export default async function ConstructionsPage({
           </thead>
           <tbody>
             {constructions.length === 0 ? (
-              <tr>
-                <td colSpan={5} style={{ padding: "2rem", textAlign: "center", color: "#64748b" }}>
-                  Chưa có hạng mục thi công nào.
-                </td>
-              </tr>
+              <tr><td colSpan={5} style={{ padding: "2rem", textAlign: "center", color: "#cbd5e1" }}>Chưa có hạng mục thi công nào.</td></tr>
             ) : (
-              constructions.map(inv => (
-                <tr key={inv.id}>
-                  <td style={{ fontWeight: 600 }}>{inv.name}</td>
-                  <td style={{ fontSize: "0.85rem", color: "#64748b" }}>{inv.description}</td>
-                  <td>{inv.unit}</td>
-                  <td style={{ fontWeight: 600 }}>{Number(inv.standardPrice).toLocaleString()} đ</td>
+              constructions.map(item => (
+                <tr key={item.id}>
+                  <td style={{ fontWeight: 700, color: "#ffffff" }}>{item.name}</td>
+                  <td style={{ fontSize: "0.85rem", color: "#cbd5e1" }}>{item.description}</td>
+                  <td>{item.unit || "Gói"}</td>
+                  <td style={{ fontWeight: 700, color: "#ffffff" }}>{Number(item.standardPrice).toLocaleString()} đ</td>
                   <td style={{ textAlign: "right" }}>
                     <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", alignItems: "center" }}>
-                      <Link href={`/admin/constructions/${inv.id}/edit`} className="btn btn-secondary" style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem" }}>
+                      <Link href={`/admin/constructions/${item.id}/edit`} className="btn btn-secondary" style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem" }}>
                         Sửa
                       </Link>
-                      <DeleteInvestmentButton id={inv.id} />
+                      <DeleteInvestmentButton id={item.id} />
                     </div>
                   </td>
                 </tr>

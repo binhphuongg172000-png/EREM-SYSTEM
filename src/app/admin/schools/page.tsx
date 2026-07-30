@@ -5,8 +5,6 @@ import SearchInput from "../SearchInput";
 import SaleFilterSelect from "./SaleFilterSelect";
 import SchoolRowActions from "./SchoolRowActions";
 
-import { getCachedData } from "@/lib/cache";
-
 export const dynamic = "force-dynamic";
 
 export default async function SchoolsPage({
@@ -18,11 +16,13 @@ export default async function SchoolsPage({
   const search = resolvedParams?.search || "";
   const saleId = resolvedParams?.saleId || undefined;
 
-  const cacheKey = `admin_schools_${search}_${saleId || "all"}`;
-  const { sales, schools } = await getCachedData(cacheKey, async () => {
-    const [sales, schools] = await Promise.all([
+  let sales: any[] = [];
+  let schools: any[] = [];
+
+  try {
+    [sales, schools] = await Promise.all([
       prisma.user.findMany({
-        where: { role: "SALE" },
+        where: { OR: [{ role: "SALE" }, { role: "sale" }] },
         select: { id: true, name: true },
         orderBy: { name: "asc" }
       }),
@@ -37,8 +37,9 @@ export default async function SchoolsPage({
         orderBy: { createdAt: "desc" },
       })
     ]);
-    return { sales, schools };
-  }, 15);
+  } catch (err) {
+    console.error("SchoolsPage findMany error:", err);
+  }
 
   return (
     <div>
@@ -58,27 +59,42 @@ export default async function SchoolsPage({
         <table className="table table-hover">
           <thead>
             <tr>
-              <th>Tên Trường</th>
-              <th>Địa chỉ</th>
-              <th>Nhân viên Sale</th>
+              <th>Tên Trường học</th>
+              <th>Địa chỉ / Tỉnh thành</th>
+              <th>Hiệu trưởng / Đại diện</th>
+              <th>Số HĐ</th>
+              <th>Sale phụ trách</th>
+              <th>Lớp ĐT</th>
+              <th>HS cũ</th>
+              <th>HS mới</th>
               <th style={{ textAlign: "right" }}>Thao tác</th>
             </tr>
           </thead>
           <tbody>
             {schools.length === 0 ? (
-              <tr>
-                <td colSpan={5} style={{ padding: "2rem", textAlign: "center", color: "#cbd5e1" }}>
-                  Chưa có trường học nào.
-                </td>
-              </tr>
+              <tr><td colSpan={9} style={{ padding: "2rem", textAlign: "center", color: "#cbd5e1" }}>Chưa có trường học nào.</td></tr>
             ) : (
-              schools.map((school) => (
+              schools.map(school => (
                 <tr key={school.id}>
                   <td style={{ fontWeight: 700, color: "#ffffff" }}>{school.name}</td>
                   <td>{school.address}</td>
-                  <td>{school.sale?.name || "Chưa gán"}</td>
+                  <td>{school.principalName || "-"}</td>
+                  <td>{school.contractNumber || "-"}</td>
+                  <td>
+                    <span className="badge badge-info" style={{ fontSize: "0.75rem" }}>
+                      {school.sale?.name || "Chưa gán"}
+                    </span>
+                  </td>
+                  <td style={{ textAlign: "center", fontWeight: 700 }}>{school.investedClassrooms || 0}</td>
+                  <td style={{ textAlign: "center" }}>{school.oldStudents}</td>
+                  <td style={{ textAlign: "center", fontWeight: 700, color: "#34d399" }}>{school.newStudents}</td>
                   <td style={{ textAlign: "right" }}>
-                    <SchoolRowActions school={school} />
+                    <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", alignItems: "center" }}>
+                      <Link href={`/admin/schools/${school.id}/edit`} className="btn btn-secondary" style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem" }}>
+                        Sửa
+                      </Link>
+                      <SchoolRowActions school={school} />
+                    </div>
                   </td>
                 </tr>
               ))

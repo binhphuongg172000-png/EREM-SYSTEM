@@ -3,11 +3,6 @@ import prisma from "@/lib/prisma";
 import Link from "next/link";
 import SearchInput from "../SearchInput";
 import DeleteItemButton from "./DeleteItemButton";
-import ItemHeaderActions from "./ItemHeaderActions";
-import { getCachedData } from "@/lib/cache";
-import { getCurrentUser } from "@/app/actions/auth";
-import { redirect } from "next/navigation";
-import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 
@@ -16,21 +11,23 @@ export default async function ItemsPage({
 }: {
   searchParams: Promise<{ search?: string; project?: string }>;
 }) {
-  const cookieStore = await cookies();
-  const userRole = cookieStore.get("userRole")?.value;
-  if (userRole !== "ADMIN" && userRole !== "SUPER_ADMIN") {
-    redirect("/login");
-  }
-
   const resolvedParams = await searchParams;
   const search = resolvedParams?.search || "";
   const projectFilter = resolvedParams?.project || "ALL";
 
-  const resItems = await prisma.item.findMany({
-    where: search ? { name: { contains: search, mode: "insensitive" } } : {},
-    orderBy: { name: "asc" },
-  });
-  const rawItems = resItems.sort((a, b) => a.name.localeCompare(b.name, "vi", { sensitivity: "base" }));
+  let resItems: any[] = [];
+  try {
+    resItems = await prisma.item.findMany({
+      where: search ? { name: { contains: search, mode: "insensitive" } } : {},
+      orderBy: { name: "asc" },
+    });
+  } catch (err) {
+    console.error("ItemsPage findMany error:", err);
+  }
+
+  const rawItems = (resItems || []).sort((a, b) => 
+    (a.name || "").localeCompare(b.name || "", "vi", { sensitivity: "base" })
+  );
 
   const items = rawItems.filter(item => {
     if (projectFilter === "ALL") return true;
