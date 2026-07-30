@@ -10,46 +10,49 @@ export default async function AdminDashboardPage() {
   let saleUsers: any[] = [];
 
   try {
-    [rawAllProposals, saleUsers] = await Promise.all([
-      prisma.proposal.findMany({
-        select: {
-          id: true,
-          schoolId: true,
-          saleId: true,
-          projectName: true,
-          status: true,
-          newStudents: true,
-          allocatedBudget: true,
-          investedBudget: true,
-          sale: { select: { id: true, name: true, email: true } },
-          school: { 
-            select: { 
-              id: true, 
-              name: true, 
-              newStudents: true,
-              saleId: true,
-              sale: { select: { id: true, name: true, email: true } } 
-            } 
-          },
-          items: { select: { totalPrice: true } },
-          investments: { select: { name: true, description: true, totalPrice: true } },
+    rawAllProposals = await prisma.proposal.findMany({
+      select: {
+        id: true,
+        schoolId: true,
+        saleId: true,
+        projectName: true,
+        status: true,
+        newStudents: true,
+        allocatedBudget: true,
+        investedBudget: true,
+        sale: { select: { id: true, name: true, email: true } },
+        school: { 
+          select: { 
+            id: true, 
+            name: true, 
+            newStudents: true,
+            saleId: true,
+            sale: { select: { id: true, name: true, email: true } } 
+          } 
         },
-        orderBy: { updatedAt: "desc" }
-      }),
-      prisma.user.findMany({
-        where: {
-          OR: [
-            { role: "SALE" },
-            { role: "sale" },
-            { schools: { some: {} } },
-            { proposals: { some: {} } }
-          ]
-        },
-        select: { id: true, name: true, email: true }
-      })
-    ]);
+        items: { select: { totalPrice: true } },
+        investments: { select: { name: true, description: true, totalPrice: true } },
+      },
+      orderBy: { updatedAt: "desc" }
+    });
   } catch (error) {
-    console.error("AdminDashboardPage fetch error:", error);
+    console.error("AdminDashboardPage rawAllProposals fetch error:", error);
+  }
+
+  try {
+    saleUsers = await prisma.user.findMany({
+      where: {
+        OR: [
+          { role: "SALE" },
+          { role: "sale" },
+          { schools: { some: {} } },
+          { proposals: { some: {} } }
+        ]
+      },
+      select: { id: true, name: true, email: true }
+    });
+  } catch (error) {
+    console.error("AdminDashboardPage saleUsers fetch error:", error);
   }
 
   const isConstructionItemName = (name: string) => {
@@ -60,26 +63,46 @@ export default async function AdminDashboardPage() {
   // Deduplicate proposals so each school counts its latest proposal
   const latestProposalsMap = new Map<string, typeof rawAllProposals[0]>();
   for (const p of rawAllProposals) {
-    const schId = p.schoolId || p.school?.id;
+    const schId = p.schoolId || p.school?.id || p.id;
     if (schId && !latestProposalsMap.has(schId)) {
       latestProposalsMap.set(schId, p);
     }
   }
   const rawUniqueProposals = Array.from(latestProposalsMap.values());
 
-  // Calculate allocatedBudget dynamically if 0 but newStudents > 0
+  // Sanitize and serialize Prisma Decimal fields to plain JS primitives
   const allProposals = rawUniqueProposals.map((p: any) => {
     const newStudents = Number(p.newStudents || p.school?.newStudents || 0);
-    const dbAlloc = Number(p.allocatedBudget || 0);
+    const dbAlloc = Number(p.allocatedBudget?.toString() || p.allocatedBudget || 0);
+    const dbInvested = Number(p.investedBudget?.toString() || p.investedBudget || 0);
     const allocatedBudget = dbAlloc > 0
       ? dbAlloc
       : (newStudents > 0 ? Math.floor((newStudents * 100000000) / 105) : 0);
 
     return {
-      ...p,
+      id: String(p.id),
+      schoolId: String(p.schoolId || p.school?.id || ""),
+      saleId: String(p.saleId || p.school?.saleId || ""),
+      projectName: String(p.projectName || "IPRO"),
+      status: String(p.status || "DRAFT"),
       newStudents,
       allocatedBudget,
-      investedBudget: Number(p.investedBudget || 0),
+      investedBudget: dbInvested,
+      sale: p.sale ? { id: String(p.sale.id), name: String(p.sale.name || ""), email: String(p.sale.email || "") } : null,
+      school: p.school ? { 
+        id: String(p.school.id), 
+        name: String(p.school.name || ""), 
+        saleId: String(p.school.saleId || ""),
+        sale: p.school.sale ? { id: String(p.school.sale.id), name: String(p.school.sale.name || ""), email: String(p.school.sale.email || "") } : null
+      } : null,
+      items: (p.items || []).map((i: any) => ({
+        totalPrice: Number(i?.totalPrice?.toString() || i?.totalPrice || 0)
+      })),
+      investments: (p.investments || []).map((invItem: any) => ({
+        name: String(invItem?.name || ""),
+        description: String(invItem?.description || ""),
+        totalPrice: Number(invItem?.totalPrice?.toString() || invItem?.totalPrice || 0)
+      })),
     };
   });
 
@@ -121,7 +144,7 @@ export default async function AdminDashboardPage() {
 
       const alloc = Number(p.allocatedBudget || 0);
       const inv = Number(p.investedBudget || 0);
-      const st = Number(p.newStudents || p.school?.newStudents || 0);
+      const st = Number(p.newStudents || 0);
 
       totalAllocated += alloc;
       totalInvested += inv;
@@ -173,10 +196,10 @@ export default async function AdminDashboardPage() {
   }>();
 
   saleUsers.forEach(u => {
-    salesMap.set(u.id, {
-      saleId: u.id,
-      saleName: u.name || "Chưa đặt tên",
-      email: u.email || "",
+    salesMap.set(String(u.id), {
+      saleId: String(u.id),
+      saleName: String(u.name || "Chưa đặt tên"),
+      email: String(u.email || ""),
       proposals: [],
     });
   });
@@ -223,7 +246,7 @@ export default async function AdminDashboardPage() {
           }
           alloc += Number(p.allocatedBudget || 0);
           inv += Number(p.investedBudget || 0);
-          const st = Number(p.newStudents || p.school?.newStudents || 0);
+          const st = Number(p.newStudents || 0);
           stCount += st;
 
           (p.items || []).forEach((i: any) => {
