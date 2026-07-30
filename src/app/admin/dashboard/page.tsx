@@ -10,37 +10,24 @@ export default async function AdminDashboardPage() {
   let saleUsers: any[] = [];
 
   try {
-    rawAllProposals = await prisma.proposal.findMany({
-      select: {
-        id: true,
-        schoolId: true,
-        saleId: true,
-        projectName: true,
-        status: true,
-        newStudents: true,
-        allocatedBudget: true,
-        investedBudget: true,
-        sale: { select: { id: true, name: true, email: true } },
-        school: { 
-          select: { 
-            id: true, 
-            name: true, 
-            newStudents: true,
-            saleId: true,
-            sale: { select: { id: true, name: true, email: true } } 
-          } 
+    const resProposals = await prisma.proposal.findMany({
+      include: {
+        sale: true,
+        school: {
+          include: { sale: true }
         },
-        items: { select: { totalPrice: true } },
-        investments: { select: { name: true, description: true, totalPrice: true } },
+        items: true,
+        investments: true,
       },
       orderBy: { updatedAt: "desc" }
     });
+    rawAllProposals = JSON.parse(JSON.stringify(resProposals));
   } catch (error) {
     console.error("AdminDashboardPage rawAllProposals fetch error:", error);
   }
 
   try {
-    saleUsers = await prisma.user.findMany({
+    const resUsers = await prisma.user.findMany({
       where: {
         OR: [
           { role: "SALE" },
@@ -51,6 +38,7 @@ export default async function AdminDashboardPage() {
       },
       select: { id: true, name: true, email: true }
     });
+    saleUsers = JSON.parse(JSON.stringify(resUsers));
   } catch (error) {
     console.error("AdminDashboardPage saleUsers fetch error:", error);
   }
@@ -70,19 +58,19 @@ export default async function AdminDashboardPage() {
   }
   const rawUniqueProposals = Array.from(latestProposalsMap.values());
 
-  // Sanitize and serialize Prisma Decimal fields to plain JS primitives
   const allProposals = rawUniqueProposals.map((p: any) => {
     const newStudents = Number(p.newStudents || p.school?.newStudents || 0);
-    const dbAlloc = Number(p.allocatedBudget?.toString() || p.allocatedBudget || 0);
-    const dbInvested = Number(p.investedBudget?.toString() || p.investedBudget || 0);
+    const dbAlloc = Number(p.allocatedBudget || 0);
+    const dbInvested = Number(p.investedBudget || 0);
     const allocatedBudget = dbAlloc > 0
       ? dbAlloc
       : (newStudents > 0 ? Math.floor((newStudents * 100000000) / 105) : 0);
 
     return {
+      ...p,
       id: String(p.id),
       schoolId: String(p.schoolId || p.school?.id || ""),
-      saleId: String(p.saleId || p.school?.saleId || ""),
+      saleId: String(p.saleId || p.school?.saleId || p.sale?.id || ""),
       projectName: String(p.projectName || "IPRO"),
       status: String(p.status || "DRAFT"),
       newStudents,
@@ -96,12 +84,12 @@ export default async function AdminDashboardPage() {
         sale: p.school.sale ? { id: String(p.school.sale.id), name: String(p.school.sale.name || ""), email: String(p.school.sale.email || "") } : null
       } : null,
       items: (p.items || []).map((i: any) => ({
-        totalPrice: Number(i?.totalPrice?.toString() || i?.totalPrice || 0)
+        totalPrice: Number(i?.totalPrice || 0)
       })),
       investments: (p.investments || []).map((invItem: any) => ({
         name: String(invItem?.name || ""),
         description: String(invItem?.description || ""),
-        totalPrice: Number(invItem?.totalPrice?.toString() || invItem?.totalPrice || 0)
+        totalPrice: Number(invItem?.totalPrice || 0)
       })),
     };
   });
