@@ -11,6 +11,10 @@ export function middleware(request: NextRequest) {
     if (!userId || !userRole) {
       return NextResponse.redirect(new URL('/login', request.url));
     }
+    // Only SUPER_ADMIN can access user account management
+    if (path.startsWith('/admin/users') && userRole !== 'SUPER_ADMIN') {
+      return NextResponse.redirect(new URL('/admin/dashboard', request.url));
+    }
     if (userRole !== 'ADMIN' && userRole !== 'SUPER_ADMIN') {
       return NextResponse.redirect(new URL('/sale/dashboard', request.url));
     }

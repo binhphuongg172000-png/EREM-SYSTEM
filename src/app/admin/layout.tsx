@@ -95,15 +95,17 @@ export default function AdminLayout({
             <SchoolIcon className="nav-item-icon" style={{ color: "#34d399" }} size={18} />
             <span>Danh sách Trường học</span>
           </Link>
-          <Link
-            href="/admin/users"
-            prefetch={true}
-            onMouseEnter={() => router.prefetch("/admin/users")}
-            className={`nav-item ${pathname?.startsWith("/admin/users") ? "active" : ""}`}
-          >
-            <Users className="nav-item-icon" style={{ color: "#fbbf24" }} size={18} />
-            <span>Tài khoản Hệ thống</span>
-          </Link>
+          {userRole === "SUPER_ADMIN" && (
+            <Link
+              href="/admin/users"
+              prefetch={true}
+              onMouseEnter={() => router.prefetch("/admin/users")}
+              className={`nav-item ${pathname?.startsWith("/admin/users") ? "active" : ""}`}
+            >
+              <Users className="nav-item-icon" style={{ color: "#fbbf24" }} size={18} />
+              <span>Tài khoản Hệ thống</span>
+            </Link>
+          )}
 
           <div className="nav-group-label">HỒ SƠ & GIAO DỊCH</div>
           <Link
