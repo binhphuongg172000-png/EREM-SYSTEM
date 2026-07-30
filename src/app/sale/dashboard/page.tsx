@@ -13,19 +13,24 @@ export default async function SaleDashboardPage() {
   const userId = cookieStore.get("userId")?.value;
   if (!userId) redirect("/login");
 
-  const rawSchools = await prisma.school.findMany({
-    where: { saleId: userId },
-    include: {
-      proposals: {
-        orderBy: { updatedAt: "desc" },
-        take: 1,
-        include: {
-          items: { select: { totalPrice: true } },
-          investments: { select: { name: true, description: true, totalPrice: true } },
+  let rawSchools: any[] = [];
+  try {
+    rawSchools = await prisma.school.findMany({
+      where: { saleId: userId },
+      include: {
+        proposals: {
+          orderBy: { updatedAt: "desc" },
+          take: 1,
+          include: {
+            items: { select: { totalPrice: true } },
+            investments: { select: { name: true, description: true, totalPrice: true } },
+          }
         }
       }
-    }
-  });
+    });
+  } catch (error) {
+    console.error("SaleDashboardPage fetch error:", error);
+  }
 
   const isConstructionItemName = (name: string) => {
     const lower = (name || "").toLowerCase();
@@ -33,7 +38,7 @@ export default async function SaleDashboardPage() {
   };
 
   const proposals = rawSchools
-    .map(s => s.proposals[0] ? { ...s.proposals[0], school: s } : null)
+    .map(s => (s.proposals && s.proposals[0]) ? { ...s.proposals[0], school: s } : null)
     .filter(Boolean) as NonNullable<any>[];
 
   const PROJECT_CONFIGS: Array<{
@@ -62,7 +67,9 @@ export default async function SaleDashboardPage() {
     let constrCost = 0;
 
     projProposals.forEach(p => {
-      schoolSet.add(p.schoolId);
+      const schId = p.schoolId || p.school?.id;
+      if (schId) schoolSet.add(schId);
+      
       const alloc = Number(p.allocatedBudget || 0);
       const inv = Number(p.investedBudget || 0);
       const st = Number(p.newStudents || p.school?.newStudents || 0);
@@ -72,12 +79,12 @@ export default async function SaleDashboardPage() {
       studentCount += st;
 
       (p.items || []).forEach((i: any) => {
-        itemCost += Number(i.totalPrice || 0);
+        itemCost += Number(i?.totalPrice || 0);
       });
 
       (p.investments || []).forEach((invItem: any) => {
-        const price = Number(invItem.totalPrice || 0);
-        if (isConstructionItemName(invItem.name)) {
+        const price = Number(invItem?.totalPrice || 0);
+        if (isConstructionItemName(invItem?.name)) {
           constrCost += price;
         } else {
           otherCost += price;

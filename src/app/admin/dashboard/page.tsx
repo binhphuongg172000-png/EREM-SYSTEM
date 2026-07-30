@@ -5,34 +5,42 @@ import ProjectCostDashboard, { ProjectCostStat, SaleCostStat, SaleProjectDetail 
 export const dynamic = "force-dynamic";
 
 export default async function AdminDashboardPage() {
-  const rawAllProposals = await prisma.proposal.findMany({
-    select: {
-      id: true,
-      schoolId: true,
-      projectName: true,
-      status: true,
-      newStudents: true,
-      allocatedBudget: true,
-      investedBudget: true,
-      school: { 
-        select: { 
-          id: true, 
-          name: true, 
-          newStudents: true,
-          saleId: true,
-          sale: { select: { id: true, name: true, email: true } } 
-        } 
-      },
-      items: { select: { totalPrice: true } },
-      investments: { select: { name: true, description: true, totalPrice: true } },
-    },
-    orderBy: { updatedAt: "desc" }
-  });
+  let rawAllProposals: any[] = [];
+  let saleUsers: any[] = [];
 
-  const saleUsers = await prisma.user.findMany({
-    where: { role: "SALE" },
-    select: { id: true, name: true, email: true }
-  });
+  try {
+    [rawAllProposals, saleUsers] = await Promise.all([
+      prisma.proposal.findMany({
+        select: {
+          id: true,
+          schoolId: true,
+          projectName: true,
+          status: true,
+          newStudents: true,
+          allocatedBudget: true,
+          investedBudget: true,
+          school: { 
+            select: { 
+              id: true, 
+              name: true, 
+              newStudents: true,
+              saleId: true,
+              sale: { select: { id: true, name: true, email: true } } 
+            } 
+          },
+          items: { select: { totalPrice: true } },
+          investments: { select: { name: true, description: true, totalPrice: true } },
+        },
+        orderBy: { updatedAt: "desc" }
+      }),
+      prisma.user.findMany({
+        where: { role: "SALE" },
+        select: { id: true, name: true, email: true }
+      })
+    ]);
+  } catch (error) {
+    console.error("AdminDashboardPage fetch error:", error);
+  }
 
   const isConstructionItemName = (name: string) => {
     const lower = (name || "").toLowerCase();
@@ -75,7 +83,7 @@ export default async function AdminDashboardPage() {
     let constrCost = 0;
 
     projProposals.forEach(p => {
-      schoolSet.add(p.schoolId);
+      if (p.schoolId) schoolSet.add(p.schoolId);
       const alloc = Number(p.allocatedBudget || 0);
       const inv = Number(p.investedBudget || 0);
       const st = Number(p.newStudents || p.school?.newStudents || 0);
@@ -84,13 +92,13 @@ export default async function AdminDashboardPage() {
       totalInvested += inv;
       studentCount += st;
 
-      p.items.forEach(i => {
-        itemCost += Number(i.totalPrice || 0);
+      (p.items || []).forEach((i: any) => {
+        itemCost += Number(i?.totalPrice || 0);
       });
 
-      p.investments.forEach(invItem => {
-        const price = Number(invItem.totalPrice || 0);
-        if (isConstructionItemName(invItem.name)) {
+      (p.investments || []).forEach((invItem: any) => {
+        const price = Number(invItem?.totalPrice || 0);
+        if (isConstructionItemName(invItem?.name)) {
           constrCost += price;
         } else {
           otherCost += price;
@@ -172,20 +180,22 @@ export default async function AdminDashboardPage() {
         let constrCost = 0;
 
         subProposals.forEach(p => {
-          subSchoolSet.add(p.schoolId);
-          allSchoolSet.add(p.schoolId);
+          if (p.schoolId) {
+            subSchoolSet.add(p.schoolId);
+            allSchoolSet.add(p.schoolId);
+          }
           alloc += Number(p.allocatedBudget || 0);
           inv += Number(p.investedBudget || 0);
           const st = Number(p.newStudents || p.school?.newStudents || 0);
           stCount += st;
 
-          p.items.forEach(i => {
-            itemCost += Number(i.totalPrice || 0);
+          (p.items || []).forEach((i: any) => {
+            itemCost += Number(i?.totalPrice || 0);
           });
 
-          p.investments.forEach(invItem => {
-            const price = Number(invItem.totalPrice || 0);
-            if (isConstructionItemName(invItem.name)) {
+          (p.investments || []).forEach((invItem: any) => {
+            const price = Number(invItem?.totalPrice || 0);
+            if (isConstructionItemName(invItem?.name)) {
               constrCost += price;
             } else {
               otherCost += price;
