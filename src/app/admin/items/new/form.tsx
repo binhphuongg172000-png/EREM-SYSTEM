@@ -7,7 +7,7 @@ import * as z from "zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createItem, createOtherInvestment } from "@/app/actions/item";
-import { FileSpreadsheet, Laptop, Coins, ArrowLeft } from "lucide-react";
+import { FileSpreadsheet, Laptop, Coins, ArrowLeft, Check } from "lucide-react";
 import ExcelImportModal from "@/components/ExcelImportModal";
 import CurrencyInput from "@/components/CurrencyInput";
 import { toast } from "@/components/Toast";
@@ -27,11 +27,14 @@ const invSchema = z.object({
   standardPrice: z.string().min(1, "Đơn giá chuẩn"),
 });
 
+const AVAILABLE_PROJECTS = ["IPRO", "ICLASS", "IGEN", "ILINK"];
+
 export default function NewItemForm({ type }: { type: string }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [selectedProjects, setSelectedProjects] = useState<string[]>(["IPRO"]);
 
   const formItem = useForm<z.infer<typeof itemSchema>>({
     resolver: zodResolver(itemSchema),
@@ -41,14 +44,27 @@ export default function NewItemForm({ type }: { type: string }) {
     resolver: zodResolver(invSchema),
   });
 
+  const toggleProject = (pKey: string) => {
+    if (selectedProjects.includes(pKey)) {
+      if (selectedProjects.length > 1) {
+        setSelectedProjects(selectedProjects.filter(p => p !== pKey));
+      }
+    } else {
+      setSelectedProjects([...selectedProjects, pKey]);
+    }
+  };
+
   const onSubmitItem = async (data: any) => {
     setIsLoading(true);
     setError("");
-    const res = await createItem(data);
+    const res = await createItem({
+      ...data,
+      projectName: selectedProjects.join(", ") || "IPRO",
+    });
     if (res.success) {
-      toast.success("Tạo Thiết bị phần cứng mới thành công!");
-      router.push("/admin/items");
+      toast.success("Tạo Thiết bị mới thành công!");
       router.refresh();
+      router.push("/admin/items");
     } else {
       setError(res.message);
       setIsLoading(false);
@@ -61,8 +77,8 @@ export default function NewItemForm({ type }: { type: string }) {
     const res = await createOtherInvestment(data);
     if (res.success) {
       toast.success("Tạo Hạng mục Đầu tư khác thành công!");
-      router.push("/admin/investments");
       router.refresh();
+      router.push("/admin/investments");
     } else {
       setError(res.message);
       setIsLoading(false);
@@ -100,10 +116,10 @@ export default function NewItemForm({ type }: { type: string }) {
           </div>
           <div>
             <h1 style={{ fontSize: "1.25rem", fontWeight: 800, color: "#ffffff" }}>
-              {isInvestment ? "Thêm Hạng mục Đầu tư khác" : "Thêm Thiết bị phần cứng mới"}
+              {isInvestment ? "Thêm Hạng mục Đầu tư khác" : "Thêm Thiết bị mới"}
             </h1>
             <p style={{ fontSize: "0.8rem", color: "#94a3b8" }}>
-              {isInvestment ? "Tạo hạng mục dịch vụ, đào tạo hoặc đầu tư đi kèm" : "Khai báo cấu hình và đơn giá chuẩn cho thiết bị máy tính / thiết bị số"}
+              {isInvestment ? "Tạo hạng mục dịch vụ, đào tạo hoặc đầu tư đi kèm" : "Khai báo cấu hình, dự án áp dụng và đơn giá chuẩn cho thiết bị"}
             </p>
           </div>
         </div>
@@ -153,6 +169,54 @@ export default function NewItemForm({ type }: { type: string }) {
           </form>
         ) : (
           <form onSubmit={formItem.handleSubmit(onSubmitItem)}>
+            {/* Multi-Project Selection */}
+            <div className="form-group" style={{ marginBottom: "1.25rem" }}>
+              <label className="form-label" style={{ display: "block", marginBottom: "0.5rem" }}>
+                Dự án áp dụng <span style={{ color: "var(--error)" }}>*</span> (Có thể chọn nhiều dự án)
+              </label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
+                {AVAILABLE_PROJECTS.map(pKey => {
+                  const isChecked = selectedProjects.includes(pKey);
+                  return (
+                    <button
+                      key={pKey}
+                      type="button"
+                      onClick={() => toggleProject(pKey)}
+                      style={{
+                        display: "inline-flex",
+                        alignItems: "center",
+                        gap: "0.4rem",
+                        padding: "0.45rem 0.9rem",
+                        borderRadius: "8px",
+                        fontWeight: 700,
+                        fontSize: "0.85rem",
+                        cursor: "pointer",
+                        border: isChecked ? "1.5px solid #38bdf8" : "1.5px solid #334155",
+                        background: isChecked ? "rgba(56, 189, 248, 0.15)" : "rgba(15, 23, 42, 0.5)",
+                        color: isChecked ? "#38bdf8" : "#94a3b8",
+                        transition: "all 0.2s ease"
+                      }}
+                    >
+                      <div style={{
+                        width: "16px",
+                        height: "16px",
+                        borderRadius: "4px",
+                        border: `1px solid ${isChecked ? "#38bdf8" : "#64748b"}`,
+                        background: isChecked ? "#38bdf8" : "transparent",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#0f172a"
+                      }}>
+                        {isChecked && <Check size={12} strokeWidth={3} />}
+                      </div>
+                      {pKey}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
             <div className="form-group">
               <label className="form-label">Tên Thiết bị <span style={{ color: "var(--error)" }}>*</span></label>
               <input type="text" className="form-input" placeholder="VD: Máy tính để bàn Core i7" {...formItem.register("name")} />
@@ -205,7 +269,7 @@ export default function NewItemForm({ type }: { type: string }) {
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         type={isInvestment ? "investments" : "items"}
-        title={isInvestment ? "Import Danh sách Hạng mục Đầu tư từ Excel" : "Import Danh sách Thiết bị phần cứng từ Excel"}
+        title={isInvestment ? "Import Danh sách Hạng mục Đầu tư từ Excel" : "Import Danh sách Thiết bị từ Excel"}
       />
     </>
   );

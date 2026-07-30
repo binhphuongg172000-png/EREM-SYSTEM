@@ -40,7 +40,7 @@ type School = {
   } | null;
 };
 
-type CatalogItem = { id: string; name: string; specifications: string; standardPrice: number; unit: string };
+type CatalogItem = { id: string; name: string; specifications: string; standardPrice: number; unit: string; projectName?: string };
 type CatalogInvestment = { id: string; name: string; description: string; standardPrice: number; unit: string; category?: string };
 
 type ProposalItem = { tempId: number; name: string; specifications: string; quantity: number; price: number; type: "ITEM" | "INVESTMENT"; unit: string; category?: string };
@@ -82,6 +82,7 @@ export default function ProposalForm({
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [schoolFilter, setSchoolFilter] = useState<"ALL" | "NONE" | "INIT" | "LOCKED" | "COMPLETED">("ALL");
+  const [projectName, setProjectName] = useState<"IPRO" | "ICLASS" | "IGEN" | "ILINK">("IPRO");
   const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
   const [catalogModalTab, setCatalogModalTab] = useState<"ALL" | "ITEM" | "INVESTMENT" | "CONSTRUCTION">("ALL");
   const [catalogModalSearch, setCatalogModalSearch] = useState("");
@@ -327,6 +328,7 @@ export default function ProposalForm({
     const data = {
       schoolId: selectedSchoolId,
       schoolDetails,
+      projectName,
       allocatedBudget,
       investedBudget: totalInvested,
       items: items.filter(i => i.type === "ITEM"),
@@ -917,6 +919,53 @@ export default function ProposalForm({
                 )}
               </div>
 
+              {/* SECTION: BƯỚC CHỌN DỰ ÁN (IPRO / ICLASS / IGEN) */}
+              <div style={{ marginTop: "1rem" }}>
+                <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "#94a3b8", marginBottom: "0.45rem", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                  <span>Chọn Dự án triển khai:</span>
+                </label>
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.6rem", maxWidth: "540px" }}>
+                  {[
+                    { key: "IPRO", label: "IPRO", color: "#38bdf8", bg: "rgba(56, 189, 248, 0.15)" },
+                    { key: "ICLASS", label: "ICLASS", color: "#a855f7", bg: "rgba(168, 85, 247, 0.15)" },
+                    { key: "IGEN", label: "IGEN", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)" },
+                    { key: "ILINK", label: "ILINK", color: "#10b981", bg: "rgba(16, 185, 129, 0.15)" },
+                  ].map((p) => {
+                    const isSelected = projectName === p.key;
+                    return (
+                      <button
+                        key={p.key}
+                        type="button"
+                        disabled={!!selectedSchool?.isLocked}
+                        onClick={() => setProjectName(p.key as any)}
+                        style={{
+                          padding: "0.55rem 0.75rem",
+                          borderRadius: "10px",
+                          border: `1.5px solid ${isSelected ? p.color : "#334155"}`,
+                          background: isSelected ? p.bg : "rgba(15, 23, 42, 0.5)",
+                          color: isSelected ? p.color : "#94a3b8",
+                          fontWeight: isSelected ? 800 : 600,
+                          fontSize: "0.85rem",
+                          cursor: selectedSchool?.isLocked ? "not-allowed" : "pointer",
+                          transition: "all 0.2s ease",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          gap: "0.4rem",
+                          boxShadow: isSelected ? `0 0 12px ${p.color}25` : "none"
+                        }}
+                      >
+                        <div style={{
+                          width: 8, height: 8, borderRadius: "50%",
+                          background: isSelected ? p.color : "#475569"
+                        }} />
+                        <span>{p.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
               {/* School Info Section or Quick Select Grid */}
               {selectedSchool ? (
                 <div style={{ marginTop: "1rem", animation: "fadeIn 0.3s ease" }}>
@@ -1088,7 +1137,11 @@ export default function ProposalForm({
 
                 {/* Direct Typing Combobox Dropdown */}
                 {isItemDropdownOpen && !selectedSchool?.isLocked && itemSearchQuery.trim() !== "" && (() => {
-                  const filteredItems = catalogItems.filter(i => vietnameseIncludes(i.name, itemSearchQuery) || vietnameseIncludes(i.specifications, itemSearchQuery));
+                  const filteredItems = catalogItems.filter(i => {
+                    const pMatch = !i.projectName || i.projectName.includes(projectName);
+                    const textMatch = vietnameseIncludes(i.name, itemSearchQuery) || vietnameseIncludes(i.specifications, itemSearchQuery);
+                    return pMatch && textMatch;
+                  });
                   const filteredInvs = catalogInvestments.filter(i => vietnameseIncludes(i.name, itemSearchQuery) || vietnameseIncludes(i.description, itemSearchQuery));
                   const hasResults = filteredItems.length > 0 || filteredInvs.length > 0;
                   
@@ -1660,11 +1713,11 @@ export default function ProposalForm({
             <div style={{ flex: 1, overflowY: "auto", padding: "1rem" }}>
               {(() => {
                 const searchLower = catalogModalSearch.toLowerCase().trim();
-                const filteredItems = catalogItems.filter(i =>
-                  !searchLower ||
-                  vietnameseIncludes(i.name, searchLower) ||
-                  vietnameseIncludes(i.specifications, searchLower)
-                );
+                const filteredItems = catalogItems.filter(i => {
+                  const pMatch = !i.projectName || i.projectName.includes(projectName);
+                  const textMatch = !searchLower || vietnameseIncludes(i.name, searchLower) || vietnameseIncludes(i.specifications, searchLower);
+                  return pMatch && textMatch;
+                });
                 const filteredInvestments = catalogInvestments.filter(i =>
                   !searchLower ||
                   vietnameseIncludes(i.name, searchLower) ||

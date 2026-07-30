@@ -1,114 +1,45 @@
 import React from "react";
 import prisma from "@/lib/prisma";
-import Link from "next/link";
-import AdminDashboardClient from "./AdminDashboardClient";
-import { getCachedData } from "@/lib/cache";
-import { warmAdminSystem } from "@/lib/prewarmer";
+import ProjectCostDashboard, { ProjectCostStat, SaleCostStat, SaleProjectDetail } from "./ProjectCostDashboard";
 
 export const dynamic = "force-dynamic";
 
-export type SaleSchoolDetail = {
-  id: string;
-  proposalId?: string;
-  schoolName: string;
-  studentsCount: number;
-  allocatedBudget: number;
-  investedBudget: number;
-  itemBudget: number;
-  otherBudget: number;
-  constructionBudget: number;
-  variance: number;
-  status: string;
-};
-
-export type SaleStat = {
-  id: string;
-  name: string;
-  username: string;
-  schoolCount: number;
-  proposalCount: number;
-  totalStudents: number;
-  totalAllocated: number;
-  totalInvested: number;
-  totalItemBudget: number;
-  totalOtherBudget: number;
-  totalConstructionBudget: number;
-  budgetVariance: number;
-  schools: SaleSchoolDetail[];
-};
-
-export type AllocatedSchoolStat = {
-  id: string;
-  schoolName: string;
-  saleName: string;
-  newStudents: number;
-  allocatedBudget: number;
-  investedBudget: number;
-  status: string;
-};
-
-export type OverdueSchoolStat = {
-  id: string;
-  proposalId: string;
-  schoolName: string;
-  saleName: string;
-  createdAt: string;
-  daysStalled: number;
-  allocatedBudget: number;
-};
-
 export default async function AdminDashboardPage() {
-  const { totalSchools, totalHandovers, rawAllProposals, salesUsers } = await getCachedData(
-    "admin_dashboard_data_v3",
-    async () => {
-      const [
-        totalSchools,
-        totalHandovers,
-        rawAllProposals,
-        salesUsers
-      ] = await Promise.all([
-        prisma.school.count(),
-        prisma.handover.count(),
-        prisma.proposal.findMany({ 
-          select: {
-            id: true,
-            schoolId: true,
-            saleId: true,
-            status: true,
-            createdAt: true,
-            updatedAt: true,
-            allocatedBudget: true,
-            investedBudget: true,
-            school: { select: { id: true, name: true, newStudents: true, isLocked: true } },
-            sale: { select: { id: true, name: true, username: true } },
-            items: { select: { totalPrice: true } },
-            investments: { select: { name: true, description: true, totalPrice: true } },
-          },
-          orderBy: { updatedAt: "desc" }
-        }),
-        prisma.user.findMany({
-          where: { role: "SALE" },
-          select: {
-            id: true,
-            name: true,
-            username: true,
-            schools: {
-              select: {
-                id: true,
-                name: true,
-                newStudents: true,
-              }
-            }
-          }
-        }),
-      ]);
-      return { totalSchools, totalHandovers, rawAllProposals, salesUsers };
+  const rawAllProposals = await prisma.proposal.findMany({
+    select: {
+      id: true,
+      schoolId: true,
+      projectName: true,
+      status: true,
+      newStudents: true,
+      allocatedBudget: true,
+      investedBudget: true,
+      school: { 
+        select: { 
+          id: true, 
+          name: true, 
+          newStudents: true,
+          saleId: true,
+          sale: { select: { id: true, name: true, email: true } } 
+        } 
+      },
+      items: { select: { totalPrice: true } },
+      investments: { select: { name: true, description: true, totalPrice: true } },
     },
-    30,
-    ["admin_dashboard"]
-  );
+    orderBy: { updatedAt: "desc" }
+  });
 
-  // Business rule: Deduplicate proposals so each school only counts its 1 latest proposal
+  const saleUsers = await prisma.user.findMany({
+    where: { role: "SALE" },
+    select: { id: true, name: true, email: true }
+  });
+
+  const isConstructionItemName = (name: string) => {
+    const lower = (name || "").toLowerCase();
+    return lower.includes("thi công") || lower.includes("bảo trì") || lower.includes("hệ thống");
+  };
+
+  // Deduplicate proposals so each school counts its latest proposal
   const latestProposalsMap = new Map<string, typeof rawAllProposals[0]>();
   for (const p of rawAllProposals) {
     if (p.schoolId && !latestProposalsMap.has(p.schoolId)) {
@@ -117,227 +48,199 @@ export default async function AdminDashboardPage() {
   }
   const allProposals = Array.from(latestProposalsMap.values());
 
-  // Calculate live real-time budget totals across all unique school latest proposals
-  let totalAllocated = 0;
-  let totalInvested = 0;
-  allProposals.forEach(p => {
-    totalAllocated += Number(p.allocatedBudget || 0);
-    totalInvested += Number(p.investedBudget || 0);
-  });
+  const PROJECT_CONFIGS: Array<{
+    key: "IPRO" | "ICLASS" | "IGEN" | "ILINK";
+    name: string;
+    color: string;
+    bg: string;
+    border: string;
+    badgeBg: string;
+  }> = [
+    { key: "IPRO", name: "IPRO", color: "#38bdf8", bg: "rgba(56, 189, 248, 0.12)", border: "rgba(56, 189, 248, 0.3)", badgeBg: "rgba(56, 189, 248, 0.2)" },
+    { key: "ICLASS", name: "ICLASS", color: "#c084fc", bg: "rgba(168, 85, 247, 0.12)", border: "rgba(168, 85, 247, 0.3)", badgeBg: "rgba(168, 85, 247, 0.2)" },
+    { key: "IGEN", name: "IGEN", color: "#fbbf24", bg: "rgba(245, 158, 11, 0.12)", border: "rgba(245, 158, 11, 0.3)", badgeBg: "rgba(245, 158, 11, 0.2)" },
+    { key: "ILINK", name: "ILINK", color: "#34d399", bg: "rgba(16, 185, 129, 0.12)", border: "rgba(16, 185, 129, 0.3)", badgeBg: "rgba(16, 185, 129, 0.2)" },
+  ];
 
-  const usagePercentage = totalAllocated > 0 ? Math.round((totalInvested / totalAllocated) * 100) : 0;
-  const remainingBudget = totalAllocated - totalInvested;
+  // 1. Projects Breakdown
+  const projectsData: ProjectCostStat[] = PROJECT_CONFIGS.map(cfg => {
+    const projProposals = allProposals.filter(p => (p.projectName || "IPRO") === cfg.key);
+    const schoolSet = new Set<string>();
 
-  let pendingAllocated = 0, pendingInvested = 0;
-  let pendingItemBudget = 0, pendingOtherBudget = 0, pendingConstructionBudget = 0;
-  let completedAllocated = 0, completedInvested = 0;
-  let completedItemBudget = 0, completedOtherBudget = 0, completedConstructionBudget = 0;
+    let totalAllocated = 0;
+    let totalInvested = 0;
+    let studentCount = 0;
+    let itemCost = 0;
+    let otherCost = 0;
+    let constrCost = 0;
 
-  const pendingSchoolSet = new Set<string>();
-  const completedSchoolSet = new Set<string>();
+    projProposals.forEach(p => {
+      schoolSet.add(p.schoolId);
+      const alloc = Number(p.allocatedBudget || 0);
+      const inv = Number(p.investedBudget || 0);
+      const st = Number(p.newStudents || p.school?.newStudents || 0);
 
-  let draftProposalCount = 0;
-  let inProgressProposalCount = 0;
-  let completedProposalCount = 0;
+      totalAllocated += alloc;
+      totalInvested += inv;
+      studentCount += st;
 
-  const isConstructionItemName = (name: string) => {
-    const lower = (name || "").toLowerCase();
-    return lower.startsWith("gói thi công") || lower.startsWith("gói bảo trì") || lower.startsWith("gói hệ thống");
-  };
+      p.items.forEach(i => {
+        itemCost += Number(i.totalPrice || 0);
+      });
 
-  allProposals.forEach(p => {
-    const alloc = Number(p.allocatedBudget || 0);
-    const inv = Number(p.investedBudget || 0);
-    
-    let pItemBudget = 0;
-    p.items.forEach((item: any) => pItemBudget += Number(item.totalPrice || 0));
-    let pOtherBudget = 0;
-    let pConstrBudget = 0;
-    p.investments.forEach((invItem: any) => {
-      if (isConstructionItemName(invItem.name)) {
-        pConstrBudget += Number(invItem.totalPrice || 0);
-      } else {
-        pOtherBudget += Number(invItem.totalPrice || 0);
-      }
-    });
-
-    if (p.status === "DRAFT") {
-      draftProposalCount++;
-    } else if (p.status === "PENDING" || p.status === "APPROVED") {
-      inProgressProposalCount++;
-    } else if (p.status === "COMPLETED") {
-      completedProposalCount++;
-      completedAllocated += alloc;
-      completedInvested += inv;
-      completedItemBudget += pItemBudget;
-      completedOtherBudget += pOtherBudget;
-      completedConstructionBudget += pConstrBudget;
-      completedSchoolSet.add(p.schoolId);
-    }
-
-    // TÍNH TỔNG BẤT KỂ TRẠNG THÁI DỰ TRÙ (DRAFT, PENDING, APPROVED, COMPLETED)
-    pendingAllocated += alloc;
-    pendingInvested += inv;
-    pendingItemBudget += pItemBudget;
-    pendingOtherBudget += pOtherBudget;
-    pendingConstructionBudget += pConstrBudget;
-    pendingSchoolSet.add(p.schoolId);
-  });
-
-  const pendingSchoolCount = pendingSchoolSet.size;
-  const completedSchoolCount = completedSchoolSet.size;
-
-  const proposalMapBySchool = new Map<string, any>();
-  allProposals.forEach(p => {
-    if (p.schoolId) proposalMapBySchool.set(p.schoolId, p);
-  });
-
-  const saleLeaderboard: SaleStat[] = salesUsers.map(sale => {
-    let proposalCount = 0;
-    let totalAllocatedBudget = 0;
-    let totalInvestedBudget = 0;
-    let totalItemBudget = 0;
-    let totalOtherBudget = 0;
-    let totalConstructionBudget = 0;
-    let totalStudents = 0;
-
-    const schoolsDetail: SaleSchoolDetail[] = [];
-
-    sale.schools.forEach(school => {
-      const p = proposalMapBySchool.get(school.id);
-      let allocated = 0;
-      let invested = 0;
-      let itemB = 0;
-      let otherB = 0;
-      let constructionB = 0;
-      let status = "NONE";
-      let proposalId = undefined;
-      const students = school.newStudents || 0;
-
-      totalStudents += students;
-
-      if (p) {
-        proposalCount++;
-        proposalId = p.id;
-        status = p.status;
-        allocated = Number(p.allocatedBudget || 0);
-        invested = Number(p.investedBudget || 0);
-
-        p.items?.forEach((item: any) => itemB += Number(item.totalPrice || 0));
-        
-        p.investments?.forEach((invItem: any) => {
-          const invPrice = Number(invItem.totalPrice || 0);
-          const nameLower = (invItem.name || "").toLowerCase();
-          const descLower = (invItem.description || "").toLowerCase();
-
-          if (nameLower.includes("thi công") || nameLower.includes("lắp đặt") || nameLower.includes("xây dựng") || descLower.includes("thi công")) {
-            constructionB += invPrice;
-          } else {
-            otherB += invPrice;
-          }
-        });
-
-        totalAllocatedBudget += allocated;
-        totalInvestedBudget += invested;
-        totalItemBudget += itemB;
-        totalOtherBudget += otherB;
-        totalConstructionBudget += constructionB;
-      }
-
-      schoolsDetail.push({
-        id: school.id,
-        proposalId,
-        schoolName: school.name,
-        studentsCount: students,
-        allocatedBudget: allocated,
-        investedBudget: invested,
-        itemBudget: itemB,
-        otherBudget: otherB,
-        constructionBudget: constructionB,
-        variance: allocated - invested,
-        status
+      p.investments.forEach(invItem => {
+        const price = Number(invItem.totalPrice || 0);
+        if (isConstructionItemName(invItem.name)) {
+          constrCost += price;
+        } else {
+          otherCost += price;
+        }
       });
     });
 
+    const delta = totalAllocated - totalInvested;
+    const usagePercentage = totalAllocated > 0 ? Math.round((totalInvested / totalAllocated) * 100) : 0;
+
     return {
-      id: sale.id,
-      name: sale.name,
-      username: sale.username,
-      schoolCount: sale.schools.length,
-      proposalCount,
-      totalStudents,
-      totalAllocated: totalAllocatedBudget,
-      totalInvested: totalInvestedBudget,
-      totalItemBudget,
-      totalOtherBudget,
-      totalConstructionBudget,
-      budgetVariance: totalAllocatedBudget - totalInvestedBudget,
-      schools: schoolsDetail.sort((a, b) => a.variance - b.variance)
+      projectKey: cfg.key,
+      projectName: cfg.name,
+      color: cfg.color,
+      bg: cfg.bg,
+      border: cfg.border,
+      badgeBg: cfg.badgeBg,
+      schoolCount: schoolSet.size,
+      proposalCount: projProposals.length,
+      studentCount,
+      totalAllocated,
+      totalInvested,
+      itemCost,
+      otherCost,
+      constrCost,
+      delta,
+      usagePercentage,
     };
-  }).sort((a, b) => b.totalAllocated - a.totalAllocated);
+  });
 
-  const allocatedBreakdown: AllocatedSchoolStat[] = allProposals.map(p => ({
-    id: p.id,
-    schoolName: p.school?.name || "N/A",
-    saleName: p.sale?.name || "N/A",
-    newStudents: p.school?.newStudents || 0,
-    allocatedBudget: Number(p.allocatedBudget || 0),
-    investedBudget: Number(p.investedBudget || 0),
-    status: p.status,
-  })).sort((a, b) => b.allocatedBudget - a.allocatedBudget);
+  // 2. Sales Breakdown Grouped by Project
+  const salesMap = new Map<string, {
+    saleId: string;
+    saleName: string;
+    email?: string;
+    proposals: typeof allProposals;
+  }>();
 
-  // Quá 5 ngày chưa chuyển sang trạng thái đang thực hiện
-  const nowTime = new Date().getTime();
-  const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
+  saleUsers.forEach(u => {
+    salesMap.set(u.id, {
+      saleId: u.id,
+      saleName: u.name || "Chưa đặt tên",
+      email: u.email || "",
+      proposals: [],
+    });
+  });
 
-  const overdueProposals: OverdueSchoolStat[] = allProposals
-    .filter(p => {
-      if (p.status === "COMPLETED" || p.status === "APPROVED") return false;
-      const createdTime = new Date(p.createdAt).getTime();
-      return (nowTime - createdTime) >= FIVE_DAYS_MS;
-    })
-    .map(p => {
-      const createdTime = new Date(p.createdAt).getTime();
-      const daysStalled = Math.floor((nowTime - createdTime) / (24 * 60 * 60 * 1000));
+  allProposals.forEach(p => {
+    const saleObj = p.school?.sale;
+    const saleId = p.school?.saleId || saleObj?.id;
+    if (saleId) {
+      if (!salesMap.has(saleId)) {
+        salesMap.set(saleId, {
+          saleId,
+          saleName: saleObj?.name || "Kinh doanh",
+          email: saleObj?.email || "",
+          proposals: [],
+        });
+      }
+      salesMap.get(saleId)!.proposals.push(p);
+    }
+  });
+
+  const salesData: SaleCostStat[] = Array.from(salesMap.values())
+    .map(s => {
+      const allSchoolSet = new Set<string>();
+      let saleAllocatedAll = 0;
+      let saleInvestedAll = 0;
+      let saleStudentsAll = 0;
+
+      const projectStats: SaleProjectDetail[] = PROJECT_CONFIGS.map(cfg => {
+        const subProposals = s.proposals.filter(p => (p.projectName || "IPRO") === cfg.key);
+        const subSchoolSet = new Set<string>();
+        let alloc = 0;
+        let inv = 0;
+        let stCount = 0;
+        let itemCost = 0;
+        let otherCost = 0;
+        let constrCost = 0;
+
+        subProposals.forEach(p => {
+          subSchoolSet.add(p.schoolId);
+          allSchoolSet.add(p.schoolId);
+          alloc += Number(p.allocatedBudget || 0);
+          inv += Number(p.investedBudget || 0);
+          const st = Number(p.newStudents || p.school?.newStudents || 0);
+          stCount += st;
+
+          p.items.forEach(i => {
+            itemCost += Number(i.totalPrice || 0);
+          });
+
+          p.investments.forEach(invItem => {
+            const price = Number(invItem.totalPrice || 0);
+            if (isConstructionItemName(invItem.name)) {
+              constrCost += price;
+            } else {
+              otherCost += price;
+            }
+          });
+        });
+
+        saleAllocatedAll += alloc;
+        saleInvestedAll += inv;
+        saleStudentsAll += stCount;
+        const delta = alloc - inv;
+        const usagePercentage = alloc > 0 ? Math.round((inv / alloc) * 100) : 0;
+
+        return {
+          projectKey: cfg.key,
+          projectName: cfg.name,
+          color: cfg.color,
+          bg: cfg.bg,
+          border: cfg.border,
+          badgeBg: cfg.badgeBg,
+          schoolCount: subSchoolSet.size,
+          proposalCount: subProposals.length,
+          studentCount: stCount,
+          totalAllocated: alloc,
+          totalInvested: inv,
+          itemCost,
+          otherCost,
+          constrCost,
+          delta,
+          usagePercentage,
+        };
+      });
+
       return {
-        id: p.schoolId,
-        proposalId: p.id,
-        schoolName: p.school?.name || "N/A",
-        saleName: p.sale?.name || "N/A",
-        createdAt: new Date(p.createdAt).toLocaleDateString("vi-VN"),
-        daysStalled,
-        allocatedBudget: Number(p.allocatedBudget || 0),
+        saleId: s.saleId,
+        saleName: s.saleName,
+        email: s.email,
+        totalAllocated: saleAllocatedAll,
+        totalInvested: saleInvestedAll,
+        totalSchools: allSchoolSet.size,
+        totalProposals: s.proposals.length,
+        totalStudents: saleStudentsAll,
+        projectStats,
       };
     })
-    .sort((a, b) => b.daysStalled - a.daysStalled);
+    .sort((a, b) => b.totalInvested - a.totalInvested);
 
   return (
-    <AdminDashboardClient
-      totalSchools={totalSchools}
-      totalHandovers={totalHandovers}
-      totalAllocated={totalAllocated}
-      totalInvested={totalInvested}
-      usagePercentage={usagePercentage}
-      remainingBudget={remainingBudget}
-      pendingAllocated={pendingAllocated}
-      pendingInvested={pendingInvested}
-      pendingItemBudget={pendingItemBudget}
-      pendingOtherBudget={pendingOtherBudget}
-      pendingConstructionBudget={pendingConstructionBudget}
-      pendingSchoolCount={pendingSchoolCount}
-      completedAllocated={completedAllocated}
-      completedInvested={completedInvested}
-      completedItemBudget={completedItemBudget}
-      completedOtherBudget={completedOtherBudget}
-      completedConstructionBudget={completedConstructionBudget}
-      completedSchoolCount={completedSchoolCount}
-      draftProposalCount={draftProposalCount}
-      inProgressProposalCount={inProgressProposalCount}
-      completedProposalCount={completedProposalCount}
-      allProposalsCount={allProposals.length}
-      saleLeaderboard={saleLeaderboard}
-      allocatedBreakdown={allocatedBreakdown}
-      overdueProposals={overdueProposals}
-    />
+    <div style={{ paddingBottom: "2rem" }}>
+      <ProjectCostDashboard
+        projectsData={projectsData}
+        salesData={salesData}
+        title="Dashboard Thống Kê Chi Phí Theo Từng Dự Án & Nhân Viên Sale 📊"
+        subtitle="Theo dõi trực quan định mức ngân sách, số học sinh mới và chi phí giải ngân chi tiết của từng dự án và từng nhân viên kinh doanh"
+      />
+    </div>
   );
 }

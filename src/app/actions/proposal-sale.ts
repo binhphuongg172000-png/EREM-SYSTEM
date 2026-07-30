@@ -38,6 +38,7 @@ export async function createProposal(data: any) {
           investedClassrooms: Number(data.schoolDetails?.investedClassrooms) || 0,
           oldStudents: Number(data.schoolDetails?.oldStudents) || 0,
           newStudents: Number(data.schoolDetails?.newStudents) || 0,
+          projectName: data.projectName || "IPRO",
         },
       })
     ];

@@ -27,7 +27,7 @@ export default function ItemHeaderActions() {
         isOpen={isImportOpen}
         onClose={() => setIsImportOpen(false)}
         type="items"
-        title="Import Danh sách Thiết bị phần cứng từ Excel"
+        title="Import Danh sách Thiết bị từ Excel"
       />
     </>
   );

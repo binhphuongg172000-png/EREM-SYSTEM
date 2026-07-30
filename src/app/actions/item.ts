@@ -9,11 +9,14 @@ export async function createItem(data: any) {
     if (!data.name || !data.standardPrice) {
       throw new Error("Vui lòng điền đầy đủ thông tin thiết bị (Tên, Đơn giá)");
     }
-    const existingName = await prisma.item.findFirst({
-      where: { name: { equals: data.name, mode: "insensitive" } }
+    const existingItem = await prisma.item.findFirst({
+      where: {
+        name: { equals: data.name, mode: "insensitive" },
+        specifications: { equals: data.specifications || "", mode: "insensitive" },
+      }
     });
-    if (existingName) {
-      throw new Error(`Tên thiết bị "${data.name}" đã tồn tại! Vui lòng chọn tên khác.`);
+    if (existingItem) {
+      throw new Error(`Thiết bị "${data.name}" với cấu hình này đã tồn tại trong hệ thống!`);
     }
 
     const code = data.code || `TB-${Date.now().toString().slice(-6)}`;
@@ -21,15 +24,18 @@ export async function createItem(data: any) {
       data: {
         code,
         name: data.name,
-        specifications: data.specifications,
+        specifications: data.specifications || "",
         accessories: data.accessories || "",
+        unit: data.unit || "Bộ",
         standardPrice: Number(data.standardPrice) || 0,
+        projectName: data.projectName || "IPRO",
       },
     });
 
     clearCache();
     revalidatePath("/admin/items");
-    return { success: true, item: newItem };
+    revalidatePath("/sale/items");
+    return { success: true, item: JSON.parse(JSON.stringify(newItem)) };
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi tạo thiết bị" };
   }
@@ -41,11 +47,15 @@ export async function createOtherInvestment(data: any) {
       throw new Error("Vui lòng điền đầy đủ thông tin hạng mục (Tên, Mô tả, Đơn vị tính, Đơn giá)");
     }
     const category = data.category || "INVESTMENT";
-    const existingName = await prisma.otherInvestment.findFirst({
-      where: { name: { equals: data.name, mode: "insensitive" }, category }
+    const existingInv = await prisma.otherInvestment.findFirst({
+      where: {
+        name: { equals: data.name, mode: "insensitive" },
+        description: { equals: data.description || "", mode: "insensitive" },
+        category
+      }
     });
-    if (existingName) {
-      throw new Error(`Tên hạng mục "${data.name}" đã tồn tại! Vui lòng chọn tên khác.`);
+    if (existingInv) {
+      throw new Error(`Hạng mục "${data.name}" với mô tả này đã tồn tại!`);
     }
 
     const newInv = await prisma.otherInvestment.create({
@@ -58,10 +68,11 @@ export async function createOtherInvestment(data: any) {
       },
     });
 
+    clearCache();
     revalidatePath("/admin/items");
     revalidatePath("/admin/investments");
     revalidatePath("/admin/constructions");
-    return { success: true, investment: newInv };
+    return { success: true, investment: JSON.parse(JSON.stringify(newInv)) };
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi tạo hạng mục" };
   }
@@ -72,6 +83,7 @@ export async function deleteOtherInvestment(id: string) {
     await prisma.otherInvestment.delete({
       where: { id },
     });
+    clearCache();
     revalidatePath("/admin/investments");
     revalidatePath("/admin/constructions");
     revalidatePath("/admin/items");
@@ -86,7 +98,9 @@ export async function deleteItem(id: string) {
     await prisma.item.delete({
       where: { id },
     });
+    clearCache();
     revalidatePath("/admin/items");
+    revalidatePath("/sale/items");
     return { success: true };
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi xóa thiết bị" };
@@ -98,18 +112,24 @@ export async function updateItem(id: string, data: any) {
     if (!data.name || !data.standardPrice) {
       throw new Error("Vui lòng điền đầy đủ thông tin thiết bị (Tên, Đơn giá)");
     }
-    const existingName = await prisma.item.findFirst({
-      where: { name: { equals: data.name, mode: "insensitive" }, id: { not: id } }
+    const existingItem = await prisma.item.findFirst({
+      where: {
+        name: { equals: data.name, mode: "insensitive" },
+        specifications: { equals: data.specifications || "", mode: "insensitive" },
+        id: { not: id }
+      }
     });
-    if (existingName) {
-      throw new Error(`Tên thiết bị "${data.name}" đã tồn tại! Vui lòng chọn tên khác.`);
+    if (existingItem) {
+      throw new Error(`Thiết bị "${data.name}" với cấu hình này đã tồn tại trong hệ thống!`);
     }
 
     const updateData: any = {
       name: data.name,
-      specifications: data.specifications,
+      specifications: data.specifications || "",
       accessories: data.accessories || "",
+      unit: data.unit || "Bộ",
       standardPrice: Number(data.standardPrice) || 0,
+      projectName: data.projectName || "IPRO",
     };
     if (data.code) {
       updateData.code = data.code;
@@ -120,8 +140,10 @@ export async function updateItem(id: string, data: any) {
       data: updateData,
     });
 
+    clearCache();
     revalidatePath("/admin/items");
-    return { success: true, item: updated };
+    revalidatePath("/sale/items");
+    return { success: true, item: JSON.parse(JSON.stringify(updated)) };
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi cập nhật thiết bị" };
   }
@@ -133,11 +155,16 @@ export async function updateOtherInvestment(id: string, data: any) {
       throw new Error("Vui lòng điền đầy đủ thông tin hạng mục (Tên, Mô tả, Đơn vị tính, Đơn giá)");
     }
     const category = data.category || "INVESTMENT";
-    const existingName = await prisma.otherInvestment.findFirst({
-      where: { name: { equals: data.name, mode: "insensitive" }, id: { not: id }, category }
+    const existingInv = await prisma.otherInvestment.findFirst({
+      where: {
+        name: { equals: data.name, mode: "insensitive" },
+        description: { equals: data.description || "", mode: "insensitive" },
+        id: { not: id },
+        category
+      }
     });
-    if (existingName) {
-      throw new Error(`Tên hạng mục "${data.name}" đã tồn tại! Vui lòng chọn tên khác.`);
+    if (existingInv) {
+      throw new Error(`Hạng mục "${data.name}" với mô tả này đã tồn tại!`);
     }
 
     const updated = await prisma.otherInvestment.update({
@@ -151,23 +178,26 @@ export async function updateOtherInvestment(id: string, data: any) {
       },
     });
 
+    clearCache();
     revalidatePath("/admin/investments");
     revalidatePath("/admin/constructions");
     revalidatePath("/admin/items");
-    return { success: true, investment: updated };
+    return { success: true, investment: JSON.parse(JSON.stringify(updated)) };
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi cập nhật hạng mục" };
   }
 }
 
-export async function importItemsBulk(records: { code?: string; name: string; specifications?: string; accessories?: string; standardPrice: number }[]) {
+export async function importItemsBulk(records: { code?: string; name: string; specifications?: string; accessories?: string; standardPrice: number; projectName?: string }[]) {
   try {
-    const dataToCreate = records.map((r, idx) => ({
+    const dataToCreate = records.map((r: any, idx) => ({
       code: r.code || `TB-${Date.now().toString().slice(-6)}-${idx + 1}`,
       name: r.name,
       specifications: r.specifications || "",
       accessories: r.accessories || "",
+      unit: r.unit || "Bộ",
       standardPrice: Number(r.standardPrice) || 0,
+      projectName: r.projectName || "IPRO",
     }));
 
     const result = await prisma.item.createMany({
@@ -175,7 +205,9 @@ export async function importItemsBulk(records: { code?: string; name: string; sp
       skipDuplicates: true,
     });
 
+    clearCache();
     revalidatePath("/admin/items");
+    revalidatePath("/sale/items");
     return { success: true, count: result.count };
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi nhập danh sách thiết bị từ Excel" };
@@ -199,6 +231,7 @@ export async function importOtherInvestmentsBulk(
       data: dataToCreate,
     });
 
+    clearCache();
     revalidatePath("/admin/investments");
     revalidatePath("/admin/constructions");
     revalidatePath("/admin/items");
@@ -207,5 +240,3 @@ export async function importOtherInvestmentsBulk(
     return { success: false, message: error.message || "Lỗi nhập danh sách từ Excel" };
   }
 }
-
-

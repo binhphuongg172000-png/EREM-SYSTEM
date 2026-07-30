@@ -24,7 +24,7 @@ export async function getNewProposalData(userId: string) {
       }
     }),
     prisma.item.findMany({
-      select: { id: true, name: true, specifications: true, standardPrice: true, unit: true }
+      select: { id: true, name: true, specifications: true, standardPrice: true, unit: true, projectName: true }
     }),
     prisma.otherInvestment.findMany({
       select: { id: true, name: true, description: true, standardPrice: true, unit: true }
@@ -83,7 +83,8 @@ export default async function NewProposalPage({
     name: item.name,
     specifications: item.specifications,
     standardPrice: Number(item.standardPrice),
-    unit: item.unit
+    unit: item.unit,
+    projectName: item.projectName || "IPRO",
   }));
 
   const serializedInvestments = catalogInvestments.map(inv => ({

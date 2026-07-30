@@ -15,7 +15,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminProposalsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; saleId?: string; latest?: string; budget?: string; status?: string }>;
+  searchParams: Promise<{ search?: string; saleId?: string; latest?: string; budget?: string; status?: string; project?: string }>;
 }) {
   const resolvedParams = await searchParams;
   const search = resolvedParams?.search || "";
@@ -23,6 +23,7 @@ export default async function AdminProposalsPage({
   const latest = resolvedParams?.latest ?? "true";
   const budget = resolvedParams?.budget || "";
   const statusFilter = resolvedParams?.status || "";
+  const projectFilter = resolvedParams?.project || "";
 
   const cookieStore = await cookies();
   const userRole = cookieStore.get("userRole")?.value;
@@ -79,6 +80,7 @@ export default async function AdminProposalsPage({
       vietnameseIncludes(p.school?.address, search) ||
       vietnameseIncludes(p.sale?.name, search)
     )) return false;
+    if (projectFilter && (p.projectName || "IPRO") !== projectFilter) return false;
     if (statusFilter === "init") {
       if (p.status === "COMPLETED" || p.status === "CLOSED" || p.school?.isLocked) return false;
     } else if (statusFilter === "locked") {
@@ -268,6 +270,7 @@ export default async function AdminProposalsPage({
           currentLatest={latest}
           currentBudget={budget}
           currentLock={statusFilter}
+          currentProject={projectFilter}
         />
       </div>
 
@@ -322,6 +325,15 @@ export default async function AdminProposalsPage({
                       <div className="school-name">
                         <Building2 size={14} color="#64748b" style={{ flexShrink: 0 }} />
                         <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{p.school?.name}</span>
+                        <span style={{
+                          fontSize: "0.68rem", fontWeight: 800, padding: "2px 7px", borderRadius: "6px",
+                          border: "1px solid", marginLeft: "0.35rem", display: "inline-flex", alignItems: "center", flexShrink: 0,
+                          borderColor: (p.projectName || "IPRO") === "ICLASS" ? "#a855f7" : (p.projectName || "IPRO") === "IGEN" ? "#f59e0b" : (p.projectName || "IPRO") === "ILINK" ? "#10b981" : "#38bdf8",
+                          color: (p.projectName || "IPRO") === "ICLASS" ? "#a855f7" : (p.projectName || "IPRO") === "IGEN" ? "#f59e0b" : (p.projectName || "IPRO") === "ILINK" ? "#34d399" : "#38bdf8",
+                          background: (p.projectName || "IPRO") === "ICLASS" ? "rgba(168,85,247,0.12)" : (p.projectName || "IPRO") === "IGEN" ? "rgba(245,158,11,0.12)" : (p.projectName || "IPRO") === "ILINK" ? "rgba(16,185,129,0.12)" : "rgba(56,189,248,0.12)"
+                        }}>
+                          {p.projectName || "IPRO"}
+                        </span>
                       </div>
                       <div className="school-address">{p.school?.address}</div>
                     </td>

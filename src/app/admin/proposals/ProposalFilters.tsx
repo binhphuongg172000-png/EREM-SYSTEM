@@ -10,9 +10,10 @@ interface ProposalFiltersProps {
   currentLatest: string;
   currentBudget: string;
   currentLock: string;
+  currentProject?: string;
 }
 
-export default function ProposalFilters({ sales, currentSaleId, currentLatest, currentBudget, currentLock }: ProposalFiltersProps) {
+export default function ProposalFilters({ sales, currentSaleId, currentLatest, currentBudget, currentLock, currentProject = "" }: ProposalFiltersProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -74,6 +75,26 @@ export default function ProposalFilters({ sales, currentSaleId, currentLatest, c
         <option value="">Tất cả ngân sách</option>
         <option value="positive">Ngân sách dư (+)</option>
         <option value="negative">Vượt ngân sách (-)</option>
+      </select>
+
+      {/* Project filter */}
+      <select
+        value={currentProject}
+        onChange={(e) => updateParams("project", e.target.value)}
+        className="form-input filter-select-admin"
+        style={{
+          fontSize: "0.78rem",
+          padding: "0.4rem 0.6rem",
+          width: "auto",
+          minWidth: "135px",
+          opacity: isPending ? 0.7 : 1,
+        }}
+      >
+        <option value="">Tất cả dự án</option>
+        <option value="IPRO">Dự án IPRO</option>
+        <option value="ICLASS">Dự án ICLASS</option>
+        <option value="IGEN">Dự án IGEN</option>
+        <option value="ILINK">Dự án ILINK</option>
       </select>
 
       {/* Status filter */}

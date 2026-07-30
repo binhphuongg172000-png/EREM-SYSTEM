@@ -18,6 +18,7 @@ export default function SaleProposalsClient({
   const [searchQuery, setSearchQuery] = useState("");
   const [budgetFilter, setBudgetFilter] = useState<"ALL" | "POSITIVE" | "NEGATIVE">("ALL");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "INIT" | "LOCKED" | "COMPLETED">("ALL");
+  const [projectFilter, setProjectFilter] = useState<"ALL" | "IPRO" | "ICLASS" | "IGEN" | "ILINK">("ALL");
 
   // Calculate counts if not passed from server
   const computedCounts = useMemo(() => {
@@ -49,8 +50,15 @@ export default function SaleProposalsClient({
     if (statusFilter === "LOCKED") matchesStatus = isLocked;
     if (statusFilter === "COMPLETED") matchesStatus = isCompleted;
 
-    return matchesSearch && matchesBudget && matchesStatus;
-  }), [proposals, searchQuery, budgetFilter, statusFilter]);
+    // 4. Project Filter
+    let matchesProject = true;
+    if (projectFilter !== "ALL") {
+      const pName = p.projectName || "IPRO";
+      matchesProject = pName === projectFilter;
+    }
+
+    return matchesSearch && matchesBudget && matchesStatus && matchesProject;
+  }), [proposals, searchQuery, budgetFilter, statusFilter, projectFilter]);
 
   // Dynamic status icon for dropdown filter
   const renderStatusFilterIcon = () => {
@@ -279,13 +287,29 @@ export default function SaleProposalsClient({
               <option value="COMPLETED">Hoàn thành</option>
             </select>
           </div>
+
+          {/* Project Filter Dropdown */}
+          <div style={{ position: "relative" }}>
+            <SlidersHorizontal size={15} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#38bdf8", pointerEvents: "none" }} />
+            <select 
+              className="filter-select"
+              value={projectFilter}
+              onChange={e => setProjectFilter(e.target.value as any)}
+            >
+              <option value="ALL">Tất cả dự án</option>
+              <option value="IPRO">Dự án IPRO</option>
+              <option value="ICLASS">Dự án ICLASS</option>
+              <option value="IGEN">Dự án IGEN</option>
+              <option value="ILINK">Dự án ILINK</option>
+            </select>
+          </div>
         </div>
 
         {/* Reset Filter Button */}
-        {(searchQuery || budgetFilter !== "ALL" || statusFilter !== "ALL") && (
+        {(searchQuery || budgetFilter !== "ALL" || statusFilter !== "ALL" || projectFilter !== "ALL") && (
           <button 
             type="button"
-            onClick={() => { setSearchQuery(""); setBudgetFilter("ALL"); setStatusFilter("ALL"); }}
+            onClick={() => { setSearchQuery(""); setBudgetFilter("ALL"); setStatusFilter("ALL"); setProjectFilter("ALL"); }}
             style={{ 
               padding: "0.45rem 0.85rem", borderRadius: "10px", border: "1px solid rgba(244, 63, 94, 0.3)",
               background: "rgba(244, 63, 94, 0.08)", color: "#f43f5e", fontSize: "0.8rem", cursor: "pointer",
@@ -366,7 +390,16 @@ export default function SaleProposalsClient({
                     <td style={{ paddingLeft: "1rem" }}>
                       <div className="school-name">
                         <Building2 size={15} color="#06b6d4" />
-                        {p.school?.name}
+                        <span>{p.school?.name}</span>
+                        <span style={{
+                          fontSize: "0.68rem", fontWeight: 800, padding: "2px 7px", borderRadius: "6px",
+                          border: "1px solid", marginLeft: "0.35rem", display: "inline-flex", alignItems: "center",
+                          borderColor: (p.projectName || "IPRO") === "ICLASS" ? "#a855f7" : (p.projectName || "IPRO") === "IGEN" ? "#f59e0b" : (p.projectName || "IPRO") === "ILINK" ? "#10b981" : "#38bdf8",
+                          color: (p.projectName || "IPRO") === "ICLASS" ? "#a855f7" : (p.projectName || "IPRO") === "IGEN" ? "#f59e0b" : (p.projectName || "IPRO") === "ILINK" ? "#34d399" : "#38bdf8",
+                          background: (p.projectName || "IPRO") === "ICLASS" ? "rgba(168,85,247,0.12)" : (p.projectName || "IPRO") === "IGEN" ? "rgba(245,158,11,0.12)" : (p.projectName || "IPRO") === "ILINK" ? "rgba(16,185,129,0.12)" : "rgba(56,189,248,0.12)"
+                        }}>
+                          {p.projectName || "IPRO"}
+                        </span>
                       </div>
                       <div className="school-address">{p.school?.address}</div>
                     </td>

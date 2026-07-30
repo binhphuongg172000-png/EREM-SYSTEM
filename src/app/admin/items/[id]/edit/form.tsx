@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Laptop, ArrowLeft } from "lucide-react";
+import { Laptop, ArrowLeft, Check } from "lucide-react";
 import { updateItem } from "@/app/actions/item";
 import CurrencyInput from "@/components/CurrencyInput";
 import { toast } from "@/components/Toast";
@@ -28,12 +28,24 @@ interface Item {
   accessories?: string | null;
   unit: string;
   standardPrice: any;
+  projectName?: string | null;
 }
+
+const AVAILABLE_PROJECTS = ["IPRO", "ICLASS", "IGEN", "ILINK"];
 
 export default function EditItemForm({ item }: { item: Item }) {
   const router = useRouter();
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Parse existing projects string e.g. "IPRO, ICLASS"
+  const initialProjects = item.projectName
+    ? item.projectName.split(",").map(p => p.trim()).filter(Boolean)
+    : ["IPRO"];
+
+  const [selectedProjects, setSelectedProjects] = useState<string[]>(
+    initialProjects.length > 0 ? initialProjects : ["IPRO"]
+  );
 
   const {
     register,
@@ -52,15 +64,28 @@ export default function EditItemForm({ item }: { item: Item }) {
     },
   });
 
+  const toggleProject = (pKey: string) => {
+    if (selectedProjects.includes(pKey)) {
+      if (selectedProjects.length > 1) {
+        setSelectedProjects(selectedProjects.filter(p => p !== pKey));
+      }
+    } else {
+      setSelectedProjects([...selectedProjects, pKey]);
+    }
+  };
+
   const onSubmit = async (data: ItemFormValues) => {
     setIsLoading(true);
     setError("");
     try {
-      const res = await updateItem(item.id, data);
+      const res = await updateItem(item.id, {
+        ...data,
+        projectName: selectedProjects.join(", ") || "IPRO",
+      });
       if (res.success) {
-        toast.success("Cập nhật Thiết bị phần cứng thành công!");
-        router.push("/admin/items");
+        toast.success("Cập nhật Thiết bị thành công!");
         router.refresh();
+        router.push("/admin/items");
       } else {
         setError(res.message);
         setIsLoading(false);
@@ -90,13 +115,61 @@ export default function EditItemForm({ item }: { item: Item }) {
           </div>
           <div>
             <h1 style={{ fontSize: "1.25rem", fontWeight: 800, color: "#ffffff" }}>Chỉnh sửa Thông tin Thiết bị</h1>
-            <p style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Cập nhật thông tin chi tiết cấu hình và đơn giá chuẩn của thiết bị</p>
+            <p style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Cập nhật thông tin chi tiết cấu hình, dự án áp dụng và đơn giá chuẩn của thiết bị</p>
           </div>
         </div>
 
         {error && <div className="alert-error" style={{ marginBottom: "1.25rem" }}>{error}</div>}
 
         <form onSubmit={handleSubmit(onSubmit)}>
+          {/* Multi-Project Selection */}
+          <div className="form-group" style={{ marginBottom: "1.25rem" }}>
+            <label className="form-label" style={{ display: "block", marginBottom: "0.5rem" }}>
+              Dự án áp dụng <span style={{ color: "var(--error)" }}>*</span> (Có thể chọn nhiều dự án)
+            </label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.6rem" }}>
+              {AVAILABLE_PROJECTS.map(pKey => {
+                const isChecked = selectedProjects.includes(pKey);
+                return (
+                  <button
+                    key={pKey}
+                    type="button"
+                    onClick={() => toggleProject(pKey)}
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "0.4rem",
+                      padding: "0.45rem 0.9rem",
+                      borderRadius: "8px",
+                      fontWeight: 700,
+                      fontSize: "0.85rem",
+                      cursor: "pointer",
+                      border: isChecked ? "1.5px solid #38bdf8" : "1.5px solid #334155",
+                      background: isChecked ? "rgba(56, 189, 248, 0.15)" : "rgba(15, 23, 42, 0.5)",
+                      color: isChecked ? "#38bdf8" : "#94a3b8",
+                      transition: "all 0.2s ease"
+                    }}
+                  >
+                    <div style={{
+                      width: "16px",
+                      height: "16px",
+                      borderRadius: "4px",
+                      border: `1px solid ${isChecked ? "#38bdf8" : "#64748b"}`,
+                      background: isChecked ? "#38bdf8" : "transparent",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#0f172a"
+                    }}>
+                      {isChecked && <Check size={12} strokeWidth={3} />}
+                    </div>
+                    {pKey}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
           <div className="form-group">
             <label className="form-label">Tên Thiết bị <span style={{ color: "var(--error)" }}>*</span></label>
             <input type="text" className="form-input" {...register("name")} />

@@ -69,6 +69,7 @@ model Item {
   accessories    String?  @db.Text
   unit           String   @default("Bộ")
   standardPrice  Decimal  @db.Decimal(15, 2)
+  projectName    String?  @default("IPRO")
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 }
@@ -99,6 +100,7 @@ model Proposal {
   investedClassrooms Int?  @default(0)
   oldStudents        Int?  @default(0)
   newStudents        Int?  @default(0)
+  projectName     String?  @default("IPRO") // IPRO / ICLASS / IGEN
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
