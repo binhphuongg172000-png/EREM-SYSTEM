@@ -4,6 +4,7 @@ import prisma from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import { getCachedData } from "@/lib/cache";
+import bcrypt from "bcryptjs";
 
 export async function loginAction(data: { username?: string; password?: string } | FormData) {
   let username = "";
@@ -34,7 +35,15 @@ export async function loginAction(data: { username?: string; password?: string }
       return { success: false, message: "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin" };
     }
 
-    if (user.password !== password) {
+    // Check password matching (supports bcrypt hash or direct plain text fallback)
+    let isValidPassword = false;
+    if (user.password.startsWith("$2b$") || user.password.startsWith("$2a$")) {
+      isValidPassword = await bcrypt.compare(password, user.password);
+    } else {
+      isValidPassword = (user.password === password);
+    }
+
+    if (!isValidPassword) {
       return { success: false, message: "Mật khẩu không chính xác" };
     }
 
