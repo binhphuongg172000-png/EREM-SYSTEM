@@ -1,11 +1,21 @@
+"use server";
+
 import prisma from "@/lib/prisma";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import { getCachedData } from "@/lib/cache";
 
-export async function loginAction(formData: FormData) {
-  const username = formData.get("username") as string;
-  const password = formData.get("password") as string;
+export async function loginAction(data: { username?: string; password?: string } | FormData) {
+  let username = "";
+  let password = "";
+
+  if (data instanceof FormData) {
+    username = (data.get("username") as string) || "";
+    password = (data.get("password") as string) || "";
+  } else if (data && typeof data === "object") {
+    username = data.username || "";
+    password = data.password || "";
+  }
 
   if (!username || !password) {
     return { success: false, message: "Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu" };
@@ -51,6 +61,10 @@ export async function loginAction(formData: FormData) {
     console.error("Login action error:", error);
     return { success: false, message: "Lỗi hệ thống: " + (error?.message || String(error)) };
   }
+}
+
+export async function warmupAction() {
+  return { success: true };
 }
 
 export const getCurrentUser = cache(async () => {
