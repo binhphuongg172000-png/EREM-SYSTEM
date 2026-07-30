@@ -15,6 +15,15 @@ export default function GlobalError({
     console.error("Global app error:", error);
   }, [error]);
 
+  // Re-throw Next.js internal redirect errors so redirect() works seamlessly
+  if (
+    error?.message?.includes("NEXT_REDIRECT") ||
+    error?.digest?.startsWith("NEXT_REDIRECT") ||
+    (error as any)?.isRedirect
+  ) {
+    throw error;
+  }
+
   return (
     <div style={{
       minHeight: "80vh",

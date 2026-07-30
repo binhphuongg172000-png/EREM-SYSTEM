@@ -14,11 +14,13 @@ export default async function AdminDashboardPage() {
         select: {
           id: true,
           schoolId: true,
+          saleId: true,
           projectName: true,
           status: true,
           newStudents: true,
           allocatedBudget: true,
           investedBudget: true,
+          sale: { select: { id: true, name: true, email: true } },
           school: { 
             select: { 
               id: true, 
@@ -179,22 +181,23 @@ export default async function AdminDashboardPage() {
   });
 
   allProposals.forEach(p => {
-    const saleObj = p.school?.sale;
-    const saleId = p.school?.saleId || saleObj?.id;
-    if (saleId) {
-      if (!salesMap.has(saleId)) {
-        salesMap.set(saleId, {
-          saleId,
-          saleName: saleObj?.name || "Kinh doanh",
+    const saleObj = p.sale || p.school?.sale;
+    const sId = p.saleId || p.school?.saleId || saleObj?.id;
+    if (sId) {
+      if (!salesMap.has(sId)) {
+        salesMap.set(sId, {
+          saleId: sId,
+          saleName: saleObj?.name || "Nhân viên kinh doanh",
           email: saleObj?.email || "",
           proposals: [],
         });
       }
-      salesMap.get(saleId)!.proposals.push(p);
+      salesMap.get(sId)!.proposals.push(p);
     }
   });
 
   const salesData: SaleCostStat[] = Array.from(salesMap.values())
+    .filter(s => s.proposals.length > 0)
     .map(s => {
       const allSchoolSet = new Set<string>();
       let saleAllocatedAll = 0;

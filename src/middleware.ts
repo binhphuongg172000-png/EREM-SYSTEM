@@ -41,7 +41,6 @@ export function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-// Config blocks middleware from running on static files and APIs
 export const config = {
   matcher: ['/', '/admin/:path*', '/sale/:path*'],
 };
