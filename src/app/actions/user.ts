@@ -70,7 +70,9 @@ export async function toggleUserStatus(id: string) {
   try {
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) throw new Error("Không tìm thấy người dùng");
-    if (user.username === "admin") throw new Error("Không thể khóa tài khoản Admin tối cao");
+    if (user.username === "sadmin" || user.role === "SUPER_ADMIN") {
+      throw new Error("Không thể khóa tài khoản Super Admin tối cao");
+    }
 
     const newStatus = user.status === "ACTIVE" ? "LOCKED" : "ACTIVE";
     await prisma.user.update({
@@ -89,7 +91,9 @@ export async function deleteUser(id: string) {
   try {
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) throw new Error("Không tìm thấy người dùng");
-    if (user.username === "admin") throw new Error("Không thể xóa tài khoản Admin tối cao");
+    if (user.username === "sadmin" || user.role === "SUPER_ADMIN") {
+      throw new Error("Không thể xóa tài khoản Super Admin tối cao");
+    }
 
     await prisma.user.delete({ where: { id } });
     revalidatePath("/admin/users");
@@ -98,4 +102,3 @@ export async function deleteUser(id: string) {
     return { success: false, message: error.message || "Không thể xóa người dùng đã có dữ liệu liên quan" };
   }
 }
-

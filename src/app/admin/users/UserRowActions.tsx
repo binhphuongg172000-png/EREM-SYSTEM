@@ -41,10 +41,21 @@ export default function UserRowActions({ user }: { user: any }) {
     setConfirmDelete(false);
   };
 
-  if (user.username === "admin") {
+  // Protect SUPER_ADMIN (sadmin) account from deletion or locking
+  if (user.username === "sadmin" || user.role === "SUPER_ADMIN") {
     return (
       <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", alignItems: "center" }}>
-        <span style={{ fontSize: "0.75rem", color: "#38bdf8", fontWeight: 700 }}>Hệ thống Quản trị</span>
+        <span style={{
+          fontSize: "0.75rem",
+          color: "#f43f5e",
+          fontWeight: 800,
+          background: "rgba(244, 63, 94, 0.12)",
+          border: "1px solid rgba(244, 63, 94, 0.3)",
+          padding: "0.2rem 0.6rem",
+          borderRadius: "6px"
+        }}>
+          Hệ thống Quản trị
+        </span>
       </div>
     );
   }
@@ -60,24 +71,20 @@ export default function UserRowActions({ user }: { user: any }) {
           Sửa
         </Link>
         <button
-          className="btn btn-secondary"
-          style={{
-            fontSize: "0.8rem",
-            padding: "0.35rem 0.75rem",
-            borderColor: user.status === "ACTIVE" ? "#f59e0b" : "#10b981",
-            color: user.status === "ACTIVE" ? "#f59e0b" : "#34d399",
-            backgroundColor: user.status === "ACTIVE" ? "rgba(245, 158, 11, 0.1)" : "rgba(16, 185, 129, 0.1)",
-          }}
+          type="button"
           onClick={() => setConfirmToggle(true)}
           disabled={isLoading}
+          className="btn btn-warning"
+          style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem" }}
         >
-          {user.status === "ACTIVE" ? "Khóa" : "Mở"}
+          {user.status === "ACTIVE" ? "Khóa" : "Mở khóa"}
         </button>
         <button
-          className="btn btn-danger"
-          style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem" }}
+          type="button"
           onClick={() => setConfirmDelete(true)}
           disabled={isLoading}
+          className="btn btn-danger"
+          style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem" }}
         >
           Xóa
         </button>
@@ -85,24 +92,22 @@ export default function UserRowActions({ user }: { user: any }) {
 
       <ConfirmModal
         isOpen={confirmToggle}
-        onClose={() => setConfirmToggle(false)}
+        title={`Xác nhận ${actionText} tài khoản`}
+        message={`Bạn có chắc chắn muốn ${actionText} tài khoản "${user.username}" (${user.name})?`}
         onConfirm={handleToggle}
-        title={`Xác nhận ${actionText} người dùng`}
-        message={`Bạn có chắc chắn muốn ${actionText} tài khoản "${user.username}" không?`}
-        confirmText={user.status === "ACTIVE" ? "Khóa tài khoản" : "Mở khóa"}
-        variant="warning"
-        isLoading={isLoading}
+        onClose={() => setConfirmToggle(false)}
+        confirmText={user.status === "ACTIVE" ? "Khóa tài khoản" : "Mở khóa tài khoản"}
+        variant={user.status === "ACTIVE" ? "warning" : "info"}
       />
 
       <ConfirmModal
         isOpen={confirmDelete}
-        onClose={() => setConfirmDelete(false)}
+        title="Xác nhận xóa tài khoản"
+        message={`Bạn có chắc chắn muốn XÓA tài khoản "${user.username}" (${user.name})? Hành động này không thể hoàn tác.`}
         onConfirm={handleDelete}
-        title="Xác nhận xóa người dùng"
-        message={`Bạn có chắc chắn muốn xóa tài khoản "${user.username}" vĩnh viễn không?`}
-        confirmText="Xóa vĩnh viễn"
+        onClose={() => setConfirmDelete(false)}
+        confirmText="Xóa tài khoản"
         variant="danger"
-        isLoading={isLoading}
       />
     </>
   );
