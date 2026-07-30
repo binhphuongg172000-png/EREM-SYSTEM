@@ -4,7 +4,7 @@ import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { getCurrentUser, logoutAction } from "@/app/actions/auth";
-import { Home, LayoutDashboard, FileText, ClipboardCheck, LogOut, Laptop, Coins, Wrench, Sparkles } from "lucide-react";
+import { Home, LayoutDashboard, School as SchoolIcon, FileText, ClipboardCheck, LogOut, Laptop, Coins, Wrench, Sparkles } from "lucide-react";
 import ToastContainer from "@/components/Toast";
 import BrandLogo from "@/components/BrandLogo";
 import NotificationBell from "@/components/NotificationBell";
@@ -61,7 +61,7 @@ export default function SaleLayout({
         </div>
 
         <nav className="sidebar-nav">
-          <div className="nav-group-label">HỆ THỐNG</div>
+          <div className="nav-group-label">TỔNG QUAN</div>
           <Link
             href="/sale/dashboard"
             prefetch={true}
@@ -70,6 +70,17 @@ export default function SaleLayout({
           >
             <LayoutDashboard className="nav-item-icon" style={{ color: "#38bdf8" }} size={18} />
             <span>Dashboard</span>
+          </Link>
+
+          <div className="nav-group-label">QUẢN LÝ THỰC THỂ</div>
+          <Link
+            href="/sale/schools"
+            prefetch={true}
+            onMouseEnter={() => router.prefetch("/sale/schools")}
+            className={`nav-item ${pathname?.startsWith("/sale/schools") ? "active" : ""}`}
+          >
+            <SchoolIcon className="nav-item-icon" style={{ color: "#34d399" }} size={18} />
+            <span>Danh sách Trường học</span>
           </Link>
 
           <div className="nav-group-label">HỒ SƠ & GIAO DỊCH</div>
@@ -82,18 +93,6 @@ export default function SaleLayout({
             <FileText className="nav-item-icon" style={{ color: "#818cf8" }} size={18} />
             <span>Kho Dự trù</span>
           </Link>
-          {/* Tạm thời ẩn Kho Biên bản theo yêu cầu */}
-          {/* <Link
-            href="/sale/handovers"
-            prefetch={true}
-            onMouseEnter={() => router.prefetch("/sale/handovers")}
-            className={`nav-item ${pathname?.startsWith("/sale/handovers") ? "active" : ""}`}
-          >
-            <ClipboardCheck className="nav-item-icon" style={{ color: "#2dd4bf" }} size={18} />
-            <span>Kho Biên bản</span>
-          </Link> */}
-
-          <div className="nav-group-label">DANH MỤC THAM KHẢO</div>
           <Link
             href="/sale/items"
             prefetch={true}
@@ -141,36 +140,28 @@ export default function SaleLayout({
             </div>
           </div>
 
-          {/* Right Space: Standard SaaS User Control (Notification Bell -> Profile Capsule -> Logout Button) */}
-          <div className="header-right-space">
-            {/* Realtime Notification Bell */}
+          <div className="user-profile" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
             <NotificationBell />
-
-            {/* User Profile Capsule */}
-            <div className="user-profile-capsule">
-              <div style={{
-                width: "34px", height: "34px", borderRadius: "9px",
-                background: "linear-gradient(135deg, #06b6d4 0%, #3b82f6 100%)",
-                display: "flex", alignItems: "center", justifyContent: "center",
-                fontWeight: 800, color: "#ffffff", fontSize: "0.9rem",
-                boxShadow: "0 0 12px rgba(6, 182, 212, 0.3)", flexShrink: 0
-              }}>
-                <span>{userName ? userName.charAt(0).toUpperCase() : "S"}</span>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <div className="avatar">
+                {userName.charAt(0).toUpperCase()}
               </div>
-              <div className="user-info-stack" style={{ display: "flex", flexDirection: "column", gap: "2px", justifyContent: "center" }}>
-                <strong style={{ color: "#ffffff", fontSize: "0.825rem", lineHeight: 1.2, whiteSpace: "nowrap" }}>{userName}</strong>
-                <span style={{ color: "#38bdf8", fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.05em", whiteSpace: "nowrap" }}>SALE MEMBER</span>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#ffffff" }}>
+                  {userName}
+                </span>
+                <span style={{ fontSize: "0.7rem", color: "#38bdf8", fontWeight: 600 }}>
+                  SALE MEMBER
+                </span>
               </div>
             </div>
-
-            {/* Logout Button on Far Right */}
             <button
               onClick={handleLogout}
-              className="btn-logout-saas"
-              title="Đăng xuất khỏi hệ thống"
+              className="btn btn-secondary"
+              style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem", display: "flex", alignItems: "center", gap: "0.35rem" }}
             >
-              <LogOut size={15} />
-              <span className="logout-text">Đăng xuất</span>
+              <LogOut size={14} />
+              Đăng xuất
             </button>
           </div>
         </header>
@@ -179,18 +170,6 @@ export default function SaleLayout({
           {children}
         </div>
       </main>
-
-      {/* Mobile Bottom Nav */}
-      <nav className="mobile-bottom-nav">
-        <Link href="/sale/dashboard" className={`mobile-nav-item ${pathname === "/sale/dashboard" ? "active" : ""}`}>
-          <LayoutDashboard size={20} />
-          <span>Tổng quan</span>
-        </Link>
-        <Link href="/sale/proposals" className={`mobile-nav-item ${pathname?.startsWith("/sale/proposals") ? "active" : ""}`}>
-          <FileText size={20} />
-          <span>Dự trù</span>
-        </Link>
-      </nav>
     </div>
   );
 }

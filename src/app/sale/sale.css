@@ -202,11 +202,8 @@ body {
 }
 
 .sale-content {
-  padding: 1.15rem 1.35rem 2rem;
-  max-width: 1400px;
-  width: 100%;
-  margin: 0 auto;
-  box-sizing: border-box;
+  padding: 1rem 1.35rem;
+  flex: 1;
 }
 
 /* ===================================================

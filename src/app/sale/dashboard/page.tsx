@@ -14,21 +14,34 @@ export default async function SaleDashboardPage() {
   const userId = cookieStore.get("userId")?.value;
   if (!userId) redirect("/login");
 
+  let rawAllProposals: any[] = [];
   let rawSchools: any[] = [];
+
   try {
-    rawSchools = await prisma.school.findMany({
-      where: { saleId: userId },
-      include: {
-        proposals: {
-          orderBy: { updatedAt: "desc" },
-          take: 1,
-          include: {
-            items: { select: { totalPrice: true } },
-            investments: { select: { name: true, description: true, totalPrice: true } },
-          }
-        }
-      }
-    });
+    const [resProposals, resSchools] = await Promise.all([
+      prisma.proposal.findMany({
+        where: {
+          OR: [
+            { saleId: userId },
+            { school: { saleId: userId } }
+          ]
+        },
+        include: {
+          sale: true,
+          school: { include: { sale: true } },
+          items: true,
+          investments: true,
+        },
+        orderBy: { updatedAt: "desc" }
+      }),
+      prisma.school.findMany({
+        where: { saleId: userId },
+        select: { id: true, saleId: true }
+      })
+    ]);
+
+    rawAllProposals = JSON.parse(JSON.stringify(resProposals));
+    rawSchools = JSON.parse(JSON.stringify(resSchools));
   } catch (error) {
     console.error("SaleDashboardPage fetch error:", error);
   }
@@ -38,9 +51,44 @@ export default async function SaleDashboardPage() {
     return lower.includes("thi công") || lower.includes("bảo trì") || lower.includes("hệ thống");
   };
 
-  const proposals = rawSchools
-    .map(s => (s.proposals && s.proposals[0]) ? { ...s.proposals[0], school: s } : null)
-    .filter(Boolean) as NonNullable<any>[];
+  // Deduplicate proposals so each school counts its latest proposal
+  const latestProposalsMap = new Map<string, typeof rawAllProposals[0]>();
+  for (const p of rawAllProposals) {
+    const schId = p.schoolId || p.school?.id || p.id;
+    if (schId && !latestProposalsMap.has(schId)) {
+      latestProposalsMap.set(schId, p);
+    }
+  }
+  const rawUniqueProposals = Array.from(latestProposalsMap.values());
+
+  const allProposals = rawUniqueProposals.map((p: any) => {
+    const newStudents = Number(p.newStudents || p.school?.newStudents || 0);
+    const dbAlloc = Number(p.allocatedBudget || 0);
+    const dbInvested = Number(p.investedBudget || 0);
+    const allocatedBudget = dbAlloc > 0
+      ? dbAlloc
+      : (newStudents > 0 ? Math.floor((newStudents * 100000000) / 105) : 0);
+
+    return {
+      ...p,
+      id: String(p.id),
+      schoolId: String(p.schoolId || p.school?.id || ""),
+      saleId: String(p.saleId || p.school?.saleId || p.sale?.id || ""),
+      projectName: String(p.projectName || "IPRO"),
+      status: String(p.status || "DRAFT"),
+      newStudents,
+      allocatedBudget,
+      investedBudget: dbInvested,
+      items: (p.items || []).map((i: any) => ({
+        totalPrice: Number(i?.totalPrice || 0)
+      })),
+      investments: (p.investments || []).map((invItem: any) => ({
+        name: String(invItem?.name || ""),
+        description: String(invItem?.description || ""),
+        totalPrice: Number(invItem?.totalPrice || 0)
+      })),
+    };
+  });
 
   const PROJECT_CONFIGS: Array<{
     key: "IPRO" | "ICLASS" | "IGEN" | "ILINK";
@@ -50,14 +98,19 @@ export default async function SaleDashboardPage() {
     border: string;
     badgeBg: string;
   }> = [
-    { key: "IPRO", name: "IPRO", color: "#38bdf8", bg: "rgba(56, 189, 248, 0.12)", border: "rgba(56, 189, 248, 0.3)", badgeBg: "rgba(56, 189, 248, 0.2)" },
-    { key: "ICLASS", name: "ICLASS", color: "#c084fc", bg: "rgba(168, 85, 247, 0.12)", border: "rgba(168, 85, 247, 0.3)", badgeBg: "rgba(168, 85, 247, 0.2)" },
-    { key: "IGEN", name: "IGEN", color: "#fbbf24", bg: "rgba(245, 158, 11, 0.12)", border: "rgba(245, 158, 11, 0.3)", badgeBg: "rgba(245, 158, 11, 0.2)" },
-    { key: "ILINK", name: "ILINK", color: "#34d399", bg: "rgba(16, 185, 129, 0.12)", border: "rgba(16, 185, 129, 0.3)", badgeBg: "rgba(16, 185, 129, 0.2)" },
-  ];
+      { key: "IPRO", name: "IPRO", color: "#38bdf8", bg: "rgba(56, 189, 248, 0.12)", border: "rgba(56, 189, 248, 0.3)", badgeBg: "rgba(56, 189, 248, 0.2)" },
+      { key: "ICLASS", name: "ICLASS", color: "#c084fc", bg: "rgba(168, 85, 247, 0.12)", border: "rgba(168, 85, 247, 0.3)", badgeBg: "rgba(168, 85, 247, 0.2)" },
+      { key: "IGEN", name: "IGEN", color: "#fbbf24", bg: "rgba(245, 158, 11, 0.12)", border: "rgba(245, 158, 11, 0.3)", badgeBg: "rgba(245, 158, 11, 0.2)" },
+      { key: "ILINK", name: "ILINK", color: "#34d399", bg: "rgba(16, 185, 129, 0.12)", border: "rgba(16, 185, 129, 0.3)", badgeBg: "rgba(16, 185, 129, 0.2)" },
+    ];
+
+  const matchProjectKey = (pName: string | undefined | null, targetKey: string) => {
+    const norm = (pName || "IPRO").toString().toUpperCase().trim();
+    return norm === targetKey;
+  };
 
   const projectsData: ProjectCostStat[] = PROJECT_CONFIGS.map(cfg => {
-    const projProposals = proposals.filter(p => (p.projectName || "IPRO") === cfg.key);
+    const projProposals = allProposals.filter(p => matchProjectKey(p.projectName, cfg.key));
     const schoolSet = new Set<string>();
 
     let totalAllocated = 0;
@@ -70,10 +123,10 @@ export default async function SaleDashboardPage() {
     projProposals.forEach(p => {
       const schId = p.schoolId || p.school?.id;
       if (schId) schoolSet.add(schId);
-      
+
       const alloc = Number(p.allocatedBudget || 0);
       const inv = Number(p.investedBudget || 0);
-      const st = Number(p.newStudents || p.school?.newStudents || 0);
+      const st = Number(p.newStudents || 0);
 
       totalAllocated += alloc;
       totalInvested += inv;
@@ -118,37 +171,25 @@ export default async function SaleDashboardPage() {
 
   return (
     <div style={{ paddingBottom: "2rem" }}>
-      {/* Top Welcome & CTA Card */}
-      <div className="dashboard-top-hero-wrap" style={{ marginBottom: "1.5rem" }}>
-        {/* Left: Page Title */}
-        <div className="sale-hero-banner" style={{ margin: 0, padding: "0.85rem 1.15rem", flex: 1 }}>
-          <h1 className="hero-title" style={{ margin: 0, fontSize: "1.2rem", fontWeight: 900, color: "#ffffff" }}>
-            Dashboard Cá Nhân Kinh Doanh 🚀
-          </h1>
-        </div>
-
-        {/* Right: Primary CTA Button */}
-        <div className="cta-create-wrap">
-          <Link 
-            href="/sale/proposals/new" 
-            prefetch={true} 
+      <ProjectCostDashboard
+        projectsData={projectsData}
+        title="Dashboard Cá Nhân Kinh Doanh 🚀"
+        subtitle="Theo dõi trực quan ngân sách, số học sinh mới và chi phí thực tế của các dự trù kinh doanh do bạn quản lý"
+        actionButton={
+          <Link
+            href="/sale/proposals/new"
+            prefetch={true}
             className="btn-cta-primary"
-            style={{ 
+            style={{
               whiteSpace: "nowrap",
-              padding: "0.65rem 1.25rem", 
-              fontSize: "0.85rem",
+              padding: "0.55rem 1.15rem",
+              fontSize: "0.82rem",
               fontWeight: 800
             }}
           >
-            <Plus size={18} /> Bắt đầu lập dự trù mới
+            <Plus size={16} /> Bắt đầu lập dự trù mới
           </Link>
-        </div>
-      </div>
-
-      <ProjectCostDashboard
-        projectsData={projectsData}
-        title="Tổng Quan Chi Phí Cá Nhân Theo Từng Dự Án 🚀"
-        subtitle="Theo dõi trực quan ngân sách, số học sinh mới và chi phí thực tế của các dự trù kinh doanh do bạn quản lý"
+        }
       />
     </div>
   );
