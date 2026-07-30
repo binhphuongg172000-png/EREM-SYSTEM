@@ -5,6 +5,7 @@ import SearchInput from "../SearchInput";
 import DeleteItemButton from "./DeleteItemButton";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function ItemsPage({
   searchParams,

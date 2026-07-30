@@ -7,6 +7,7 @@ import { Plus } from "lucide-react";
 import ProjectCostDashboard, { ProjectCostStat } from "@/app/admin/dashboard/ProjectCostDashboard";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function SaleDashboardPage() {
   const cookieStore = await cookies();

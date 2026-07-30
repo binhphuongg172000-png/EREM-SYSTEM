@@ -11,6 +11,7 @@ import { Building2, Calendar, TrendingUp, TrendingDown, UserCircle, AlertTriangl
 import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default async function AdminProposalsPage({
   searchParams,
