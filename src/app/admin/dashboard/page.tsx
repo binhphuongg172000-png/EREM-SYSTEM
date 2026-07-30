@@ -8,6 +8,7 @@ export const revalidate = 0;
 export default async function AdminDashboardPage() {
   let rawAllProposals: any[] = [];
   let saleUsers: any[] = [];
+  let rawSchools: any[] = [];
 
   try {
     const resProposals = await prisma.proposal.findMany({
@@ -41,6 +42,15 @@ export default async function AdminDashboardPage() {
     saleUsers = JSON.parse(JSON.stringify(resUsers));
   } catch (error) {
     console.error("AdminDashboardPage saleUsers fetch error:", error);
+  }
+
+  try {
+    const resSchools = await prisma.school.findMany({
+      select: { id: true, saleId: true }
+    });
+    rawSchools = JSON.parse(JSON.stringify(resSchools));
+  } catch (error) {
+    console.error("AdminDashboardPage rawSchools fetch error:", error);
   }
 
   const isConstructionItemName = (name: string) => {
@@ -175,11 +185,12 @@ export default async function AdminDashboardPage() {
     };
   });
 
-  // 2. Sales Breakdown Grouped by Project
+  // 2. Sales Breakdown Grouped by Project (Includes ALL Sales users)
   const salesMap = new Map<string, {
     saleId: string;
     saleName: string;
     email?: string;
+    schoolIds: Set<string>;
     proposals: typeof allProposals;
   }>();
 
@@ -188,8 +199,15 @@ export default async function AdminDashboardPage() {
       saleId: String(u.id),
       saleName: String(u.name || "Chưa đặt tên"),
       email: String(u.email || ""),
+      schoolIds: new Set<string>(),
       proposals: [],
     });
+  });
+
+  rawSchools.forEach(sch => {
+    if (sch.saleId && salesMap.has(String(sch.saleId))) {
+      salesMap.get(String(sch.saleId))!.schoolIds.add(String(sch.id));
+    }
   });
 
   allProposals.forEach(p => {
@@ -201,17 +219,20 @@ export default async function AdminDashboardPage() {
           saleId: sId,
           saleName: saleObj?.name || "Nhân viên kinh doanh",
           email: saleObj?.email || "",
+          schoolIds: new Set<string>(),
           proposals: [],
         });
       }
       salesMap.get(sId)!.proposals.push(p);
+      if (p.schoolId || p.school?.id) {
+        salesMap.get(sId)!.schoolIds.add(p.schoolId || p.school?.id);
+      }
     }
   });
 
   const salesData: SaleCostStat[] = Array.from(salesMap.values())
-    .filter(s => s.proposals.length > 0)
     .map(s => {
-      const allSchoolSet = new Set<string>();
+      const allSchoolSet = new Set<string>(s.schoolIds);
       let saleAllocatedAll = 0;
       let saleInvestedAll = 0;
       let saleStudentsAll = 0;
@@ -289,7 +310,7 @@ export default async function AdminDashboardPage() {
         projectStats,
       };
     })
-    .sort((a, b) => b.totalAllocated - a.totalAllocated);
+    .sort((a, b) => (b.totalAllocated - a.totalAllocated) || (b.totalProposals - a.totalProposals) || (b.totalSchools - a.totalSchools));
 
   return (
     <div style={{ paddingBottom: "2rem" }}>
