@@ -36,8 +36,9 @@ export async function getCachedData<T>(
     });
     return freshData;
   } catch (err) {
+    console.error(`getCachedData error for key [${key}]:`, err);
     // Fail-safe: if fetch fails, return stale data if available
-    if (existing) {
+    if (existing && existing.data !== undefined) {
       return existing.data as T;
     }
     throw err;

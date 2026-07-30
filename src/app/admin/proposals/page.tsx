@@ -33,20 +33,26 @@ export default async function AdminProposalsPage({
   const nowTime = Date.now();
   const FIVE_DAYS_MS = 5 * 24 * 60 * 60 * 1000;
 
-  const [sales, dbProposals] = await Promise.all([
-    prisma.user.findMany({
-      where: { role: "SALE" },
-      select: { id: true, name: true, username: true },
-      orderBy: { name: "asc" },
-    }),
-    prisma.proposal.findMany({
-      include: {
-        school: true,
-        sale: true,
-      },
-      orderBy: { createdAt: "desc" },
-    })
-  ]);
+  let sales: any[] = [];
+  let dbProposals: any[] = [];
+  try {
+    [sales, dbProposals] = await Promise.all([
+      prisma.user.findMany({
+        where: { OR: [{ role: "SALE" }, { role: "sale" }] },
+        select: { id: true, name: true, username: true },
+        orderBy: { name: "asc" },
+      }),
+      prisma.proposal.findMany({
+        include: {
+          school: true,
+          sale: true,
+        },
+        orderBy: { createdAt: "desc" },
+      })
+    ]);
+  } catch (err) {
+    console.error("AdminProposalsPage fetch error:", err);
+  }
   const allProposals = JSON.parse(JSON.stringify(dbProposals)).map((p: any) => {
     if (p.status === "CLOSED") {
       return {
