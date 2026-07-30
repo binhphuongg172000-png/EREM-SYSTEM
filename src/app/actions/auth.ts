@@ -1,68 +1,46 @@
-"use server";
-
 import prisma from "@/lib/prisma";
-import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
-import { getCachedData } from "@/lib/cache";
 import { cache } from "react";
+import { getCachedData } from "@/lib/cache";
 
-// Warms up the serverless function + DB connection on login page load
-export async function warmupAction() {
+export async function loginAction(formData: FormData) {
+  const username = formData.get("username") as string;
+  const password = formData.get("password") as string;
+
+  if (!username || !password) {
+    return { success: false, message: "Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu" };
+  }
+
   try {
-    await prisma.$queryRaw`SELECT 1`;
-  } catch {}
-}
-
-export async function loginAction(data: any) {
-  try {
-    const username = data?.username?.trim();
-    const password = data?.password;
-
-    if (!username || !password) {
-      return { success: false, message: "Vui lòng nhập đầy đủ tên đăng nhập và mật khẩu." };
-    }
-
     const user = await prisma.user.findUnique({
       where: { username },
-      select: {
-        id: true,
-        username: true,
-        password: true,
-        role: true,
-        status: true,
-        name: true,
-      },
     });
 
     if (!user) {
-      return { success: false, message: "Tên đăng nhập hoặc mật khẩu không đúng." };
+      return { success: false, message: "Tài khoản không tồn tại trên hệ thống" };
     }
 
-    if (user.status !== "ACTIVE") {
-      return { success: false, message: "Tài khoản của bạn đã bị khóa." };
+    if (user.status === "LOCKED") {
+      return { success: false, message: "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin" };
     }
 
-    let isValidPassword = password === user.password;
-    if (!isValidPassword && user.password.startsWith("$2")) {
-      isValidPassword = await bcrypt.compare(password, user.password);
+    if (user.password !== password) {
+      return { success: false, message: "Mật khẩu không chính xác" };
     }
 
-    if (!isValidPassword) {
-      return { success: false, message: "Tên đăng nhập hoặc mật khẩu không đúng." };
-    }
-
-    // Set cookies for session (Explicit sameSite: "lax" for mobile Safari / Android Chrome over LAN IP)
     const cookieStore = await cookies();
+    const isProd = process.env.NODE_ENV === "production";
+    
     cookieStore.set("userId", user.id, {
       httpOnly: true,
-      secure: false,
+      secure: isProd,
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 7, // 1 week
       path: "/",
     });
     cookieStore.set("userRole", user.role, {
       httpOnly: true,
-      secure: false,
+      secure: isProd,
       sameSite: "lax",
       maxAge: 60 * 60 * 24 * 7,
       path: "/",
@@ -76,18 +54,27 @@ export async function loginAction(data: any) {
 }
 
 export const getCurrentUser = cache(async () => {
-  const cookieStore = await cookies();
-  const userId = cookieStore.get("userId")?.value;
-  if (!userId) return null;
-  
-  return getCachedData(`current_user_${userId}`, async () => {
-    return prisma.user.findUnique({ where: { id: userId } });
-  }, 30);
+  try {
+    const cookieStore = await cookies();
+    const userId = cookieStore.get("userId")?.value;
+    if (!userId) return null;
+    
+    return await getCachedData(`current_user_${userId}`, async () => {
+      return prisma.user.findUnique({ where: { id: userId } });
+    }, 30);
+  } catch (e) {
+    console.error("getCurrentUser error:", e);
+    return null;
+  }
 });
 
 export async function logoutAction() {
-  const cookieStore = await cookies();
-  cookieStore.delete("userId");
-  cookieStore.delete("userRole");
+  try {
+    const cookieStore = await cookies();
+    cookieStore.delete("userId");
+    cookieStore.delete("userRole");
+  } catch (e) {
+    console.error("logoutAction error:", e);
+  }
   return { success: true };
 }

@@ -34,7 +34,14 @@ export default async function AdminDashboardPage() {
         orderBy: { updatedAt: "desc" }
       }),
       prisma.user.findMany({
-        where: { role: "SALE" },
+        where: {
+          OR: [
+            { role: "SALE" },
+            { role: "sale" },
+            { schools: { some: {} } },
+            { proposals: { some: {} } }
+          ]
+        },
         select: { id: true, name: true, email: true }
       })
     ]);
@@ -50,11 +57,28 @@ export default async function AdminDashboardPage() {
   // Deduplicate proposals so each school counts its latest proposal
   const latestProposalsMap = new Map<string, typeof rawAllProposals[0]>();
   for (const p of rawAllProposals) {
-    if (p.schoolId && !latestProposalsMap.has(p.schoolId)) {
-      latestProposalsMap.set(p.schoolId, p);
+    const schId = p.schoolId || p.school?.id;
+    if (schId && !latestProposalsMap.has(schId)) {
+      latestProposalsMap.set(schId, p);
     }
   }
-  const allProposals = Array.from(latestProposalsMap.values());
+  const rawUniqueProposals = Array.from(latestProposalsMap.values());
+
+  // Calculate allocatedBudget dynamically if 0 but newStudents > 0
+  const allProposals = rawUniqueProposals.map((p: any) => {
+    const newStudents = Number(p.newStudents || p.school?.newStudents || 0);
+    const dbAlloc = Number(p.allocatedBudget || 0);
+    const allocatedBudget = dbAlloc > 0
+      ? dbAlloc
+      : (newStudents > 0 ? Math.floor((newStudents * 100000000) / 105) : 0);
+
+    return {
+      ...p,
+      newStudents,
+      allocatedBudget,
+      investedBudget: Number(p.investedBudget || 0),
+    };
+  });
 
   const PROJECT_CONFIGS: Array<{
     key: "IPRO" | "ICLASS" | "IGEN" | "ILINK";
@@ -70,9 +94,15 @@ export default async function AdminDashboardPage() {
     { key: "ILINK", name: "ILINK", color: "#34d399", bg: "rgba(16, 185, 129, 0.12)", border: "rgba(16, 185, 129, 0.3)", badgeBg: "rgba(16, 185, 129, 0.2)" },
   ];
 
+  // Helper matching project name case-insensitively
+  const matchProjectKey = (pName: string | undefined | null, targetKey: string) => {
+    const norm = (pName || "IPRO").toString().toUpperCase().trim();
+    return norm === targetKey;
+  };
+
   // 1. Projects Breakdown
   const projectsData: ProjectCostStat[] = PROJECT_CONFIGS.map(cfg => {
-    const projProposals = allProposals.filter(p => (p.projectName || "IPRO") === cfg.key);
+    const projProposals = allProposals.filter(p => matchProjectKey(p.projectName, cfg.key));
     const schoolSet = new Set<string>();
 
     let totalAllocated = 0;
@@ -83,7 +113,9 @@ export default async function AdminDashboardPage() {
     let constrCost = 0;
 
     projProposals.forEach(p => {
-      if (p.schoolId) schoolSet.add(p.schoolId);
+      const schId = p.schoolId || p.school?.id;
+      if (schId) schoolSet.add(schId);
+
       const alloc = Number(p.allocatedBudget || 0);
       const inv = Number(p.investedBudget || 0);
       const st = Number(p.newStudents || p.school?.newStudents || 0);
@@ -170,7 +202,7 @@ export default async function AdminDashboardPage() {
       let saleStudentsAll = 0;
 
       const projectStats: SaleProjectDetail[] = PROJECT_CONFIGS.map(cfg => {
-        const subProposals = s.proposals.filter(p => (p.projectName || "IPRO") === cfg.key);
+        const subProposals = s.proposals.filter(p => matchProjectKey(p.projectName, cfg.key));
         const subSchoolSet = new Set<string>();
         let alloc = 0;
         let inv = 0;
@@ -180,9 +212,10 @@ export default async function AdminDashboardPage() {
         let constrCost = 0;
 
         subProposals.forEach(p => {
-          if (p.schoolId) {
-            subSchoolSet.add(p.schoolId);
-            allSchoolSet.add(p.schoolId);
+          const schId = p.schoolId || p.school?.id;
+          if (schId) {
+            subSchoolSet.add(schId);
+            allSchoolSet.add(schId);
           }
           alloc += Number(p.allocatedBudget || 0);
           inv += Number(p.investedBudget || 0);
@@ -241,7 +274,7 @@ export default async function AdminDashboardPage() {
         projectStats,
       };
     })
-    .sort((a, b) => b.totalInvested - a.totalInvested);
+    .sort((a, b) => b.totalAllocated - a.totalAllocated);
 
   return (
     <div style={{ paddingBottom: "2rem" }}>
