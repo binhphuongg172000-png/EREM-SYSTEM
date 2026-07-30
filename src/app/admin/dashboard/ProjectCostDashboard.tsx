@@ -359,15 +359,18 @@ function ProjectCard({ proj }: { proj: ProjectCostStat }) {
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
           <span style={{
             fontSize: "0.85rem", fontWeight: 900,
-            padding: "0.3rem 0.75rem", borderRadius: "8px",
+            padding: "0.3rem 0.85rem", borderRadius: "8px",
             background: proj.badgeBg, color: proj.color,
-            border: `1px solid ${proj.border}`,
+            border: `1.5px solid ${proj.border}`,
+            letterSpacing: "0.03em"
           }}>
-            {proj.projectKey}
+            DỰ ÁN {proj.projectKey}
           </span>
-          <span style={{ fontSize: "0.95rem", fontWeight: 800, color: "#ffffff" }}>
-            {proj.projectName}
-          </span>
+          {proj.projectName && proj.projectName.toUpperCase().trim() !== proj.projectKey.toUpperCase().trim() && (
+            <span style={{ fontSize: "0.95rem", fontWeight: 800, color: "#ffffff" }}>
+              {proj.projectName}
+            </span>
+          )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.72rem", color: "#64748b" }}>
           <span style={{ display: "flex", alignItems: "center", gap: "0.15rem" }}>
