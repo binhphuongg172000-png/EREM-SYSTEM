@@ -145,7 +145,7 @@ const S = {
     textAlign: "right",
   }),
   blink: (isNeg: boolean): React.CSSProperties => ({
-    animation: isNeg ? "blinkRed 1s ease-in-out infinite" : "none",
+    animation: isNeg ? "blinkRed 1.8s ease-in-out infinite" : "none",
   }),
 };
 
@@ -1036,6 +1036,10 @@ export default function ProjectCostDashboard({
 
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
               {salesData.map(sale => {
+                const saleDelta = sale.totalAllocated - sale.totalInvested;
+                const isSaleNeg = saleDelta < 0;
+                const saleUsage = sale.totalAllocated > 0 ? Math.round((sale.totalInvested / sale.totalAllocated) * 100) : 0;
+
                 return (
                   <div key={sale.saleId} style={{
                     background: "rgba(15, 23, 42, 0.65)",
@@ -1049,23 +1053,24 @@ export default function ProjectCostDashboard({
                       justifyContent: "space-between",
                       alignItems: "center",
                       flexWrap: "wrap",
-                      gap: "0.5rem",
+                      gap: "0.55rem",
                       marginBottom: "0.75rem",
                       paddingBottom: "0.55rem",
                       borderBottom: "1px solid rgba(255, 255, 255, 0.08)",
                     }}>
                       <div style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
                         <div style={{
-                          width: "30px", height: "30px", borderRadius: "50%",
+                          width: "32px", height: "32px", borderRadius: "50%",
                           background: "linear-gradient(135deg, #10b981, #059669)",
                           display: "flex", alignItems: "center", justifyContent: "center",
-                          color: "#ffffff", fontWeight: 900, fontSize: "0.82rem",
+                          color: "#ffffff", fontWeight: 900, fontSize: "0.85rem",
                           boxShadow: "0 2px 6px rgba(16, 185, 129, 0.35)",
+                          flexShrink: 0
                         }}>
                           {sale.saleName.charAt(0).toUpperCase()}
                         </div>
                         <div>
-                          <div style={{ fontWeight: 900, color: "#ffffff", fontSize: "0.9rem" }}>
+                          <div style={{ fontWeight: 900, color: "#ffffff", fontSize: "0.95rem" }}>
                             {sale.saleName}
                           </div>
                           {sale.email && (
@@ -1074,16 +1079,40 @@ export default function ProjectCostDashboard({
                         </div>
                       </div>
 
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", fontSize: "0.76rem" }}>
-                        <span style={{ color: "#cbd5e1" }}>
-                          Trường: <strong style={{ color: "#ffffff", fontWeight: 900 }}>{sale.totalSchools}</strong>
-                        </span>
-                        <span style={{ color: "#cbd5e1" }}>
-                          Dự trù: <strong style={{ color: "#818cf8", fontWeight: 900 }}>{sale.totalProposals}</strong>
-                        </span>
-                        <span style={{ color: "#38bdf8", fontWeight: 800, display: "inline-flex", alignItems: "center", gap: "0.15rem" }}>
-                          <GraduationCap size={11} /> {fmtMoney(sale.totalStudents)} HS
-                        </span>
+                      {/* Sale Summary Stats & Financial Totals Strip */}
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.55rem", flexWrap: "wrap" }}>
+                        {/* General Meta Counts */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.45rem", background: "rgba(15, 23, 42, 0.6)", padding: "0.3rem 0.65rem", borderRadius: "6px", border: "1px solid rgba(255, 255, 255, 0.08)", fontSize: "0.74rem" }}>
+                          <span style={{ color: "#cbd5e1" }}>Trường: <strong style={{ color: "#ffffff", fontWeight: 900 }}>{sale.totalSchools}</strong></span>
+                          <span style={{ color: "rgba(255,255,255,0.2)" }}>•</span>
+                          <span style={{ color: "#cbd5e1" }}>Dự trù: <strong style={{ color: "#818cf8", fontWeight: 900 }}>{sale.totalProposals}</strong></span>
+                          <span style={{ color: "rgba(255,255,255,0.2)" }}>•</span>
+                          <span style={{ color: "#38bdf8", fontWeight: 800, display: "inline-flex", alignItems: "center", gap: "0.15rem" }}>
+                            <GraduationCap size={11} /> {fmtMoney(sale.totalStudents)} HS
+                          </span>
+                        </div>
+
+                        {/* Financial Totals Badge */}
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", background: "rgba(15, 23, 42, 0.75)", padding: "0.3rem 0.7rem", borderRadius: "6px", border: "1px solid rgba(255, 255, 255, 0.12)", fontSize: "0.74rem" }}>
+                          <div title={fmtMoney(sale.totalAllocated) + " đ"} style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
+                            <span style={{ fontSize: "0.62rem", color: "#94a3b8", fontWeight: 700 }}>TỔNG CẤP:</span>
+                            <strong style={{ color: "#34d399", fontWeight: 900 }}>{fmtSmartMoney(sale.totalAllocated)}</strong>
+                          </div>
+                          <span style={{ color: "rgba(255,255,255,0.2)" }}>|</span>
+                          <div title={fmtMoney(sale.totalInvested) + " đ"} style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
+                            <span style={{ fontSize: "0.62rem", color: "#94a3b8", fontWeight: 700 }}>ĐÃ ĐẦU TƯ:</span>
+                            <strong style={{ color: "#fbbf24", fontWeight: 900 }}>{fmtSmartMoney(sale.totalInvested)}</strong>
+                          </div>
+                          <span style={{ color: "rgba(255,255,255,0.2)" }}>|</span>
+                          <div title={(isSaleNeg ? "" : "+") + fmtMoney(saleDelta) + " đ"} style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
+                            <span style={{ fontSize: "0.62rem", color: isSaleNeg ? "#ff4d6d" : "#34d399", fontWeight: 700 }}>
+                              {isSaleNeg ? "THÂM HỤT:" : "CÒN DƯ:"}
+                            </span>
+                            <strong style={{ color: isSaleNeg ? "#ff4d6d" : "#34d399", fontWeight: 900, ...S.blink(isSaleNeg) }}>
+                              {isSaleNeg ? "" : "+"}{fmtSmartMoney(saleDelta)} ({saleUsage}%)
+                            </strong>
+                          </div>
+                        </div>
                       </div>
                     </div>
 
