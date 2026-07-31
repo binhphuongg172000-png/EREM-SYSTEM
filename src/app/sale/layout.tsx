@@ -22,7 +22,7 @@ export default function SaleLayout({
   const [userName, setUserName] = useState("Nhân viên Sale");
   const [greetingInfo, setGreetingInfo] = useState<GreetingInfo>({
     greeting: "Xin chào,",
-    humorTag: "Chào mừng đến với hệ thống EREM!",
+    humorTag: "Chào mừng đến với hệ thống IT HCM!",
     icon: "👋",
   });
 

@@ -26,7 +26,7 @@ export default function AdminLayout({
   const [userRole, setUserRole] = useState<string>("ADMIN");
   const [greetingInfo, setGreetingInfo] = useState<GreetingInfo>({
     greeting: "Xin chào,",
-    humorTag: "Chào mừng đến trung tâm quản trị EREM!",
+    humorTag: "Chào mừng đến trung tâm quản trị IT HCM!",
     icon: "👋",
   });
 

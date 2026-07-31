@@ -218,7 +218,7 @@ export default function LoginPage() {
 
             {/* Header Title */}
             <div className="form-header">
-              <div className="version-pill">EREM SYSTEM v2.5</div>
+              <div className="version-pill">IT HCM SYSTEM v2.5</div>
               <h2>Đăng Nhập System 👋</h2>
               <p>Nhập thông tin tài khoản để truy cập hệ thống</p>
             </div>
@@ -297,7 +297,7 @@ export default function LoginPage() {
             </form>
 
             <div className="form-footer-3d">
-              © 2026 EREM OS — Nền tảng quản lý dự trù thiết bị trường học
+              © 2026 IT HCM SYSTEM — Nền tảng quản lý dự trù thiết bị trường học
             </div>
           </div>
         </div>

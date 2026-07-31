@@ -123,7 +123,7 @@ export default function NewUserPage() {
               <input
                 type="email"
                 className="form-input"
-                placeholder="VD: a@erem.vn"
+                placeholder="VD: a@ithcm.vn"
                 {...register("email")}
               />
               {errors.email && <p className="form-error">{errors.email.message}</p>}
