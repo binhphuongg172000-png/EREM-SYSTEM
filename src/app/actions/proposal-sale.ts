@@ -13,6 +13,10 @@ export async function createProposal(data: any) {
     if (!saleId) throw new Error("Chưa đăng nhập");
 
     const proposalId = crypto.randomUUID();
+    const propNewStudents = Number(data.schoolDetails?.newStudents) || 0;
+    const computedAllocated = Number(data.allocatedBudget) > 0
+      ? Number(data.allocatedBudget)
+      : Math.floor((propNewStudents * 100_000_000) / 105);
 
     const ops: any[] = [
       prisma.school.update({
@@ -20,7 +24,7 @@ export async function createProposal(data: any) {
         data: {
           investedClassrooms: Number(data.schoolDetails?.investedClassrooms) || 0,
           oldStudents: Number(data.schoolDetails?.oldStudents) || 0,
-          newStudents: Number(data.schoolDetails?.newStudents) || 0,
+          newStudents: propNewStudents,
         }
       }),
       prisma.proposal.updateMany({
@@ -36,11 +40,11 @@ export async function createProposal(data: any) {
           schoolId: data.schoolId,
           saleId: saleId,
           status: "PENDING",
-          allocatedBudget: data.allocatedBudget,
-          investedBudget: data.investedBudget,
+          allocatedBudget: computedAllocated,
+          investedBudget: Number(data.investedBudget) || 0,
           investedClassrooms: Number(data.schoolDetails?.investedClassrooms) || 0,
           oldStudents: Number(data.schoolDetails?.oldStudents) || 0,
-          newStudents: Number(data.schoolDetails?.newStudents) || 0,
+          newStudents: propNewStudents,
           projectName: data.projectName || "IPRO",
         },
       })
@@ -106,11 +110,19 @@ export async function updateProposal(id: string, data: any) {
       await tx.proposalItem.deleteMany({ where: { proposalId: id } });
       await tx.proposalInvestment.deleteMany({ where: { proposalId: id } });
 
+      const propNewStudents = Number(data.schoolDetails?.newStudents) || 0;
+      const computedAllocated = Number(data.allocatedBudget) > 0
+        ? Number(data.allocatedBudget)
+        : Math.floor((propNewStudents * 100_000_000) / 105);
+
       await tx.proposal.update({
         where: { id },
         data: {
-          allocatedBudget: data.allocatedBudget,
-          investedBudget: data.investedBudget,
+          allocatedBudget: computedAllocated,
+          investedBudget: Number(data.investedBudget) || 0,
+          investedClassrooms: Number(data.schoolDetails?.investedClassrooms) || 0,
+          oldStudents: Number(data.schoolDetails?.oldStudents) || 0,
+          newStudents: propNewStudents,
         },
       });
 

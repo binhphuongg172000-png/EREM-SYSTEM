@@ -14,6 +14,7 @@ export async function getNewProposalData(userId: string) {
       where: { saleId: userId },
       include: {
         proposals: {
+          where: { status: { not: "CLOSED" } },
           orderBy: { updatedAt: "desc" },
           include: {
             items: true,

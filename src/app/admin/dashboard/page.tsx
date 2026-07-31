@@ -66,7 +66,7 @@ export default async function AdminDashboardPage() {
   const rawUniqueProposals = deduplicateActiveProposals(rawAllProposals);
 
   const allProposals = rawUniqueProposals.map((p: any) => {
-    const newStudents = Number(p.newStudents || p.school?.newStudents || 0);
+    const newStudents = Number(p.newStudents ?? p.school?.newStudents ?? 0);
     const dbInvested = Number(p.investedBudget || 0);
     const allocatedBudget = computeProposalAllocatedBudget(p);
 

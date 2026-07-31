@@ -11,9 +11,13 @@ export function computeProposalAllocatedBudget(p: {
   const dbAlloc = Number(p.allocatedBudget || 0);
   if (dbAlloc > 0) return dbAlloc;
 
-  const propStudents = Number(p.newStudents || 0);
-  if (propStudents > 0) {
-    return Math.floor((propStudents * 100_000_000) / 105);
+  // Check if newStudents is explicitly set on proposal record
+  if (p.newStudents !== undefined && p.newStudents !== null) {
+    const propStudents = Number(p.newStudents || 0);
+    if (propStudents > 0) {
+      return Math.floor((propStudents * 100_000_000) / 105);
+    }
+    return 0;
   }
 
   const schoolStudents = Number(p.school?.newStudents || 0);
