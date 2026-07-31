@@ -581,11 +581,14 @@ export default function ProjectCostDashboard({
   actionButton?: React.ReactNode;
 }) {
   const [activeTab, setActiveTab] = useState<string>("ALL");
-  const [selectedSaleId, setSelectedSaleId] = useState<string>("ALL");
   const pathname = usePathname();
   const basePath = pathname?.startsWith("/sale") ? "sale" : "admin";
+  const [selectedSaleId, setSelectedSaleId] = useState<string>(
+    basePath === "sale" && salesData.length > 0 ? (salesData[0]?.saleId || "") : ""
+  );
 
   const displayedSales = useMemo(() => {
+    if (!selectedSaleId) return [];
     if (selectedSaleId === "ALL") return salesData;
     return salesData.filter(s => s.saleId === selectedSaleId);
   }, [salesData, selectedSaleId]);
@@ -1024,55 +1027,60 @@ export default function ProjectCostDashboard({
           }}>
             <div style={{
               display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              flexWrap: "wrap",
-              gap: "0.75rem",
-              marginBottom: "0.85rem",
-              paddingBottom: "0.75rem",
+              flexDirection: "column",
+              gap: "0.85rem",
+              marginBottom: "1rem",
+              paddingBottom: "0.85rem",
               borderBottom: "1px solid rgba(16, 185, 129, 0.25)"
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
                 <div style={{
-                  width: "34px", height: "34px", borderRadius: "8px",
+                  width: "36px", height: "36px", borderRadius: "8px",
                   background: "rgba(16, 185, 129, 0.2)", border: "1px solid rgba(16, 185, 129, 0.3)",
                   display: "flex", alignItems: "center", justifyContent: "center", color: "#10b981",
+                  flexShrink: 0
                 }}>
                   <Users size={18} />
                 </div>
                 <div>
-                  <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 900, color: "#ffffff" }}>
+                  <h3 style={{ margin: 0, fontSize: "1.05rem", fontWeight: 900, color: "#ffffff" }}>
                     Thống Kê Theo Nhân Viên Sale
                   </h3>
-                  <p style={{ margin: "0.1rem 0 0 0", fontSize: "0.74rem", color: "#94a3b8" }}>
+                  <p style={{ margin: "0.15rem 0 0 0", fontSize: "0.75rem", color: "#94a3b8" }}>
                     Chi phí, học sinh mới và đầu tư chi tiết của từng nhân viên kinh doanh
                   </p>
                 </div>
               </div>
 
-              {/* Dropdown Filter Select */}
-              {salesData.length > 1 && (
-                <div style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
-                  <span style={{ fontSize: "0.78rem", color: "#94a3b8", fontWeight: 700 }}>Nhân viên:</span>
+              {/* Dropdown Filter Select Positioned Directly Below Text */}
+              {salesData.length > 0 && (
+                <div style={{ display: "flex", alignItems: "center", gap: "0.65rem" }}>
+                  <span style={{ fontSize: "0.8rem", color: "#cbd5e1", fontWeight: 700 }}>Chọn Nhân viên Sale:</span>
                   <select
                     value={selectedSaleId}
                     onChange={(e) => setSelectedSaleId(e.target.value)}
                     style={{
                       background: "rgba(15, 23, 42, 0.95)",
-                      color: "#10b981",
-                      border: "1px solid rgba(16, 185, 129, 0.45)",
+                      color: selectedSaleId ? "#10b981" : "#94a3b8",
+                      border: "1.5px solid rgba(16, 185, 129, 0.45)",
                       borderRadius: "8px",
-                      padding: "0.4rem 0.85rem",
-                      fontSize: "0.82rem",
+                      padding: "0.45rem 1rem",
+                      fontSize: "0.85rem",
                       fontWeight: 800,
                       outline: "none",
                       cursor: "pointer",
-                      boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
+                      minWidth: "260px",
+                      boxShadow: "0 2px 10px rgba(0,0,0,0.35)"
                     }}
                   >
-                    <option value="ALL" style={{ background: "#0f172a", color: "#ffffff" }}>
-                      Tất cả Nhân viên ({salesData.length})
+                    <option value="" style={{ background: "#0f172a", color: "#94a3b8" }}>
+                      -- Chưa chọn nhân viên (Vui lòng chọn) --
                     </option>
+                    {salesData.length > 1 && (
+                      <option value="ALL" style={{ background: "#0f172a", color: "#ffffff" }}>
+                        Tất cả Nhân viên ({salesData.length})
+                      </option>
+                    )}
                     {salesData.map(sale => (
                       <option key={sale.saleId} value={sale.saleId} style={{ background: "#0f172a", color: "#ffffff" }}>
                         {sale.saleName}
@@ -1083,8 +1091,28 @@ export default function ProjectCostDashboard({
               )}
             </div>
 
-            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              {displayedSales.map(sale => {
+            {/* Displayed Content */}
+            {!selectedSaleId ? (
+              <div style={{
+                padding: "2rem 1.5rem",
+                textAlign: "center",
+                background: "rgba(15, 23, 42, 0.5)",
+                borderRadius: "12px",
+                border: "1px dashed rgba(16, 185, 129, 0.25)",
+                color: "#94a3b8",
+                fontSize: "0.88rem",
+                fontWeight: 600,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: "0.5rem"
+              }}>
+                <span style={{ fontSize: "1.6rem" }}>👉</span>
+                <span>Vui lòng chọn <strong>Nhân viên Sale</strong> từ danh sách menu ở trên để xem báo cáo thống kê chi tiết.</span>
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                {displayedSales.map(sale => {
                 const saleDelta = sale.totalAllocated - sale.totalInvested;
                 const isSaleNeg = saleDelta < 0;
                 const saleUsage = sale.totalAllocated > 0 ? Math.round((sale.totalInvested / sale.totalAllocated) * 100) : 0;
@@ -1180,6 +1208,7 @@ export default function ProjectCostDashboard({
                 );
               })}
             </div>
+          )}
           </div>
         </div>
       )}
