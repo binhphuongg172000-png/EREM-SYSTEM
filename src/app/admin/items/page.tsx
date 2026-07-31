@@ -3,6 +3,7 @@ import prisma from "@/lib/prisma";
 import Link from "next/link";
 import SearchInput from "../SearchInput";
 import DeleteItemButton from "./DeleteItemButton";
+import PaginationControls from "@/components/PaginationControls";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -10,11 +11,13 @@ export const revalidate = 0;
 export default async function ItemsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; project?: string }>;
+  searchParams: Promise<{ search?: string; project?: string; page?: string }>;
 }) {
   const resolvedParams = await searchParams;
   const search = resolvedParams?.search || "";
   const projectFilter = resolvedParams?.project || "ALL";
+  const page = Math.max(1, Number(resolvedParams?.page || 1));
+  const pageSize = 20;
 
   let resItems: any[] = [];
   try {
@@ -35,6 +38,9 @@ export default async function ItemsPage({
     const pStr = item.projectName || "IPRO";
     return pStr.includes(projectFilter);
   });
+
+  const totalPages = Math.ceil(items.length / pageSize);
+  const displayItems = items.slice((page - 1) * pageSize, page * pageSize);
 
   const getProjectBadges = (pStr?: string | null) => {
     const projects = (pStr || "IPRO").split(",").map(p => p.trim()).filter(Boolean);
@@ -115,6 +121,10 @@ export default async function ItemsPage({
               </Link>
             ))}
           </div>
+
+          <span style={{ fontSize: "0.8rem", color: "#94a3b8", fontWeight: 600 }}>
+            Tổng cộng: {items.length} thiết bị
+          </span>
         </div>
 
         <Link href="/admin/items/new" className="btn btn-primary">+ Thêm Thiết bị</Link>
@@ -125,6 +135,7 @@ export default async function ItemsPage({
           <table className="table table-hover">
             <thead>
               <tr>
+                <th style={{ width: "50px", textAlign: "center" }}>STT</th>
                 <th>Tên Thiết bị</th>
                 <th>Dự án áp dụng</th>
                 <th>Cấu hình chi tiết</th>
@@ -135,11 +146,14 @@ export default async function ItemsPage({
               </tr>
             </thead>
             <tbody>
-              {items.length === 0 ? (
-                <tr><td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: "#cbd5e1" }}>Chưa có thiết bị nào phù hợp.</td></tr>
+              {displayItems.length === 0 ? (
+                <tr><td colSpan={8} style={{ padding: "2rem", textAlign: "center", color: "#cbd5e1" }}>Chưa có thiết bị nào phù hợp.</td></tr>
               ) : (
-                items.map(item => (
+                displayItems.map((item, idx) => (
                   <tr key={item.id}>
+                    <td style={{ textAlign: "center", fontWeight: 700, color: "#94a3b8" }}>
+                      {(page - 1) * pageSize + idx + 1}
+                    </td>
                     <td style={{ fontWeight: 700, color: "#ffffff" }}>{item.name}</td>
                     <td>{getProjectBadges(item.projectName)}</td>
                     <td style={{ fontSize: "0.85rem", color: "#cbd5e1" }}>{item.specifications}</td>
@@ -160,6 +174,12 @@ export default async function ItemsPage({
             </tbody>
           </table>
         </div>
+        <PaginationControls
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={items.length}
+          pageSize={pageSize}
+        />
       </div>
     </div>
   );

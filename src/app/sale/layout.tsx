@@ -72,17 +72,6 @@ export default function SaleLayout({
             <span>Dashboard</span>
           </Link>
 
-          <div className="nav-group-label">QUẢN LÝ THỰC THỂ</div>
-          <Link
-            href="/sale/schools"
-            prefetch={true}
-            onMouseEnter={() => router.prefetch("/sale/schools")}
-            className={`nav-item ${pathname?.startsWith("/sale/schools") ? "active" : ""}`}
-          >
-            <SchoolIcon className="nav-item-icon" style={{ color: "#34d399" }} size={18} />
-            <span>Danh sách Trường học</span>
-          </Link>
-
           <div className="nav-group-label">HỒ SƠ & GIAO DỊCH</div>
           <Link
             href="/sale/proposals"
@@ -92,6 +81,17 @@ export default function SaleLayout({
           >
             <FileText className="nav-item-icon" style={{ color: "#818cf8" }} size={18} />
             <span>Kho Dự trù</span>
+          </Link>
+
+          <div className="nav-group-label">DANH MỤC DỮ LIỆU</div>
+          <Link
+            href="/sale/schools"
+            prefetch={true}
+            onMouseEnter={() => router.prefetch("/sale/schools")}
+            className={`nav-item ${pathname?.startsWith("/sale/schools") ? "active" : ""}`}
+          >
+            <SchoolIcon className="nav-item-icon" style={{ color: "#34d399" }} size={18} />
+            <span>Danh sách Trường học</span>
           </Link>
           <Link
             href="/sale/items"
@@ -142,9 +142,15 @@ export default function SaleLayout({
 
           <div className="user-profile" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
             <NotificationBell />
-            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <div className="avatar">
-                {userName.charAt(0).toUpperCase()}
+            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+              <div style={{
+                width: "32px", height: "32px", borderRadius: "8px",
+                background: "linear-gradient(135deg, #0284c7 0%, #38bdf8 100%)",
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontWeight: 900, color: "#030712", fontSize: "0.85rem",
+                boxShadow: "0 0 10px rgba(56, 189, 248, 0.3)", flexShrink: 0
+              }}>
+                {userName ? userName.charAt(0).toUpperCase() : "S"}
               </div>
               <div style={{ display: "flex", flexDirection: "column" }}>
                 <span style={{ fontSize: "0.85rem", fontWeight: 700, color: "#ffffff" }}>

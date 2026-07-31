@@ -73,7 +73,7 @@ export default function EditConstructionForm({ construction }: { construction: C
   };
 
   return (
-    <>
+    <div style={{ maxWidth: "680px", margin: "0 auto" }}>
       <div style={{ marginBottom: "1.25rem" }}>
         <Link
           href="/admin/constructions"
@@ -138,6 +138,6 @@ export default function EditConstructionForm({ construction }: { construction: C
           </div>
         </form>
       </div>
-    </>
+    </div>
   );
 }

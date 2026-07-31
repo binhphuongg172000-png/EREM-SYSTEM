@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import { vietnameseIncludes } from "@/lib/vietnamese";
 import SaleProposalRowActions from "./SaleProposalRowActions";
+import PaginationControls from "@/components/PaginationControls";
 import { 
   Search, SlidersHorizontal, Building2, Calendar, 
   TrendingUp, TrendingDown, Filter, X, FileText, Clock, Lock, CheckCircle2, Coins 
@@ -19,6 +20,7 @@ export default function SaleProposalsClient({
   const [budgetFilter, setBudgetFilter] = useState<"ALL" | "POSITIVE" | "NEGATIVE">("ALL");
   const [statusFilter, setStatusFilter] = useState<"ALL" | "INIT" | "LOCKED" | "COMPLETED">("ALL");
   const [projectFilter, setProjectFilter] = useState<"ALL" | "IPRO" | "ICLASS" | "IGEN" | "ILINK">("ALL");
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Calculate counts if not passed from server
   const computedCounts = useMemo(() => {
@@ -324,11 +326,11 @@ export default function SaleProposalsClient({
 
       {/* Results Count Bar */}
       <div style={{ fontSize: "0.8rem", color: "#94a3b8", marginBottom: "0.85rem", fontWeight: 600, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-        <span>Hiển thị <strong style={{ color: "#ffffff" }}>{filtered.length}</strong> / {proposals.length} hồ sơ dự trù</span>
+        <span>Tổng cộng: <strong style={{ color: "#ffffff" }}>{filtered.length}</strong> hồ sơ dự trù</span>
       </div>
 
       {/* Table Container */}
-      <div className="sale-table-card">
+      <div className="sale-table-card" style={{ padding: 0 }}>
         {filtered.length === 0 ? (
           <div className="empty-state">
             <div className="empty-state-icon">
@@ -346,99 +348,113 @@ export default function SaleProposalsClient({
             </p>
           </div>
         ) : (
-          <table className="sale-table" style={{ tableLayout: "auto", width: "100%" }}>
-            <colgroup>
-              <col style={{ width: "24%" }} />
-              <col style={{ width: "14%" }} />
-              <col style={{ width: "13%" }} />
-              <col style={{ width: "13%" }} />
-              <col style={{ width: "14%" }} />
-              <col style={{ width: "11%" }} />
-              <col style={{ width: "11%" }} />
-            </colgroup>
-            <thead>
-              <tr>
-                <th style={{ paddingLeft: "1rem" }}>Trường học</th>
-                <th>Ngày lập</th>
-                <th>Ngân sách cấp</th>
-                <th>Tổng đầu tư</th>
-                <th>Chênh lệch</th>
-                <th>Trạng thái</th>
-                <th style={{ textAlign: "right", paddingRight: "1rem" }}>Thao tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((p) => {
-                let statusStyleClass = "status-init";
-                let statusLabel = "Khởi tạo";
-                let StatusIcon = Clock;
-                
-                if (p.status === "COMPLETED") { 
-                  statusStyleClass = "status-completed"; 
-                  statusLabel = "Hoàn thành"; 
-                  StatusIcon = CheckCircle2;
-                } else if (p.school?.isLocked || p.status === "APPROVED") { 
-                  statusStyleClass = "status-locked"; 
-                  statusLabel = "Đang thực hiện"; 
-                  StatusIcon = Lock;
-                }
-                
-                const delta = p.allocatedBudget - p.investedBudget;
+          <>
+            <table className="sale-table" style={{ tableLayout: "auto", width: "100%", margin: 0 }}>
+              <colgroup>
+                <col style={{ width: "5%" }} />
+                <col style={{ width: "22%" }} />
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "13%" }} />
+                <col style={{ width: "13%" }} />
+                <col style={{ width: "14%" }} />
+                <col style={{ width: "10%" }} />
+                <col style={{ width: "9%" }} />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th style={{ width: "50px", textAlign: "center", paddingLeft: "0.75rem" }}>STT</th>
+                  <th>Trường học</th>
+                  <th>Ngày lập</th>
+                  <th>Ngân sách cấp</th>
+                  <th>Tổng đầu tư</th>
+                  <th>Chênh lệch</th>
+                  <th>Trạng thái</th>
+                  <th style={{ textAlign: "right", paddingRight: "1rem" }}>Thao tác</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filtered.slice((currentPage - 1) * 20, currentPage * 20).map((p, idx) => {
+                  let statusStyleClass = "status-init";
+                  let statusLabel = "Khởi tạo";
+                  let StatusIcon = Clock;
+                  
+                  if (p.status === "COMPLETED") { 
+                    statusStyleClass = "status-completed"; 
+                    statusLabel = "Hoàn thành"; 
+                    StatusIcon = CheckCircle2;
+                  } else if (p.school?.isLocked || p.status === "APPROVED") { 
+                    statusStyleClass = "status-locked"; 
+                    statusLabel = "Đang thực hiện"; 
+                    StatusIcon = Lock;
+                  }
+                  
+                  const delta = p.allocatedBudget - p.investedBudget;
 
-                return (
-                  <tr key={p.id}>
-                    <td style={{ paddingLeft: "1rem" }}>
-                      <div className="school-name">
-                        <Building2 size={15} color="#06b6d4" />
-                        <span>{p.school?.name}</span>
-                        <span style={{
-                          fontSize: "0.68rem", fontWeight: 800, padding: "2px 7px", borderRadius: "6px",
-                          border: "1px solid", marginLeft: "0.35rem", display: "inline-flex", alignItems: "center",
-                          borderColor: (p.projectName || "IPRO") === "ICLASS" ? "#a855f7" : (p.projectName || "IPRO") === "IGEN" ? "#f59e0b" : (p.projectName || "IPRO") === "ILINK" ? "#10b981" : "#38bdf8",
-                          color: (p.projectName || "IPRO") === "ICLASS" ? "#a855f7" : (p.projectName || "IPRO") === "IGEN" ? "#f59e0b" : (p.projectName || "IPRO") === "ILINK" ? "#34d399" : "#38bdf8",
-                          background: (p.projectName || "IPRO") === "ICLASS" ? "rgba(168,85,247,0.12)" : (p.projectName || "IPRO") === "IGEN" ? "rgba(245,158,11,0.12)" : (p.projectName || "IPRO") === "ILINK" ? "rgba(16,185,129,0.12)" : "rgba(56,189,248,0.12)"
-                        }}>
-                          {p.projectName || "IPRO"}
+                  return (
+                    <tr key={p.id}>
+                      <td style={{ textAlign: "center", fontWeight: 700, color: "#94a3b8", paddingLeft: "0.75rem" }}>
+                        {(currentPage - 1) * 20 + idx + 1}
+                      </td>
+                      <td>
+                        <div className="school-name">
+                          <Building2 size={15} color="#06b6d4" />
+                          <span>{p.school?.name}</span>
+                          <span style={{
+                            fontSize: "0.68rem", fontWeight: 800, padding: "2px 7px", borderRadius: "6px",
+                            border: "1px solid", marginLeft: "0.35rem", display: "inline-flex", alignItems: "center",
+                            borderColor: (p.projectName || "IPRO") === "ICLASS" ? "#a855f7" : (p.projectName || "IPRO") === "IGEN" ? "#f59e0b" : (p.projectName || "IPRO") === "ILINK" ? "#10b981" : "#38bdf8",
+                            color: (p.projectName || "IPRO") === "ICLASS" ? "#a855f7" : (p.projectName || "IPRO") === "IGEN" ? "#f59e0b" : (p.projectName || "IPRO") === "ILINK" ? "#34d399" : "#38bdf8",
+                            background: (p.projectName || "IPRO") === "ICLASS" ? "rgba(168,85,247,0.12)" : (p.projectName || "IPRO") === "IGEN" ? "rgba(245,158,11,0.12)" : (p.projectName || "IPRO") === "ILINK" ? "rgba(16,185,129,0.12)" : "rgba(56,189,248,0.12)"
+                          }}>
+                            {p.projectName || "IPRO"}
+                          </span>
+                        </div>
+                        <div className="school-address">{p.school?.address}</div>
+                      </td>
+                      <td>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#94a3b8", fontSize: "0.825rem" }}>
+                          <Calendar size={13} color="#64748b" />
+                          {new Date(p.createdAt).toLocaleString("vi-VN", { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                        </div>
+                      </td>
+                      <td style={{ whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "0.875rem", fontWeight: 700, color: "#f8fafc" }}>
+                          {p.allocatedBudget.toLocaleString()} đ
                         </span>
-                      </div>
-                      <div className="school-address">{p.school?.address}</div>
-                    </td>
-                    <td>
-                      <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#94a3b8", fontSize: "0.825rem" }}>
-                        <Calendar size={13} color="#64748b" />
-                        {new Date(p.createdAt).toLocaleString("vi-VN", { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}
-                      </div>
-                    </td>
-                    <td style={{ whiteSpace: "nowrap" }}>
-                      <span style={{ fontSize: "0.875rem", fontWeight: 700, color: "#f8fafc" }}>
-                        {p.allocatedBudget.toLocaleString()} đ
-                      </span>
-                    </td>
-                    <td style={{ whiteSpace: "nowrap" }}>
-                      <span style={{ fontSize: "0.875rem", fontWeight: 700, color: "#cbd5e1" }}>
-                        {p.investedBudget.toLocaleString()} đ
-                      </span>
-                    </td>
-                    <td style={{ whiteSpace: "nowrap" }}>
-                      <span className={`delta-chip ${delta >= 0 ? "delta-positive" : "delta-negative"}`}>
-                        {delta >= 0 ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
-                        {delta >= 0 ? "+" : ""}{delta.toLocaleString()} đ
-                      </span>
-                    </td>
-                    <td>
-                      <span className={`status-pill ${statusStyleClass}`}>
-                        <StatusIcon size={12} />
-                        {statusLabel}
-                      </span>
-                    </td>
-                    <td style={{ textAlign: "right", paddingRight: "1rem" }}>
-                      <SaleProposalRowActions proposal={p} />
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                      </td>
+                      <td style={{ whiteSpace: "nowrap" }}>
+                        <span style={{ fontSize: "0.875rem", fontWeight: 700, color: "#cbd5e1" }}>
+                          {p.investedBudget.toLocaleString()} đ
+                        </span>
+                      </td>
+                      <td style={{ whiteSpace: "nowrap" }}>
+                        <span className={`delta-chip ${delta >= 0 ? "delta-positive" : "delta-negative"}`}>
+                          {delta >= 0 ? <TrendingUp size={13} /> : <TrendingDown size={13} />}
+                          {delta >= 0 ? "+" : ""}{delta.toLocaleString()} đ
+                        </span>
+                      </td>
+                      <td>
+                        <span className={`status-pill ${statusStyleClass}`}>
+                          <StatusIcon size={12} />
+                          {statusLabel}
+                        </span>
+                      </td>
+                      <td style={{ textAlign: "right", paddingRight: "1rem" }}>
+                        <SaleProposalRowActions proposal={p} />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={Math.ceil(filtered.length / 20)}
+              totalItems={filtered.length}
+              pageSize={20}
+              onPageChange={setCurrentPage}
+            />
+          </>
         )}
       </div>
     </>

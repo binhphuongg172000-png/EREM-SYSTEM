@@ -3,11 +3,13 @@
 import React, { useState, useMemo } from "react";
 import SaleHandoverRowActions from "./SaleHandoverRowActions";
 import { Search, ClipboardCheck, Building2, Calendar, UserCheck } from "lucide-react";
-
+import PaginationControls from "@/components/PaginationControls";
 import { vietnameseIncludes } from "@/lib/vietnamese";
 
 export default function SaleHandoversClient({ handovers }: { handovers: any[] }) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 20;
 
   const filtered = useMemo(() => handovers.filter((h) => {
     if (!searchQuery.trim()) return true;
@@ -15,6 +17,9 @@ export default function SaleHandoversClient({ handovers }: { handovers: any[] })
            vietnameseIncludes(h.school?.address, searchQuery) || 
            vietnameseIncludes(h.receiver?.name, searchQuery);
   }), [handovers, searchQuery]);
+
+  const totalPages = Math.ceil(filtered.length / pageSize);
+  const displayHandovers = filtered.slice((currentPage - 1) * pageSize, currentPage * pageSize);
 
   return (
     <>
@@ -46,18 +51,23 @@ export default function SaleHandoversClient({ handovers }: { handovers: any[] })
       `}</style>
 
       {/* Search Input */}
-      <div className="handover-search-wrap">
-        <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
-        <input 
-          type="text" 
-          placeholder="Tìm kiếm theo tên trường, địa chỉ, người nhận..." 
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-        />
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.25rem", gap: "1rem", flexWrap: "wrap" }}>
+        <div className="handover-search-wrap" style={{ margin: 0, flex: 1 }}>
+          <Search size={16} style={{ position: "absolute", left: "12px", top: "50%", transform: "translateY(-50%)", color: "#64748b" }} />
+          <input 
+            type="text" 
+            placeholder="Tìm kiếm theo tên trường, địa chỉ, người nhận..." 
+            value={searchQuery}
+            onChange={e => { setSearchQuery(e.target.value); setCurrentPage(1); }}
+          />
+        </div>
+        <span style={{ fontSize: "0.8rem", color: "#94a3b8", fontWeight: 600 }}>
+          Tổng cộng: {filtered.length} biên bản
+        </span>
       </div>
 
       {/* Table Card Container */}
-      <div className="sale-table-card">
+      <div className="sale-table-card" style={{ padding: 0 }}>
         {filtered.length === 0 ? (
           <div style={{ padding: "3.5rem 2rem", textAlign: "center" }}>
             <div style={{ width: "60px", height: "60px", borderRadius: "18px", background: "rgba(6, 182, 212, 0.1)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1.25rem" }}>
@@ -71,54 +81,67 @@ export default function SaleHandoversClient({ handovers }: { handovers: any[] })
             </p>
           </div>
         ) : (
-          <table className="sale-table">
-            <thead>
-              <tr>
-                <th style={{ paddingLeft: "1.5rem" }}>Trường học</th>
-                <th>Người Nhận</th>
-                <th>Ngày Lập</th>
-                <th>Trạng Thái</th>
-                <th style={{ textAlign: "right", paddingRight: "1.5rem" }}>Thao Tác</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((h) => (
-                <tr key={h.id}>
-                  <td style={{ paddingLeft: "1.5rem" }}>
-                    <div style={{ fontWeight: 700, color: "#ffffff", display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9rem", marginBottom: "0.2rem" }}>
-                      <Building2 size={15} color="#06b6d4" />
-                      {h.school?.name}
-                    </div>
-                    <div style={{ fontSize: "0.78rem", color: "#64748b", paddingLeft: "1.4rem" }}>{h.school?.address}</div>
-                  </td>
-                  <td>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#e2e8f0", fontSize: "0.875rem", fontWeight: 600 }}>
-                      <UserCheck size={14} color="#818cf8" />
-                      {h.receiver?.name || "Bàn giao theo HĐ"}
-                    </div>
-                  </td>
-                  <td>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#94a3b8", fontSize: "0.825rem" }}>
-                      <Calendar size={13} color="#64748b" />
-                      {new Date(h.createdAt).toLocaleString("vi-VN", { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}
-                    </div>
-                  </td>
-                  <td>
-                    {h.status === "CONFIRMED" ? (
-                      <span className="handover-status-badge status-confirmed">Đã ký nhận</span>
-                    ) : h.status === "SUPERSEDED" ? (
-                      <span className="handover-status-badge status-superseded">Đã có bản mới</span>
-                    ) : (
-                      <span className="handover-status-badge status-pending">Khởi tạo</span>
-                    )}
-                  </td>
-                  <td style={{ textAlign: "right", paddingRight: "1.5rem" }}>
-                    <SaleHandoverRowActions handover={h} />
-                  </td>
+          <>
+            <table className="sale-table" style={{ margin: 0, width: "100%" }}>
+              <thead>
+                <tr>
+                  <th style={{ width: "50px", textAlign: "center", paddingLeft: "0.75rem" }}>STT</th>
+                  <th>Trường học</th>
+                  <th>Người Nhận</th>
+                  <th>Ngày Lập</th>
+                  <th>Trạng Thái</th>
+                  <th style={{ textAlign: "right", paddingRight: "1.5rem" }}>Thao Tác</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {displayHandovers.map((h, idx) => (
+                  <tr key={h.id}>
+                    <td style={{ textAlign: "center", fontWeight: 700, color: "#94a3b8", paddingLeft: "0.75rem" }}>
+                      {(currentPage - 1) * pageSize + idx + 1}
+                    </td>
+                    <td>
+                      <div style={{ fontWeight: 700, color: "#ffffff", display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.9rem", marginBottom: "0.2rem" }}>
+                        <Building2 size={15} color="#06b6d4" />
+                        {h.school?.name}
+                      </div>
+                      <div style={{ fontSize: "0.78rem", color: "#64748b", paddingLeft: "1.4rem" }}>{h.school?.address}</div>
+                    </td>
+                    <td>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#e2e8f0", fontSize: "0.875rem", fontWeight: 600 }}>
+                        <UserCheck size={14} color="#818cf8" />
+                        {h.receiver?.name || "Bàn giao theo HĐ"}
+                      </div>
+                    </td>
+                    <td>
+                      <div style={{ display: "flex", alignItems: "center", gap: "0.4rem", color: "#94a3b8", fontSize: "0.825rem" }}>
+                        <Calendar size={13} color="#64748b" />
+                        {new Date(h.createdAt).toLocaleString("vi-VN", { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                      </div>
+                    </td>
+                    <td>
+                      {h.status === "CONFIRMED" ? (
+                        <span className="handover-status-badge status-confirmed">Đã ký nhận</span>
+                      ) : h.status === "SUPERSEDED" ? (
+                        <span className="handover-status-badge status-superseded">Đã có bản mới</span>
+                      ) : (
+                        <span className="handover-status-badge status-pending">Khởi tạo</span>
+                      )}
+                    </td>
+                    <td style={{ textAlign: "right", paddingRight: "1.5rem" }}>
+                      <SaleHandoverRowActions handover={h} />
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <PaginationControls
+              currentPage={currentPage}
+              totalPages={totalPages}
+              totalItems={filtered.length}
+              pageSize={pageSize}
+              onPageChange={setCurrentPage}
+            />
+          </>
         )}
       </div>
     </>

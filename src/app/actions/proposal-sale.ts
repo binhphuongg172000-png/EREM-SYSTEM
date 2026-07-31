@@ -24,7 +24,10 @@ export async function createProposal(data: any) {
         }
       }),
       prisma.proposal.updateMany({
-        where: { schoolId: data.schoolId },
+        where: { 
+          schoolId: data.schoolId,
+          projectName: data.projectName || "IPRO"
+        },
         data: { status: "CLOSED" }
       }),
       prisma.proposal.create({

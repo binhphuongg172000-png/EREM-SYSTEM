@@ -158,7 +158,7 @@ export default function LoginPage() {
               <EremLogo
                 variant="vertical"
                 size={72}
-                badge="SYSTEM v2.5 • 8D CORE"
+                badge="IT HCM PLATFORM"
                 subtitle="Quản Lý Dự Trù & Bàn Giao Thiết Bị"
               />
             </div>

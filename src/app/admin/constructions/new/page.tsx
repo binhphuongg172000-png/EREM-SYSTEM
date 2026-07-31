@@ -62,7 +62,7 @@ export default function NewConstructionPage() {
   };
 
   return (
-    <>
+    <div style={{ maxWidth: "680px", margin: "0 auto" }}>
       <div style={{ marginBottom: "1.25rem" }}>
         <Link
           href="/admin/constructions"
@@ -127,6 +127,6 @@ export default function NewConstructionPage() {
           </div>
         </form>
       </div>
-    </>
+    </div>
   );
 }

@@ -4,6 +4,17 @@ import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { clearCache } from "@/lib/cache";
 
+function safeRevalidate(paths: string[]) {
+  clearCache();
+  for (const p of paths) {
+    try {
+      revalidatePath(p);
+    } catch {
+      // ignore standalone context revalidate error
+    }
+  }
+}
+
 export async function createItem(data: any) {
   try {
     if (!data.name || !data.standardPrice) {
@@ -32,9 +43,7 @@ export async function createItem(data: any) {
       },
     });
 
-    clearCache();
-    revalidatePath("/admin/items");
-    revalidatePath("/sale/items");
+    safeRevalidate(["/admin/items", "/sale/items"]);
     return { success: true, item: JSON.parse(JSON.stringify(newItem)) };
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi tạo thiết bị" };
@@ -68,10 +77,7 @@ export async function createOtherInvestment(data: any) {
       },
     });
 
-    clearCache();
-    revalidatePath("/admin/items");
-    revalidatePath("/admin/investments");
-    revalidatePath("/admin/constructions");
+    safeRevalidate(["/admin/items", "/admin/investments", "/admin/constructions"]);
     return { success: true, investment: JSON.parse(JSON.stringify(newInv)) };
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi tạo hạng mục" };
@@ -83,10 +89,7 @@ export async function deleteOtherInvestment(id: string) {
     await prisma.otherInvestment.delete({
       where: { id },
     });
-    clearCache();
-    revalidatePath("/admin/investments");
-    revalidatePath("/admin/constructions");
-    revalidatePath("/admin/items");
+    safeRevalidate(["/admin/investments", "/admin/constructions", "/admin/items"]);
     return { success: true };
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi xóa hạng mục" };
@@ -98,9 +101,7 @@ export async function deleteItem(id: string) {
     await prisma.item.delete({
       where: { id },
     });
-    clearCache();
-    revalidatePath("/admin/items");
-    revalidatePath("/sale/items");
+    safeRevalidate(["/admin/items", "/sale/items"]);
     return { success: true };
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi xóa thiết bị" };
@@ -140,9 +141,7 @@ export async function updateItem(id: string, data: any) {
       data: updateData,
     });
 
-    clearCache();
-    revalidatePath("/admin/items");
-    revalidatePath("/sale/items");
+    safeRevalidate(["/admin/items", "/sale/items"]);
     return { success: true, item: JSON.parse(JSON.stringify(updated)) };
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi cập nhật thiết bị" };
@@ -178,10 +177,7 @@ export async function updateOtherInvestment(id: string, data: any) {
       },
     });
 
-    clearCache();
-    revalidatePath("/admin/investments");
-    revalidatePath("/admin/constructions");
-    revalidatePath("/admin/items");
+    safeRevalidate(["/admin/investments", "/admin/constructions", "/admin/items"]);
     return { success: true, investment: JSON.parse(JSON.stringify(updated)) };
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi cập nhật hạng mục" };
@@ -205,9 +201,7 @@ export async function importItemsBulk(records: { code?: string; name: string; sp
       skipDuplicates: true,
     });
 
-    clearCache();
-    revalidatePath("/admin/items");
-    revalidatePath("/sale/items");
+    safeRevalidate(["/admin/items", "/sale/items"]);
     return { success: true, count: result.count };
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi nhập danh sách thiết bị từ Excel" };
@@ -231,10 +225,7 @@ export async function importOtherInvestmentsBulk(
       data: dataToCreate,
     });
 
-    clearCache();
-    revalidatePath("/admin/investments");
-    revalidatePath("/admin/constructions");
-    revalidatePath("/admin/items");
+    safeRevalidate(["/admin/investments", "/admin/constructions", "/admin/items"]);
     return { success: true, count: result.count };
   } catch (error: any) {
     return { success: false, message: error.message || "Lỗi nhập danh sách từ Excel" };

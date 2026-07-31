@@ -5,7 +5,7 @@ import { createPortal } from "react-dom";
 import { useRouter } from "next/navigation";
 import { createProposal } from "@/app/actions/proposal-sale";
 import { vietnameseIncludes } from "@/lib/vietnamese";
-import { AlertCircle, AlertTriangle, RefreshCcw, Search, Plus, Trash2, Package, Building2, ChevronDown, CheckCircle2, FileText, TrendingUp, GraduationCap, DoorOpen, Wrench } from "lucide-react";
+import { AlertCircle, AlertTriangle, RefreshCcw, Search, Plus, Trash2, Package, Building2, ChevronDown, CheckCircle2, FileText, TrendingUp, GraduationCap, DoorOpen, Wrench, SlidersHorizontal } from "lucide-react";
 import CurrencyInput from "@/components/CurrencyInput";
 
 type ProposalItemInput = {
@@ -32,12 +32,19 @@ type School = {
   oldStudents: number;
   newStudents: number;
   isLocked: boolean;
-  latestProposal: {
+  projects?: string[];
+  proposalsByProject?: Record<string, {
     id: string;
+    projectName: string;
+    status: string;
     updatedAt: string;
+    investedClassrooms?: number;
+    oldStudents?: number;
+    newStudents?: number;
+    allocatedBudget?: number;
     items: ProposalItemInput[];
     investments: ProposalInvestmentInput[];
-  } | null;
+  }>;
 };
 
 type CatalogItem = { id: string; name: string; specifications: string; standardPrice: number; unit: string; projectName?: string };
@@ -82,7 +89,8 @@ export default function ProposalForm({
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [schoolFilter, setSchoolFilter] = useState<"ALL" | "NONE" | "INIT" | "LOCKED" | "COMPLETED">("ALL");
-  const [projectName, setProjectName] = useState<"IPRO" | "ICLASS" | "IGEN" | "ILINK">("IPRO");
+  const [projectName, setProjectName] = useState<"IPRO" | "ICLASS" | "IGEN" | "ILINK" | "">("");
+  const [pendingProjectChange, setPendingProjectChange] = useState<"IPRO" | "ICLASS" | "IGEN" | "ILINK" | null>(null);
   const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
   const [catalogModalTab, setCatalogModalTab] = useState<"ALL" | "ITEM" | "INVESTMENT" | "CONSTRUCTION">("ALL");
   const [catalogModalSearch, setCatalogModalSearch] = useState("");
@@ -165,74 +173,94 @@ export default function ProposalForm({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Load school data when selected
+  // Load school & project data when selected school or project changes
   useEffect(() => {
     if (selectedSchool) {
-      const details = {
-        investedClassrooms: selectedSchool.investedClassrooms || "",
-        oldStudents: selectedSchool.oldStudents || "",
-        newStudents: selectedSchool.newStudents || "",
-      };
-      
-      let initialItems: ProposalItem[] = [];
-      if (selectedSchool.latestProposal) {
-        let tempIdCounter = Date.now();
-        const itemMap = new Map<string, any>();
-        selectedSchool.latestProposal.items.forEach(i => {
-          const itemQty = Math.max(0.01, Number(i.quantity) || 1);
-          if (itemMap.has(i.name)) {
-            itemMap.get(i.name).quantity += itemQty;
-          } else {
-            itemMap.set(i.name, {
-              tempId: tempIdCounter++,
-              name: i.name,
-              specifications: i.specifications,
-              quantity: itemQty,
-              price: Number(i.price),
-              type: "ITEM" as const,
-              unit: (i as any).unit || "Bộ"
-            });
-          }
-        });
-        
-        const invMap = new Map<string, any>();
-        selectedSchool.latestProposal.investments.forEach(inv => {
-          const invQty = Math.max(0.01, Number(inv.quantity) || 1);
-          if (invMap.has(inv.name)) {
-            invMap.get(inv.name).quantity += invQty;
-          } else {
-            invMap.set(inv.name, {
-              tempId: tempIdCounter++,
-              name: inv.name,
-              specifications: inv.description,
-              quantity: invQty,
-              price: Number(inv.price),
-              type: "INVESTMENT" as const,
-              unit: (inv as any).unit || "Cái"
-            });
-          }
-        });
-
-        const mappedItems = Array.from(itemMap.values());
-        const mappedInvestments = Array.from(invMap.values());
-        initialItems = [...mappedItems, ...mappedInvestments];
-      }
-
-      setSchoolDetails(details);
-      setItems(initialItems);
-      
-      const semanticHash = JSON.stringify({
-        details,
-        items: initialItems.map(i => ({ name: i.name, quantity: i.quantity, price: i.price }))
-      });
-      setInitialHash(semanticHash);
       setSearchQuery(`${selectedSchool.name}`);
+
+      if (projectName) {
+        const matchingProposal = selectedSchool.proposalsByProject?.[projectName];
+        
+        let details: {
+          investedClassrooms: number | string;
+          oldStudents: number | string;
+          newStudents: number | string;
+        } = {
+          investedClassrooms: "",
+          oldStudents: "",
+          newStudents: "",
+        };
+
+        let initialItems: ProposalItem[] = [];
+
+        if (matchingProposal) {
+          details = {
+            investedClassrooms: matchingProposal.investedClassrooms ?? "",
+            oldStudents: matchingProposal.oldStudents ?? "",
+            newStudents: matchingProposal.newStudents ?? "",
+          };
+
+          let tempIdCounter = Date.now();
+          const itemMap = new Map<string, any>();
+          (matchingProposal.items || []).forEach(i => {
+            const itemQty = Math.max(0.01, Number(i.quantity) || 1);
+            if (itemMap.has(i.name)) {
+              itemMap.get(i.name).quantity += itemQty;
+            } else {
+              itemMap.set(i.name, {
+                tempId: tempIdCounter++,
+                name: i.name,
+                specifications: i.specifications,
+                quantity: itemQty,
+                price: Number(i.price),
+                type: "ITEM" as const,
+                unit: (i as any).unit || "Bộ"
+              });
+            }
+          });
+          
+          const invMap = new Map<string, any>();
+          (matchingProposal.investments || []).forEach(inv => {
+            const invQty = Math.max(0.01, Number(inv.quantity) || 1);
+            if (invMap.has(inv.name)) {
+              invMap.get(inv.name).quantity += invQty;
+            } else {
+              invMap.set(inv.name, {
+                tempId: tempIdCounter++,
+                name: inv.name,
+                specifications: inv.description,
+                quantity: invQty,
+                price: Number(inv.price),
+                type: "INVESTMENT" as const,
+                unit: (inv as any).unit || "Gói"
+              });
+            }
+          });
+
+          const mappedItems = Array.from(itemMap.values());
+          const mappedInvestments = Array.from(invMap.values());
+          initialItems = [...mappedItems, ...mappedInvestments];
+        }
+
+        setSchoolDetails(details);
+        setItems(initialItems);
+        
+        const semanticHash = JSON.stringify({
+          details,
+          items: initialItems.map(i => ({ name: i.name, quantity: i.quantity, price: i.price }))
+        });
+        setInitialHash(semanticHash);
+      } else {
+        setSchoolDetails({ investedClassrooms: "", oldStudents: "", newStudents: "" });
+        setItems([]);
+        setInitialHash("");
+      }
     } else {
       setSchoolDetails({ investedClassrooms: "", oldStudents: "", newStudents: "" });
       setItems([]);
       setInitialHash("");
     }
-  }, [selectedSchoolId, schools]);
+  }, [selectedSchoolId, projectName]);
 
   const currentHash = useMemo(() => {
     return JSON.stringify({
@@ -321,6 +349,7 @@ export default function ProposalForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedSchoolId) return alert("Vui lòng chọn trường");
+    if (!projectName) return alert("Vui lòng chọn Dự án triển khai ở Bước 2!");
     if (selectedSchool?.isLocked) return alert("Trường này đã bị khóa!");
     if (items.length === 0) return alert("Vui lòng chọn ít nhất một thiết bị hoặc hạng mục đầu tư!");
 
@@ -815,242 +844,286 @@ export default function ProposalForm({
       <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1.25rem", animation: "fadeIn 0.4s ease", paddingBottom: selectedSchool ? "6rem" : 0 }}>
         
         {/* Step Indicator Wrapper */}
-        <div className="wizard-step-wrap" style={{ width: "100%", overflowX: "hidden" }}>
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "0.2rem", padding: "0.25rem 0.4rem", background: "rgba(15, 23, 42, 0.5)", border: "1px solid #1e293b", borderRadius: "10px", width: "100%" }}>
-          {[
-            { step: 1, label: "1. Chọn trường", done: !!selectedSchoolId },
-            { step: 2, label: "2. Hạng mục", done: !!selectedSchoolId && items.length > 0 },
-            { step: 3, label: "3. Xác nhận", done: false },
-          ].map((s, idx) => (
-            <React.Fragment key={s.step}>
-              {idx > 0 && (
-                <div style={{ width: 12, height: 2, borderRadius: 1, background: s.done || (idx === 1 && !!selectedSchoolId) || (idx === 2 && items.length > 0) ? "#38bdf8" : "#334155", transition: "background 0.4s", flexShrink: 0 }} />
-              )}
-              <div style={{
-                display: "flex", alignItems: "center", gap: "0.25rem",
-                padding: "0.25rem 0.45rem", borderRadius: "6px",
-                background: s.done ? "rgba(16,185,129,0.08)" : (idx === 0 && !selectedSchoolId) || (idx === 1 && selectedSchoolId && items.length === 0) || (idx === 2 && items.length > 0) ? "rgba(56,189,248,0.08)" : "transparent",
-                border: `1px solid ${s.done ? "rgba(16,185,129,0.2)" : (idx === 0 && !selectedSchoolId) || (idx === 1 && selectedSchoolId && items.length === 0) || (idx === 2 && items.length > 0) ? "rgba(56,189,248,0.2)" : "transparent"}`,
-                transition: "all 0.3s ease",
-                flexShrink: 1,
-                minWidth: 0
-              }}>
-                <div style={{
-                  width: 18, height: 18, borderRadius: "50%",
-                  background: s.done ? "#10b981" : "#334155",
-                  color: s.done ? "#fff" : "#64748b",
-                  display: "flex", alignItems: "center", justifyContent: "center",
-                  fontSize: "0.55rem", fontWeight: 800, transition: "all 0.3s",
-                  flexShrink: 0
+        <div className="wizard-step-wrap" style={{ width: "100%", margin: "0 0 0.5rem 0" }}>
+          <div style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(3, 1fr)",
+            gap: "0.75rem",
+            width: "100%"
+          }}>
+            {[
+              { step: 1, title: "Chọn trường học", sub: selectedSchool ? selectedSchool.name : "Chưa chọn", done: !!selectedSchoolId },
+              { step: 2, title: "Chọn dự án", sub: projectName ? `Dự án ${projectName}` : "Chưa chọn", done: !!selectedSchoolId && !!projectName },
+              { step: 3, title: "Lập dự trù", sub: items.length > 0 ? `${items.length} hạng mục` : "Chưa có hạng mục", done: !!selectedSchoolId && !!projectName && items.length > 0 },
+            ].map((s) => {
+              const isActive = (s.step === 1 && !selectedSchoolId) || (s.step === 2 && selectedSchoolId && !projectName) || (s.step === 3 && selectedSchoolId && projectName);
+              return (
+                <div key={s.step} style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.65rem",
+                  padding: "0.6rem 0.85rem",
+                  borderRadius: "10px",
+                  background: s.done ? "rgba(16, 185, 129, 0.08)" : isActive ? "rgba(56, 189, 248, 0.1)" : "rgba(15, 23, 42, 0.4)",
+                  border: `1px solid ${s.done ? "rgba(16, 185, 129, 0.3)" : isActive ? "rgba(56, 189, 248, 0.4)" : "#1e293b"}`,
+                  transition: "all 0.3s ease"
                 }}>
-                  {s.done ? "✓" : s.step}
-                </div>
-                <span style={{ fontSize: "0.7rem", fontWeight: 600, color: s.done ? "#10b981" : "#94a3b8", transition: "color 0.3s", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.label}</span>
-              </div>
-            </React.Fragment>
-          ))}
-        </div>
-        </div>
-
-        {/* SECTION 1: BƯỚC 1 - CHỌN TRƯỜNG HỌC */}
-        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
-          
-          {/* STEP 1: School Search */}
-          <div className="proposal-card" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", margin: 0 }}>
-            <div>
-              <div className="section-title">
-                <div className="icon-wrap" style={{ background: "linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(59, 130, 246, 0.2))" }}>
-                  <Search size={18} color="#38bdf8" />
-                </div>
-                Tìm kiếm Trường học
-              </div>
-              
-              <div className="search-wrapper" ref={schoolSearchRef} style={{ position: "relative", maxWidth: "420px" }}>
-                <div className="input-with-icon">
-                  <Search size={18} className="search-icon" />
-                  <input 
-                    type="text" 
-                    className="form-input" 
-                    placeholder="Nhập tên trường học để tìm..." 
-                    value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      setIsDropdownOpen(true);
-                      if (selectedSchoolId) setSelectedSchoolId("");
-                    }}
-                    onFocus={() => setIsDropdownOpen(true)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        e.preventDefault();
-                        (e.target as HTMLInputElement).blur();
-                      }
-                    }}
-                  />
-                </div>
-                {isDropdownOpen && (
-                  <ul className="dropdown-list">
-                    {filteredSchools.length > 0 ? filteredSchools.map(s => (
-                      <li 
-                        key={s.id} 
-                        className="dropdown-item"
-                        style={{ background: s.id === selectedSchoolId ? "rgba(56, 189, 248, 0.1)" : undefined }}
-                        onClick={() => {
-                          setSelectedSchoolId(s.id);
-                          setSearchQuery(s.name);
-                          setIsDropdownOpen(false);
-                        }}
-                      >
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                          <div>
-                            <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.95rem" }}>
-                              {s.name}
-                            </div>
-                            <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: 2 }}>{s.address}</div>
-                          </div>
-                          {s.isLocked && (
-                            <span style={{ fontSize: "0.7rem", padding: "3px 8px", borderRadius: 6, background: "rgba(244, 63, 94, 0.15)", color: "#f43f5e", fontWeight: 600 }}>Đang thực hiện</span>
-                          )}
-                        </div>
-                      </li>
-                    )) : (
-                      <li style={{ padding: "1.5rem", textAlign: "center", color: "#64748b" }}>Không tìm thấy trường nào</li>
-                    )}
-                  </ul>
-                )}
-              </div>
-
-              {/* SECTION: BƯỚC CHỌN DỰ ÁN (IPRO / ICLASS / IGEN) */}
-              <div style={{ marginTop: "1rem" }}>
-                <label style={{ fontSize: "0.82rem", fontWeight: 700, color: "#94a3b8", marginBottom: "0.45rem", display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                  <span>Chọn Dự án triển khai:</span>
-                </label>
-                <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.6rem", maxWidth: "540px" }}>
-                  {[
-                    { key: "IPRO", label: "IPRO", color: "#38bdf8", bg: "rgba(56, 189, 248, 0.15)" },
-                    { key: "ICLASS", label: "ICLASS", color: "#a855f7", bg: "rgba(168, 85, 247, 0.15)" },
-                    { key: "IGEN", label: "IGEN", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)" },
-                    { key: "ILINK", label: "ILINK", color: "#10b981", bg: "rgba(16, 185, 129, 0.15)" },
-                  ].map((p) => {
-                    const isSelected = projectName === p.key;
-                    return (
-                      <button
-                        key={p.key}
-                        type="button"
-                        disabled={!!selectedSchool?.isLocked}
-                        onClick={() => setProjectName(p.key as any)}
-                        style={{
-                          padding: "0.55rem 0.75rem",
-                          borderRadius: "10px",
-                          border: `1.5px solid ${isSelected ? p.color : "#334155"}`,
-                          background: isSelected ? p.bg : "rgba(15, 23, 42, 0.5)",
-                          color: isSelected ? p.color : "#94a3b8",
-                          fontWeight: isSelected ? 800 : 600,
-                          fontSize: "0.85rem",
-                          cursor: selectedSchool?.isLocked ? "not-allowed" : "pointer",
-                          transition: "all 0.2s ease",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          gap: "0.4rem",
-                          boxShadow: isSelected ? `0 0 12px ${p.color}25` : "none"
-                        }}
-                      >
-                        <div style={{
-                          width: 8, height: 8, borderRadius: "50%",
-                          background: isSelected ? p.color : "#475569"
-                        }} />
-                        <span>{p.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* School Info Section or Quick Select Grid */}
-              {selectedSchool ? (
-                <div style={{ marginTop: "1rem", animation: "fadeIn 0.3s ease" }}>
-                  {/* Alerts */}
-                  {selectedSchool.isLocked && (
-                    <div className="alert-box error">
-                      <AlertCircle size={18} style={{ flexShrink: 0, marginTop: 2 }} />
-                      <span><strong>Trường đang trong trạng thái "Đang thực hiện".</strong> Bạn có thể xem thông tin chi tiết nhưng <strong>không thể chỉnh sửa</strong> hoặc lưu bản dự trù mới.</span>
+                  <div style={{
+                    width: 24, height: 24, borderRadius: "50%",
+                    background: s.done ? "#10b981" : isActive ? "#38bdf8" : "#334155",
+                    color: s.done || isActive ? "#0f172a" : "#94a3b8",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    fontSize: "0.75rem", fontWeight: 800, flexShrink: 0
+                  }}>
+                    {s.done ? "✓" : s.step}
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <div style={{ fontSize: "0.8rem", fontWeight: 700, color: s.done ? "#10b981" : isActive ? "#38bdf8" : "#94a3b8", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {s.title}
                     </div>
-                  )}
-                  {selectedSchool.latestProposal && !selectedSchool.isLocked && (
-                    <div className="alert-box warning">
-                      <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: 2 }} />
-                      <span>Trường đã có bản dự trù trước đó (cập nhật {new Date(selectedSchool.latestProposal.updatedAt).toLocaleString("vi-VN")}). Dữ liệu cũ đã được load lại — Khi bấm lưu sẽ tạo ra một <strong>phiên bản dự trù mới</strong>.</span>
-                    </div>
-                  )}
-
-                  {/* Stats Grid */}
-                  <div className="student-inputs-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.75rem", background: "rgba(30, 41, 59, 0.5)", padding: "0.85rem", borderRadius: "10px", border: "1px solid #334155" }}>
-                    <div>
-                      <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "0.35rem", fontWeight: 500 }}><GraduationCap size={14}/> HS Cũ</label>
-                      <input type="number" className="form-input" disabled={selectedSchool.isLocked} style={{ width: "100%", padding: "0.5rem 0.75rem", background: "rgba(15,23,42,0.4)", borderRadius: "8px" }} 
-                        value={schoolDetails.oldStudents} 
-                        onChange={e => setSchoolDetails({...schoolDetails, oldStudents: e.target.value})} 
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#38bdf8", marginBottom: "0.35rem", fontWeight: 500 }}><GraduationCap size={14}/> HS Mới <span style={{color:"#f43f5e"}}>*</span></label>
-                      <input type="number" className="form-input" required disabled={selectedSchool.isLocked} style={{ width: "100%", padding: "0.5rem 0.75rem", background: "rgba(56,189,248,0.05)", border: "1px solid rgba(56,189,248,0.3)", borderRadius: "8px", color: "#38bdf8" }} 
-                        value={schoolDetails.newStudents} 
-                        onChange={e => setSchoolDetails({...schoolDetails, newStudents: e.target.value})} 
-                      />
-                    </div>
-                    <div>
-                      <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#a855f7", marginBottom: "0.35rem", fontWeight: 500 }}><DoorOpen size={14}/> Phòng ĐT</label>
-                      <input type="number" className="form-input" disabled={selectedSchool.isLocked} style={{ width: "100%", padding: "0.5rem 0.75rem", background: "rgba(168,85,247,0.05)", border: "1px solid rgba(168,85,247,0.3)", borderRadius: "8px", color: "#a855f7" }} 
-                        value={schoolDetails.investedClassrooms} 
-                        onChange={e => setSchoolDetails({...schoolDetails, investedClassrooms: e.target.value})} 
-                      />
+                    <div style={{ fontSize: "0.7rem", color: s.done ? "#34d399" : isActive ? "#7dd3fc" : "#64748b", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {s.sub}
                     </div>
                   </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* SECTION 1: BƯỚC 1 (CHỌN TRƯỜNG) & BƯỚC 2 (CHỌN DỰ ÁN) */}
+        <div style={{ display: "flex", flexDirection: "column", gap: "1.25rem" }}>
+          
+          <div className="proposal-card" style={{ display: "flex", flexDirection: "column", justifyContent: "space-between", margin: 0 }}>
+            <div>
+              {/* BƯỚC 1: Chọn trường */}
+              <div className="section-title">
+                <div className="icon-wrap" style={{ background: "linear-gradient(135deg, rgba(56, 189, 248, 0.2), rgba(59, 130, 246, 0.2))" }}>
+                  <Building2 size={18} color="#38bdf8" />
+                </div>
+                Bước 1: Chọn Trường học
+              </div>
+              
+              {selectedSchool ? (
+                <div style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  background: "linear-gradient(135deg, rgba(56, 189, 248, 0.1), rgba(30, 41, 59, 0.8))",
+                  border: "1px solid rgba(56, 189, 248, 0.35)",
+                  borderRadius: "12px",
+                  padding: "0.85rem 1.1rem",
+                  marginTop: "0.5rem"
+                }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: "0.85rem" }}>
+                    <div style={{ width: 42, height: 42, borderRadius: "10px", background: "rgba(56, 189, 248, 0.2)", border: "1px solid rgba(56, 189, 248, 0.4)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <Building2 size={22} color="#38bdf8" />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: "0.72rem", color: "#38bdf8", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.06em" }}>Trường đang chọn</div>
+                      <div style={{ fontSize: "1.05rem", fontWeight: 800, color: "#ffffff", marginTop: 1 }}>{selectedSchool.name}</div>
+                      <div style={{ fontSize: "0.78rem", color: "#94a3b8" }}>{selectedSchool.address}</div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (items.length > 0) {
+                        if (!confirm("Thay đổi trường học sẽ làm mới dự trù. Bạn có chắc chắn không?")) return;
+                      }
+                      setSelectedSchoolId("");
+                      setSearchQuery("");
+                      setProjectName("");
+                      setItems([]);
+                    }}
+                    className="btn btn-secondary"
+                    style={{ fontSize: "0.78rem", padding: "0.4rem 0.85rem", borderRadius: "8px", background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", color: "#cbd5e1", fontWeight: 600 }}
+                  >
+                    Đổi trường khác
+                  </button>
+                </div>
+              ) : (
+                <div className="search-wrapper" ref={schoolSearchRef} style={{ position: "relative", maxWidth: "460px" }}>
+                  <div className="input-with-icon">
+                    <Search size={18} className="search-icon" />
+                    <input 
+                      type="text" 
+                      className="form-input" 
+                      placeholder="Nhập tên trường học để tìm..." 
+                      value={searchQuery}
+                      onChange={(e) => {
+                        setSearchQuery(e.target.value);
+                        setIsDropdownOpen(true);
+                        if (selectedSchoolId) setSelectedSchoolId("");
+                      }}
+                      onFocus={() => setIsDropdownOpen(true)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          (e.target as HTMLInputElement).blur();
+                        }
+                      }}
+                    />
+                  </div>
+                  {isDropdownOpen && (
+                    <ul className="dropdown-list">
+                      {filteredSchools.length > 0 ? filteredSchools.map(s => (
+                        <li 
+                          key={s.id} 
+                          className="dropdown-item"
+                          style={{ background: s.id === selectedSchoolId ? "rgba(56, 189, 248, 0.1)" : undefined }}
+                          onClick={() => {
+                            setSelectedSchoolId(s.id);
+                            setSearchQuery(s.name);
+                            setIsDropdownOpen(false);
+                          }}
+                        >
+                          <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.95rem" }}>
+                            {s.name}
+                          </div>
+                          <div style={{ fontSize: "0.8rem", color: "#64748b", marginTop: 2 }}>{s.address}</div>
+                        </li>
+                      )) : (
+                        <li style={{ padding: "1.5rem", textAlign: "center", color: "#64748b" }}>Không tìm thấy trường nào</li>
+                      )}
+                    </ul>
+                  )}
+                </div>
+              )}
+
+              {/* BƯỚC 2: CHỌN DỰ ÁN (HIỂN THỊ KHI ĐÃ CHỌN TRƯỜNG) */}
+              {selectedSchool ? (
+                <div style={{ marginTop: "1.2rem", paddingTop: "1rem", borderTop: "1px solid #1e293b", animation: "fadeIn 0.3s ease" }}>
+                  <div className="section-title">
+                    <div className="icon-wrap" style={{ background: "linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(147, 51, 234, 0.2))" }}>
+                      <SlidersHorizontal size={18} color="#a855f7" />
+                    </div>
+                    Bước 2: Chọn Dự án lập Dự trù
+                  </div>
+
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: "0.65rem", maxWidth: "560px", marginTop: "0.5rem" }}>
+                    {[
+                      { key: "IPRO", label: "IPRO", desc: "Trường tương tác IPRO", color: "#38bdf8", bg: "rgba(56, 189, 248, 0.15)" },
+                      { key: "ICLASS", label: "ICLASS", desc: "Lớp học thông minh ICLASS", color: "#a855f7", bg: "rgba(168, 85, 247, 0.15)" },
+                      { key: "IGEN", label: "IGEN", desc: "Thế hệ số IGEN", color: "#f59e0b", bg: "rgba(245, 158, 11, 0.15)" },
+                      { key: "ILINK", label: "ILINK", desc: "Hạ tầng kết nối ILINK", color: "#10b981", bg: "rgba(16, 185, 129, 0.15)" },
+                    ].map((p) => {
+                      const isSelected = projectName === p.key;
+                      const hasProposal = !!selectedSchool.proposalsByProject?.[p.key];
+
+                      return (
+                        <button
+                          key={p.key}
+                          type="button"
+                          onClick={() => {
+                            if (p.key === projectName) return;
+                            if (items.length > 0) {
+                              setPendingProjectChange(p.key as any);
+                            } else {
+                              setProjectName(p.key as any);
+                            }
+                          }}
+                          style={{
+                            padding: "0.65rem 0.75rem",
+                            borderRadius: "10px",
+                            border: `1.5px solid ${isSelected ? p.color : "#334155"}`,
+                            background: isSelected ? p.bg : "rgba(15, 23, 42, 0.5)",
+                            color: isSelected ? p.color : "#94a3b8",
+                            fontWeight: isSelected ? 800 : 600,
+                            fontSize: "0.85rem",
+                            cursor: "pointer",
+                            transition: "all 0.2s ease",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            gap: "0.25rem",
+                            boxShadow: isSelected ? `0 0 14px ${p.color}30` : "none",
+                          }}
+                        >
+                          <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                            <div style={{ width: 8, height: 8, borderRadius: "50%", background: isSelected ? p.color : "#475569" }} />
+                            <span>{p.label}</span>
+                          </div>
+                          {hasProposal && (
+                            <span style={{ fontSize: "0.6rem", color: "#34d399", fontWeight: 700 }}>
+                              ✓ Đã có dự trù
+                            </span>
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* NẾU CHƯA CHỌN DỰ ÁN -> HIỂN THỊ YÊU CẦU BẮT BUỘC CHỌN DỰ ÁN */}
+                  {!projectName ? (
+                    <div style={{ marginTop: "1rem", padding: "1.1rem", borderRadius: "10px", background: "rgba(56, 189, 248, 0.06)", border: "1px dashed rgba(56, 189, 248, 0.3)", textAlign: "center", color: "#38bdf8", display: "flex", alignItems: "center", justifyContent: "center", gap: "0.6rem" }}>
+                      <AlertCircle size={20} color="#38bdf8" />
+                      <span style={{ fontWeight: 700, fontSize: "0.9rem" }}>BẮT BUỘC: Vui lòng chọn 1 Dự án ở Bước 2 trên đây để bắt đầu hiển thị bảng Lập dự trù & Chọn thiết bị.</span>
+                    </div>
+                  ) : (
+                    <>
+                      {/* THÔNG BÁO DỰ ÁN ĐÃ CÓ BẢN DỰ TRÙ VỚI MỤC BƯỚC 2 */}
+                      {selectedSchool.proposalsByProject?.[projectName] ? (
+                        <div className="alert-box warning" style={{ marginTop: "0.85rem" }}>
+                          <AlertTriangle size={18} style={{ flexShrink: 0, marginTop: 2 }} />
+                          <span>Trường <strong>{selectedSchool.name}</strong> đã có bản dự trù dự án <strong>{projectName}</strong> (Cập nhật {new Date(selectedSchool.proposalsByProject[projectName].updatedAt).toLocaleString("vi-VN")}). Dữ liệu dự án này đã được tự động nạp lại để bạn chỉnh sửa/lưu bản mới.</span>
+                        </div>
+                      ) : (
+                        <div className="alert-box warning" style={{ marginTop: "0.85rem", background: "rgba(56, 189, 248, 0.08)", border: "1px solid rgba(56, 189, 248, 0.2)", color: "#38bdf8" }}>
+                          <AlertCircle size={18} style={{ flexShrink: 0, marginTop: 2 }} />
+                          <span>Sẵn sàng lập bản dự trù mới cho dự án <strong>{projectName}</strong> tại <strong>{selectedSchool.name}</strong>.</span>
+                        </div>
+                      )}
+
+                      {/* THÔNG TIN HỌC SINH BƯỚC 3 */}
+                      <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid #1e293b" }}>
+                        <div className="section-title" style={{ fontSize: "0.95rem" }}>
+                          <div className="icon-wrap" style={{ background: "linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2))" }}>
+                            <GraduationCap size={18} color="#10b981" />
+                          </div>
+                          Bước 3: Nhập thông tin học sinh & Lập Dự trù cho dự án {projectName}
+                        </div>
+
+                        <div className="student-inputs-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.75rem", background: "rgba(30, 41, 59, 0.5)", padding: "0.85rem", borderRadius: "10px", border: "1px solid #334155", marginTop: "0.5rem" }}>
+                          <div>
+                            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#94a3b8", marginBottom: "0.35rem", fontWeight: 500 }}><GraduationCap size={14}/> HS Cũ</label>
+                            <input type="number" className="form-input" style={{ width: "100%", padding: "0.5rem 0.75rem", background: "rgba(15,23,42,0.4)", borderRadius: "8px" }} 
+                              value={schoolDetails.oldStudents} 
+                              onChange={e => setSchoolDetails({...schoolDetails, oldStudents: e.target.value})} 
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#38bdf8", marginBottom: "0.35rem", fontWeight: 500 }}><GraduationCap size={14}/> HS Mới <span style={{color:"#f43f5e"}}>*</span></label>
+                            <input type="number" className="form-input" required style={{ width: "100%", padding: "0.5rem 0.75rem", background: "rgba(56,189,248,0.05)", border: "1px solid rgba(56,189,248,0.3)", borderRadius: "8px", color: "#38bdf8" }} 
+                              value={schoolDetails.newStudents} 
+                              onChange={e => setSchoolDetails({...schoolDetails, newStudents: e.target.value})} 
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#a855f7", marginBottom: "0.35rem", fontWeight: 500 }}><DoorOpen size={14}/> Phòng ĐT</label>
+                            <input type="number" className="form-input" style={{ width: "100%", padding: "0.5rem 0.75rem", background: "rgba(168,85,247,0.05)", border: "1px solid rgba(168,85,247,0.3)", borderRadius: "8px", color: "#a855f7" }} 
+                              value={schoolDetails.investedClassrooms} 
+                              onChange={e => setSchoolDetails({...schoolDetails, investedClassrooms: e.target.value})} 
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  )}
                 </div>
               ) : (
                 <div style={{ marginTop: "1.25rem", animation: "fadeIn 0.3s ease" }}>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "0.5rem", marginBottom: "0.75rem" }}>
                     <div style={{ fontSize: "0.75rem", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", display: "flex", alignItems: "center", gap: "0.4rem" }}>
                       <Building2 size={13} color="#38bdf8" />
-                      Danh sách trường được phân công ({filteredSchools.length})
-                    </div>
-
-                    {/* Filter Buttons */}
-                    <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap" }}>
-                      {[
-                        { key: "ALL", label: `Tất cả (${schools.length})`, color: "#38bdf8" },
-                        { key: "NONE", label: `Chưa có dự trù (${schools.filter(s => getSchoolStatus(s).type === "NONE").length})`, color: "#10b981" },
-                        { key: "INIT", label: `Khởi tạo (${schools.filter(s => getSchoolStatus(s).type === "INIT").length})`, color: "#f59e0b" },
-                        { key: "LOCKED", label: `Đang thực hiện (${schools.filter(s => getSchoolStatus(s).type === "LOCKED").length})`, color: "#f43f5e" },
-                        { key: "COMPLETED", label: `Đã hoàn thành (${schools.filter(s => getSchoolStatus(s).type === "COMPLETED").length})`, color: "#38bdf8" },
-                      ].map(btn => (
-                        <button
-                          key={btn.key}
-                          type="button"
-                          onClick={() => setSchoolFilter(btn.key as any)}
-                          style={{
-                            padding: "3px 8px",
-                            borderRadius: "6px",
-                            fontSize: "0.72rem",
-                            fontWeight: 600,
-                            border: "1px solid",
-                            borderColor: schoolFilter === btn.key ? btn.color : "#334155",
-                            background: schoolFilter === btn.key ? `${btn.color}22` : "transparent",
-                            color: schoolFilter === btn.key ? btn.color : "#94a3b8",
-                            cursor: "pointer",
-                            transition: "all 0.2s"
-                          }}
-                        >
-                          {btn.label}
-                        </button>
-                      ))}
+                      Hoặc bấm chọn trường từ danh sách phân công ({filteredSchools.length}):
                     </div>
                   </div>
                   
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(240px, 1fr))", gap: "0.75rem" }}>
                     {filteredSchools.map(s => {
-                      const stInfo = getSchoolStatus(s);
                       return (
                         <div 
                           key={s.id}
@@ -1069,13 +1142,39 @@ export default function ProposalForm({
                           }}
                           className="school-card-item"
                         >
-                          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "0.5rem" }}>
-                            <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.85rem", lineHeight: 1.3 }}>{s.name}</div>
-                            <span style={{ fontSize: "0.6rem", padding: "2px 6px", borderRadius: 4, background: stInfo.bg, color: stInfo.color, fontWeight: 700, flexShrink: 0 }}>
-                              {stInfo.label}
-                            </span>
-                          </div>
+                          <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.85rem", lineHeight: 1.3 }}>{s.name}</div>
                           <div style={{ fontSize: "0.75rem", color: "#64748b", marginTop: 4 }}>{s.address}</div>
+
+                          {/* Project Badges */}
+                          {s.projects && s.projects.length > 0 && (
+                            <div style={{ display: "flex", gap: "0.3rem", flexWrap: "wrap", marginTop: "0.5rem" }}>
+                              {s.projects.map((proj) => {
+                                const isClass = proj === "ICLASS";
+                                const isGen = proj === "IGEN";
+                                const isLink = proj === "ILINK";
+                                const color = isClass ? "#c084fc" : isGen ? "#fbbf24" : isLink ? "#34d399" : "#38bdf8";
+                                const border = isClass ? "rgba(168, 85, 247, 0.4)" : isGen ? "rgba(245, 158, 11, 0.4)" : isLink ? "rgba(16, 185, 129, 0.4)" : "rgba(56, 189, 248, 0.4)";
+                                const bg = isClass ? "rgba(168, 85, 247, 0.15)" : isGen ? "rgba(245, 158, 11, 0.15)" : isLink ? "rgba(16, 185, 129, 0.15)" : "rgba(56, 189, 248, 0.15)";
+                                return (
+                                  <span
+                                    key={proj}
+                                    style={{
+                                      fontSize: "0.65rem",
+                                      fontWeight: 800,
+                                      padding: "1px 6px",
+                                      borderRadius: "5px",
+                                      border: `1px solid ${border}`,
+                                      color: color,
+                                      background: bg,
+                                      letterSpacing: "0.03em"
+                                    }}
+                                  >
+                                    {proj}
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
                         </div>
                       );
                     })}
@@ -1087,7 +1186,7 @@ export default function ProposalForm({
         </div>
 
         {/* ROW 2: Items Search & Table (Full Width) */}
-        {selectedSchool && (
+        {selectedSchool && projectName && (
           <div className="proposal-card" style={{ animation: "fadeIn 0.3s ease" }}>
             <div className="section-title">
               <div className="icon-wrap" style={{ background: "linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(5, 150, 105, 0.2))" }}>
@@ -2012,6 +2111,65 @@ export default function ProposalForm({
                 onMouseOut={(e) => e.currentTarget.style.background = "#f43f5e"}
               >
                 Đồng ý xóa
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
+      {/* Custom Project Switch Confirmation Modal */}
+      {pendingProjectChange && mounted && createPortal(
+        <div style={{
+          position: "fixed", top: 0, left: 0, right: 0, bottom: 0,
+          background: "rgba(15, 23, 42, 0.8)", backdropFilter: "blur(4px)",
+          display: "flex", alignItems: "center", justifyContent: "center", zIndex: 1000000,
+          animation: "fadeIn 0.2s ease"
+        }}>
+          <div style={{
+            background: "#1e293b", border: "1px solid #334155", borderRadius: "12px",
+            padding: "1.5rem", width: "90%", maxWidth: "440px",
+            boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5)"
+          }}>
+            <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
+              <AlertTriangle color="#f59e0b" size={22} />
+              <h3 style={{ margin: 0, fontSize: "1.1rem", fontWeight: 700, color: "#f1f5f9" }}>Xác nhận chuyển đổi dự án</h3>
+            </div>
+            <p style={{ margin: "0 0 1rem 0", color: "#cbd5e1", fontSize: "0.9rem", lineHeight: 1.5 }}>
+              Bạn đang chọn <strong>{items.length} hạng mục</strong> trong bản dự trù dự án <strong>{projectName}</strong>.
+            </p>
+            <p style={{ margin: "0 0 1.5rem 0", color: "#fbbf24", fontSize: "0.85rem", fontWeight: 600, background: "rgba(245, 158, 11, 0.1)", padding: "0.65rem 0.85rem", borderRadius: "8px", border: "1px solid rgba(245, 158, 11, 0.25)", lineHeight: 1.4 }}>
+              ⚠️ CẢNH BÁO: Dữ liệu đang nhập chưa lưu của dự án <strong>{projectName}</strong> sẽ bị thay thế bằng dữ liệu của dự án <strong>{pendingProjectChange}</strong>.
+            </p>
+            <div style={{ display: "flex", gap: "0.75rem", justifyContent: "flex-end" }}>
+              <button 
+                type="button"
+                onClick={() => setPendingProjectChange(null)}
+                style={{
+                  padding: "0.5rem 1rem", borderRadius: "8px", fontSize: "0.85rem", fontWeight: 600,
+                  background: "transparent", border: "1px solid #475569", color: "#cbd5e1", cursor: "pointer",
+                  transition: "all 0.2s"
+                }}
+                onMouseOver={(e) => { e.currentTarget.style.background = "rgba(255,255,255,0.05)"; }}
+                onMouseOut={(e) => { e.currentTarget.style.background = "transparent"; }}
+              >
+                Hủy bỏ
+              </button>
+              <button 
+                type="button"
+                onClick={() => {
+                  setProjectName(pendingProjectChange);
+                  setPendingProjectChange(null);
+                }}
+                style={{
+                  padding: "0.5rem 1.1rem", borderRadius: "8px", fontSize: "0.85rem", fontWeight: 700,
+                  background: "#f59e0b", border: "none", color: "#0f172a", cursor: "pointer",
+                  boxShadow: "0 0 12px rgba(245, 158, 11, 0.3)", transition: "all 0.2s"
+                }}
+                onMouseOver={(e) => { e.currentTarget.style.background = "#d97706"; }}
+                onMouseOut={(e) => { e.currentTarget.style.background = "#f59e0b"; }}
+              >
+                Đồng ý chuyển {pendingProjectChange}
               </button>
             </div>
           </div>

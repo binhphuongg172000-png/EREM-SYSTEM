@@ -1,20 +1,22 @@
 import React from "react";
 import prisma from "@/lib/prisma";
-import { getCachedData } from "@/lib/cache";
 import SearchInput from "@/app/admin/SearchInput";
 import { Laptop } from "lucide-react";
 import Link from "next/link";
+import PaginationControls from "@/components/PaginationControls";
 
 export const dynamic = "force-dynamic";
 
 export default async function SaleItemsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; project?: string }>;
+  searchParams: Promise<{ search?: string; project?: string; page?: string }>;
 }) {
   const resolvedParams = await searchParams;
   const search = resolvedParams?.search || "";
   const projectFilter = resolvedParams?.project || "ALL";
+  const page = Math.max(1, Number(resolvedParams?.page || 1));
+  const pageSize = 20;
 
   const resItems = await prisma.item.findMany({
     where: search ? { name: { contains: search, mode: "insensitive" } } : {},
@@ -27,6 +29,9 @@ export default async function SaleItemsPage({
     const pStr = item.projectName || "IPRO";
     return pStr.includes(projectFilter);
   });
+
+  const totalPages = Math.ceil(items.length / pageSize);
+  const displayItems = items.slice((page - 1) * pageSize, page * pageSize);
 
   const getProjectBadges = (pStr?: string | null) => {
     const projects = (pStr || "IPRO").split(",").map(p => p.trim()).filter(Boolean);
@@ -114,13 +119,17 @@ export default async function SaleItemsPage({
             </Link>
           ))}
         </div>
+
+        <span style={{ fontSize: "0.8rem", color: "#94a3b8", fontWeight: 600 }}>
+          Tổng cộng: {items.length} thiết bị
+        </span>
       </div>
 
       <div className="card table-container" style={{ padding: 0 }}>
         <table className="table table-hover">
           <thead>
             <tr>
-              <th>#</th>
+              <th style={{ width: "50px", textAlign: "center" }}>STT</th>
               <th>Tên Thiết bị</th>
               <th>Dự án áp dụng</th>
               <th>Quy cách kỹ thuật</th>
@@ -130,29 +139,37 @@ export default async function SaleItemsPage({
             </tr>
           </thead>
           <tbody>
-            {items.length === 0 ? (
+            {displayItems.length === 0 ? (
               <tr>
                 <td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: "#64748b" }}>
                   Chưa có thiết bị nào trong danh mục phù hợp.
                 </td>
               </tr>
             ) : (
-              items.map((item, idx) => (
+              displayItems.map((item, idx) => (
                 <tr key={item.id}>
-                  <td style={{ color: "#64748b", fontWeight: 700 }}>{idx + 1}</td>
+                  <td style={{ textAlign: "center", color: "#94a3b8", fontWeight: 700 }}>
+                    {(page - 1) * pageSize + idx + 1}
+                  </td>
                   <td style={{ fontWeight: 700, color: "#ffffff" }}>{item.name}</td>
                   <td>{getProjectBadges(item.projectName)}</td>
-                  <td style={{ fontSize: "0.825rem", color: "#94a3b8", maxWidth: "300px" }}>{item.specifications}</td>
-                  <td style={{ fontSize: "0.825rem", color: "#64748b" }}>{item.accessories || "—"}</td>
-                  <td><span className="badge badge-secondary">{item.unit}</span></td>
-                  <td style={{ textAlign: "right", fontWeight: 800, color: "#34d399" }}>
-                    {Number(item.standardPrice).toLocaleString("vi-VN")} đ
+                  <td style={{ fontSize: "0.85rem", color: "#cbd5e1" }}>{item.specifications}</td>
+                  <td style={{ fontSize: "0.85rem", color: "#cbd5e1" }}>{item.accessories || "-"}</td>
+                  <td>{item.unit || "Bộ"}</td>
+                  <td style={{ fontWeight: 700, color: "#38bdf8", textAlign: "right" }}>
+                    {Number(item.standardPrice).toLocaleString()} đ
                   </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
+        <PaginationControls
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={items.length}
+          pageSize={pageSize}
+        />
       </div>
     </div>
   );

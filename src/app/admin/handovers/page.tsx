@@ -2,18 +2,20 @@ import React from "react";
 import prisma from "@/lib/prisma";
 import SearchInput from "../SearchInput";
 import HandoverRowActions from "./HandoverRowActions";
-
 import { getCachedData } from "@/lib/cache";
+import PaginationControls from "@/components/PaginationControls";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminHandoversPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string }>;
+  searchParams: Promise<{ search?: string; page?: string }>;
 }) {
   const resolvedParams = await searchParams;
   const search = resolvedParams?.search || "";
+  const page = Math.max(1, Number(resolvedParams?.page || 1));
+  const pageSize = 20;
 
   const whereClause: any = {};
   if (search) {
@@ -37,6 +39,9 @@ export default async function AdminHandoversPage({
     });
   }, 15);
 
+  const totalPages = Math.ceil(handovers.length / pageSize);
+  const displayHandovers = handovers.slice((page - 1) * pageSize, page * pageSize);
+
   return (
     <div>
       <div className="page-title-bar">
@@ -44,13 +49,19 @@ export default async function AdminHandoversPage({
       </div>
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", gap: "1rem", flexWrap: "wrap" }}>
-        <SearchInput placeholder="Tìm tên trường, người nhận..." />
+        <div style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap", flex: 1 }}>
+          <SearchInput placeholder="Tìm tên trường, người nhận..." />
+          <span style={{ fontSize: "0.8rem", color: "#94a3b8", fontWeight: 600 }}>
+            Tổng cộng: {handovers.length} biên bản
+          </span>
+        </div>
       </div>
 
       <div className="card table-container" style={{ padding: 0 }}>
         <table className="table table-hover">
           <thead>
             <tr>
+              <th style={{ width: "50px", textAlign: "center" }}>STT</th>
               <th>Trường học / Địa chỉ</th>
               <th>Người Bàn giao (Sale)</th>
               <th>Người Nhận</th>
@@ -60,15 +71,18 @@ export default async function AdminHandoversPage({
             </tr>
           </thead>
           <tbody>
-            {handovers.length === 0 ? (
+            {displayHandovers.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ padding: "2rem", textAlign: "center", color: "#cbd5e1" }}>
+                <td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: "#cbd5e1" }}>
                   Chưa có Biên bản bàn giao nào.
                 </td>
               </tr>
             ) : (
-              handovers.map((h) => (
+              displayHandovers.map((h, idx) => (
                 <tr key={h.id}>
+                  <td style={{ textAlign: "center", fontWeight: 700, color: "#94a3b8" }}>
+                    {(page - 1) * pageSize + idx + 1}
+                  </td>
                   <td>
                     <span style={{ fontWeight: 700, color: "#ffffff", display: "block" }}>{h.school?.name}</span>
                     <span style={{ fontSize: "0.8rem", color: "#cbd5e1" }}>{h.school?.address}</span>
@@ -93,6 +107,12 @@ export default async function AdminHandoversPage({
             )}
           </tbody>
         </table>
+        <PaginationControls
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={handovers.length}
+          pageSize={pageSize}
+        />
       </div>
     </div>
   );

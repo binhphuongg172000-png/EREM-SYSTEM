@@ -15,7 +15,6 @@ export async function getNewProposalData(userId: string) {
       include: {
         proposals: {
           orderBy: { updatedAt: "desc" },
-          take: 1,
           include: {
             items: true,
             investments: true,
@@ -48,7 +47,37 @@ export default async function NewProposalPage({
   const { rawSchools, catalogItems, catalogInvestments } = await getNewProposalData(userId);
 
   const serializedSchools = rawSchools.map(s => {
-    const latestProposal = s.proposals[0];
+    const proposalsByProject: Record<string, any> = {};
+    s.proposals.forEach(p => {
+      const pName = p.projectName || "IPRO";
+      if (!proposalsByProject[pName]) {
+        proposalsByProject[pName] = {
+          id: p.id,
+          projectName: pName,
+          status: p.status,
+          updatedAt: p.updatedAt instanceof Date ? p.updatedAt.toISOString() : String(p.updatedAt),
+          investedClassrooms: p.investedClassrooms,
+          oldStudents: p.oldStudents,
+          newStudents: p.newStudents,
+          allocatedBudget: Number(p.allocatedBudget) || 0,
+          items: p.items.map(i => ({
+            name: i.name,
+            specifications: i.specifications,
+            quantity: Number(i.quantity),
+            price: Number(i.price),
+          })),
+          investments: p.investments.map(inv => ({
+            name: inv.name,
+            description: inv.description,
+            quantity: Number(inv.quantity),
+            price: Number(inv.price),
+          }))
+        };
+      }
+    });
+
+    const projects = Array.from(new Set(s.proposals.map(p => p.projectName || "IPRO"))).filter(Boolean);
+
     return {
       id: s.id,
       name: s.name,
@@ -59,22 +88,8 @@ export default async function NewProposalPage({
       oldStudents: s.oldStudents,
       newStudents: s.newStudents,
       isLocked: s.isLocked,
-      latestProposal: latestProposal ? {
-        id: latestProposal.id,
-        updatedAt: latestProposal.updatedAt instanceof Date ? latestProposal.updatedAt.toISOString() : String(latestProposal.updatedAt),
-        items: latestProposal.items.map(i => ({
-          name: i.name,
-          specifications: i.specifications,
-          quantity: Number(i.quantity),
-          price: Number(i.price),
-        })),
-        investments: latestProposal.investments.map(inv => ({
-          name: inv.name,
-          description: inv.description,
-          quantity: Number(inv.quantity),
-          price: Number(inv.price),
-        }))
-      } : null
+      projects,
+      proposalsByProject,
     };
   });
 

@@ -9,6 +9,7 @@ import { getCachedData } from "@/lib/cache";
 import { vietnameseIncludes } from "@/lib/vietnamese";
 import { Building2, Calendar, TrendingUp, TrendingDown, UserCircle, AlertTriangle } from "lucide-react";
 import { cookies } from "next/headers";
+import PaginationControls from "@/components/PaginationControls";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -16,7 +17,7 @@ export const revalidate = 0;
 export default async function AdminProposalsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ search?: string; saleId?: string; latest?: string; budget?: string; status?: string; project?: string }>;
+  searchParams: Promise<{ search?: string; saleId?: string; latest?: string; budget?: string; status?: string; project?: string; page?: string }>;
 }) {
   const resolvedParams = await searchParams;
   const search = resolvedParams?.search || "";
@@ -104,13 +105,14 @@ export default async function AdminProposalsPage({
     return true;
   });
 
-  // If latest === "true", filter to keep only the newest proposal per school
+  // If latest === "true", filter to keep only the newest proposal per school & project
   let displayProposals = rawProposals;
   if (latest === "true") {
-    const seenSchoolIds = new Set<string>();
+    const seenSchoolProjectKeys = new Set<string>();
     displayProposals = rawProposals.filter((p: any) => {
-      if (seenSchoolIds.has(p.schoolId)) return false;
-      seenSchoolIds.add(p.schoolId);
+      const key = `${p.schoolId}_${p.projectName || "IPRO"}`;
+      if (seenSchoolProjectKeys.has(key)) return false;
+      seenSchoolProjectKeys.add(key);
       return true;
     });
   }
@@ -121,6 +123,12 @@ export default async function AdminProposalsPage({
   } else if (budget === "negative") {
     displayProposals = displayProposals.filter((p: any) => Number(p.allocatedBudget) - Number(p.investedBudget) < 0);
   }
+
+  const page = Math.max(1, Number(resolvedParams?.page || 1));
+  const pageSize = 20;
+  const totalItems = displayProposals.length;
+  const totalPages = Math.ceil(totalItems / pageSize);
+  const limitedProposals = displayProposals.slice((page - 1) * pageSize, page * pageSize);
 
   // System Total Stats (Excludes CLOSED proposals so metrics reflect active work)
   const totalProposals = activeProposals.length;
@@ -231,22 +239,22 @@ export default async function AdminProposalsPage({
 
       {/* Mini Stats (Clickable filters) */}
       <div style={{ display: "flex", gap: "0.75rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
-        <Link href="/admin/proposals" className="stat-mini" style={{ textDecoration: "none", cursor: "pointer" }}>
+        <Link href="/admin/proposals" className="stat-mini" style={{ textDecoration: "none", cursor: "pointer", border: !statusFilter ? "1px solid #38bdf8" : "1px solid rgba(255,255,255,0.08)", background: !statusFilter ? "rgba(56,189,248,0.18)" : "rgba(30,41,59,0.7)" }}>
           <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#38bdf8" }} />
           <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Tổng cộng</span>
           <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#ffffff" }}>{totalProposals}</span>
         </Link>
-        <Link href="/admin/proposals?status=init" className="stat-mini" style={{ textDecoration: "none", cursor: "pointer" }}>
+        <Link href="/admin/proposals?status=init" className="stat-mini" style={{ textDecoration: "none", cursor: "pointer", border: statusFilter === "init" ? "1px solid #fbbf24" : "1px solid rgba(255,255,255,0.08)", background: statusFilter === "init" ? "rgba(251,191,36,0.18)" : "rgba(30,41,59,0.7)" }}>
           <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#fbbf24" }} />
           <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Khởi tạo</span>
           <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#fbbf24" }}>{initCount}</span>
         </Link>
-        <Link href="/admin/proposals?status=locked" className="stat-mini" style={{ textDecoration: "none", cursor: "pointer" }}>
-          <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#3b82f6" }} />
+        <Link href="/admin/proposals?status=locked" className="stat-mini" style={{ textDecoration: "none", cursor: "pointer", border: statusFilter === "locked" ? "1px solid #a855f7" : "1px solid rgba(255,255,255,0.08)", background: statusFilter === "locked" ? "rgba(168,85,247,0.18)" : "rgba(30,41,59,0.7)" }}>
+          <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#a855f7" }} />
           <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Đang thực hiện</span>
-          <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#3b82f6" }}>{lockedCount}</span>
+          <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#c084fc" }}>{lockedCount}</span>
         </Link>
-        <Link href="/admin/proposals?status=completed" className="stat-mini" style={{ textDecoration: "none", cursor: "pointer" }}>
+        <Link href="/admin/proposals?status=completed" className="stat-mini" style={{ textDecoration: "none", cursor: "pointer", border: statusFilter === "completed" ? "1px solid #34d399" : "1px solid rgba(255,255,255,0.08)", background: statusFilter === "completed" ? "rgba(52,211,153,0.18)" : "rgba(30,41,59,0.7)" }}>
           <div style={{ width: "8px", height: "8px", borderRadius: "50%", background: "#34d399" }} />
           <span style={{ fontSize: "0.8rem", color: "#94a3b8" }}>Hoàn thành</span>
           <span style={{ fontSize: "0.9rem", fontWeight: 700, color: "#34d399" }}>{completedCount}</span>
@@ -270,7 +278,12 @@ export default async function AdminProposalsPage({
 
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem", gap: "0.75rem", flexWrap: "wrap" }}>
-        <SearchInput placeholder="Tìm theo tên trường học..." />
+        <div style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap", flex: 1 }}>
+          <SearchInput placeholder="Tìm theo tên trường học..." />
+          <span style={{ fontSize: "0.8rem", color: "#94a3b8", fontWeight: 600 }}>
+            Hiển thị tối đa: {limitedProposals.length} / {displayProposals.length} hồ sơ
+          </span>
+        </div>
         <ProposalFilters
           sales={sales}
           currentSaleId={saleId}
@@ -284,16 +297,18 @@ export default async function AdminProposalsPage({
       <div className="card table-container" style={{ padding: 0, overflow: "visible", borderRadius: "12px" }}>
         <table className="table table-hover" style={{ tableLayout: "fixed", width: "100%", margin: 0 }}>
           <colgroup>
+            <col style={{ width: "5%" }} />
             <col style={{ width: "22%" }} />
             <col style={{ width: "14%" }} />
             <col style={{ width: "12%" }} />
             <col style={{ width: "14%" }} />
             <col style={{ width: "13%" }} />
-            <col style={{ width: "25%" }} />
+            <col style={{ width: "20%" }} />
           </colgroup>
           <thead>
             <tr>
-              <th style={{ paddingLeft: "1.25rem" }}>Trường học</th>
+              <th style={{ width: "50px", textAlign: "center", paddingLeft: "0.75rem" }}>STT</th>
+              <th>Trường học</th>
               <th>Nhân viên Sale</th>
               <th>Ngày lập</th>
               <th style={{ textAlign: "right" }}>Chênh lệch</th>
@@ -302,9 +317,9 @@ export default async function AdminProposalsPage({
             </tr>
           </thead>
           <tbody>
-            {displayProposals.length === 0 ? (
+            {limitedProposals.length === 0 ? (
               <tr>
-                <td colSpan={6} style={{ padding: "3rem 2rem", textAlign: "center", color: "#64748b" }}>
+                <td colSpan={7} style={{ padding: "3rem 2rem", textAlign: "center", color: "#64748b" }}>
                   <div style={{ width: "56px", height: "56px", borderRadius: "16px", background: "rgba(56,189,248,0.08)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem" }}>
                     <Building2 size={24} color="#38bdf8" />
                   </div>
@@ -313,7 +328,7 @@ export default async function AdminProposalsPage({
                 </td>
               </tr>
             ) : (
-              displayProposals.map((p: any) => {
+              limitedProposals.map((p: any, idx: number) => {
                 const delta = Number(p.allocatedBudget) - Number(p.investedBudget);
                 
                 const createdTime = new Date(p.createdAt).getTime();
@@ -328,7 +343,10 @@ export default async function AdminProposalsPage({
 
                 return (
                   <tr key={p.id} className="proposal-row" style={isOverdue ? { background: "rgba(244, 63, 94, 0.03)" } : {}}>
-                    <td style={{ paddingLeft: "1.25rem", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    <td style={{ textAlign: "center", fontWeight: 700, color: "#94a3b8", paddingLeft: "0.75rem" }}>
+                      {(page - 1) * pageSize + idx + 1}
+                    </td>
+                    <td style={{ overflow: "hidden", textOverflow: "ellipsis" }}>
                       <div className="school-name">
                         <Building2 size={14} color="#64748b" style={{ flexShrink: 0 }} />
                         <span style={{ overflow: "hidden", textOverflow: "ellipsis" }}>{p.school?.name}</span>
@@ -381,6 +399,12 @@ export default async function AdminProposalsPage({
             )}
           </tbody>
         </table>
+        <PaginationControls
+          currentPage={page}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          pageSize={pageSize}
+        />
       </div>
     </div>
   );

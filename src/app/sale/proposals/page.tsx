@@ -34,15 +34,16 @@ export default async function SaleProposalsPage() {
   }
   const raw = JSON.parse(JSON.stringify(res));
 
-  // Business rule: Each school has ONLY 1 latest proposal displayed
-  const schoolMap = new Map<string, typeof raw[0]>();
+  // Business rule: Each school has 1 proposal per project displayed
+  const schoolProjectMap = new Map<string, typeof raw[0]>();
   for (const p of raw) {
     if (!p.schoolId) continue;
-    if (!schoolMap.has(p.schoolId)) {
-      schoolMap.set(p.schoolId, p);
+    const key = `${p.schoolId}_${p.projectName || "IPRO"}`;
+    if (!schoolProjectMap.has(key)) {
+      schoolProjectMap.set(key, p);
     }
   }
-  const uniqueRaw = Array.from(schoolMap.values());
+  const uniqueRaw = Array.from(schoolProjectMap.values());
 
   const proposals = JSON.parse(JSON.stringify(uniqueRaw)).map((p: any) => {
     let allocatedBudget = Number(p.allocatedBudget || 0);

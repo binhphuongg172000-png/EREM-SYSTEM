@@ -81,17 +81,38 @@ export default function ExcelImportModal({
       sampleFileName = "Mau_Import_Thiet_Bi.xlsx";
       headers = [
         {
+          "STT": 1,
+          "Tên Thiết bị": "Bảng từ trắng 1,2x1,8m",
+          "Dự án áp dụng": "IPRO, ICLASS",
+          "Cấu hình chi tiết": "Mặt bảng bằng thép phủ sơn chống lóa Hàn Quốc",
+          "Linh kiện kèm theo": "Khay để bút, nam châm từ",
+          "Đơn vị tính": "Bộ",
+          "Đơn giá chuẩn (VNĐ)": 1255000,
+        },
+        {
+          "STT": 2,
           "Tên Thiết bị": "Máy tính để bàn Core i7",
+          "Dự án áp dụng": "IPRO",
           "Cấu hình chi tiết": "RAM 16GB, SSD 512GB, Màn hình 24 inch",
           "Linh kiện kèm theo": "Bàn phím, chuột, dây nguồn",
           "Đơn vị tính": "Bộ",
           "Đơn giá chuẩn (VNĐ)": 15000000,
+        },
+        {
+          "STT": 3,
+          "Tên Thiết bị": "Tủ Sạc 36 Thiết Bị",
+          "Dự án áp dụng": "IGEN, ILINK",
+          "Cấu hình chi tiết": "Tủ sạc thông minh cho máy tính bảng/laptop",
+          "Linh kiện kèm theo": "Dây cáp sạc USB-C, ổ khóa",
+          "Đơn vị tính": "Bộ",
+          "Đơn giá chuẩn (VNĐ)": 28500000,
         },
       ];
     } else if (type === "investments") {
       sampleFileName = "Mau_Import_Dau_Tu_Khac.xlsx";
       headers = [
         {
+          "STT": 1,
           "Tên Hạng mục": "Gói Lắp đặt & Đi dây mạng",
           "Mô tả chi tiết": "Thi công hạ tầng mạng LAN và ổ cắm điện cho phòng máy",
           "Đơn vị tính": "Gói",
@@ -174,12 +195,13 @@ export default function ExcelImportModal({
             }
           } else if (type === "items") {
             const name = getVal(row, ["tên thiết bị", "ten thiet bi", "thiết bị", "thiet bi"]);
-            const specifications = getVal(row, ["cấu hình chi tiết", "cấu hình", "cau hinh", "specifications", " thông số"]);
+            const projectName = getVal(row, ["dự án áp dụng", "dự án", "du an", "project name", "project"]) || "IPRO";
+            const specifications = getVal(row, ["cấu hình chi tiết", "cấu hình", "cau hinh", "specifications", "thông số"]);
             const accessories = getVal(row, ["linh kiện kèm theo", "linh kiện", "linh kien", "accessories", "phụ kiện"]);
             const unit = getVal(row, ["đơn vị tính", "đơn vị", "dvt", "unit"]) || "Bộ";
             const priceStr = getVal(row, ["đơn giá chuẩn", "đơn giá", "don gia", "giá"]);
             const price = Number(priceStr.replace(/[^0-9.]/g, "")) || 0;
-            if (name) cleanData.push({ name, specifications, accessories, unit, standardPrice: price });
+            if (name) cleanData.push({ name, projectName, specifications, accessories, unit, standardPrice: price });
           } else if (type === "investments") {
             const name = getVal(row, ["tên hạng mục", "ten hang muc", "hạng mục"]);
             const description = getVal(row, ["mô tả chi tiết", "mô tả", "mo ta", "description"]);
@@ -456,7 +478,9 @@ export default function ExcelImportModal({
                       )}
                       {type === "items" && (
                         <tr>
+                          <th style={{ width: "45px", textAlign: "center" }}>STT</th>
                           <th>Tên Thiết bị</th>
+                          <th>Dự án</th>
                           <th>Cấu hình</th>
                           <th>Linh kiện</th>
                           <th>ĐVT</th>
@@ -465,6 +489,7 @@ export default function ExcelImportModal({
                       )}
                       {type === "investments" && (
                         <tr>
+                          <th style={{ width: "45px", textAlign: "center" }}>STT</th>
                           <th>Tên Hạng mục</th>
                           <th>Mô tả</th>
                           <th>ĐVT</th>
@@ -494,19 +519,26 @@ export default function ExcelImportModal({
                           )}
                           {type === "items" && (
                             <>
+                              <td style={{ textAlign: "center", fontWeight: 700, color: "#94a3b8" }}>{idx + 1}</td>
                               <td style={{ fontWeight: 700 }}>{row.name}</td>
-                              <td>{row.specifications}</td>
+                              <td>
+                                <span style={{ fontSize: "0.72rem", fontWeight: 800, padding: "0.15rem 0.45rem", borderRadius: "5px", background: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", border: "1px solid rgba(56, 189, 248, 0.3)" }}>
+                                  {row.projectName || "IPRO"}
+                                </span>
+                              </td>
+                              <td>{row.specifications || "-"}</td>
                               <td>{row.accessories || "-"}</td>
                               <td>{row.unit || "Bộ"}</td>
-                              <td style={{ fontWeight: 700 }}>{Number(row.standardPrice).toLocaleString()}</td>
+                              <td style={{ fontWeight: 700 }}>{Number(row.standardPrice).toLocaleString()} đ</td>
                             </>
                           )}
                           {type === "investments" && (
                             <>
+                              <td style={{ textAlign: "center", fontWeight: 700, color: "#94a3b8" }}>{idx + 1}</td>
                               <td style={{ fontWeight: 700 }}>{row.name}</td>
-                              <td>{row.description}</td>
-                              <td>{row.unit}</td>
-                              <td style={{ fontWeight: 700 }}>{Number(row.standardPrice).toLocaleString()}</td>
+                              <td>{row.description || "-"}</td>
+                              <td>{row.unit || "Gói"}</td>
+                              <td style={{ fontWeight: 700 }}>{Number(row.standardPrice).toLocaleString()} đ</td>
                             </>
                           )}
                         </tr>

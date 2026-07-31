@@ -85,28 +85,6 @@ export default function AdminLayout({
             <span>Dashboard</span>
           </Link>
 
-          <div className="nav-group-label">QUẢN LÝ THỰC THỂ</div>
-          <Link
-            href="/admin/schools"
-            prefetch={true}
-            onMouseEnter={() => router.prefetch("/admin/schools")}
-            className={`nav-item ${pathname?.startsWith("/admin/schools") ? "active" : ""}`}
-          >
-            <SchoolIcon className="nav-item-icon" style={{ color: "#34d399" }} size={18} />
-            <span>Danh sách Trường học</span>
-          </Link>
-          {userRole === "SUPER_ADMIN" && (
-            <Link
-              href="/admin/users"
-              prefetch={true}
-              onMouseEnter={() => router.prefetch("/admin/users")}
-              className={`nav-item ${pathname?.startsWith("/admin/users") ? "active" : ""}`}
-            >
-              <Users className="nav-item-icon" style={{ color: "#fbbf24" }} size={18} />
-              <span>Tài khoản Hệ thống</span>
-            </Link>
-          )}
-
           <div className="nav-group-label">HỒ SƠ & GIAO DỊCH</div>
           <Link
             href="/admin/proposals"
@@ -116,6 +94,32 @@ export default function AdminLayout({
           >
             <FileText className="nav-item-icon" style={{ color: "#818cf8" }} size={18} />
             <span>Kho Dự trù</span>
+          </Link>
+
+          {userRole === "SUPER_ADMIN" && (
+            <>
+              <div className="nav-group-label">QUẢN TRỊ HỆ THỐNG</div>
+              <Link
+                href="/admin/users"
+                prefetch={true}
+                onMouseEnter={() => router.prefetch("/admin/users")}
+                className={`nav-item ${pathname?.startsWith("/admin/users") ? "active" : ""}`}
+              >
+                <Users className="nav-item-icon" style={{ color: "#fbbf24" }} size={18} />
+                <span>Tài khoản Hệ thống</span>
+              </Link>
+            </>
+          )}
+
+          <div className="nav-group-label">DANH MỤC DỮ LIỆU</div>
+          <Link
+            href="/admin/schools"
+            prefetch={true}
+            onMouseEnter={() => router.prefetch("/admin/schools")}
+            className={`nav-item ${pathname?.startsWith("/admin/schools") ? "active" : ""}`}
+          >
+            <SchoolIcon className="nav-item-icon" style={{ color: "#34d399" }} size={18} />
+            <span>Danh sách Trường học</span>
           </Link>
           <Link
             href="/admin/items"

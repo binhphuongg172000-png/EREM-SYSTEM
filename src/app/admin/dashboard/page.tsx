@@ -58,12 +58,14 @@ export default async function AdminDashboardPage() {
     return lower.includes("thi công") || lower.includes("bảo trì") || lower.includes("hệ thống");
   };
 
-  // Deduplicate proposals so each school counts its latest proposal
+  // Deduplicate proposals so each school counts its latest proposal PER PROJECT
   const latestProposalsMap = new Map<string, typeof rawAllProposals[0]>();
   for (const p of rawAllProposals) {
     const schId = p.schoolId || p.school?.id || p.id;
-    if (schId && !latestProposalsMap.has(schId)) {
-      latestProposalsMap.set(schId, p);
+    const projName = p.projectName || "IPRO";
+    const key = `${schId}_${projName}`;
+    if (schId && !latestProposalsMap.has(key)) {
+      latestProposalsMap.set(key, p);
     }
   }
   const rawUniqueProposals = Array.from(latestProposalsMap.values());
@@ -312,11 +314,14 @@ export default async function AdminDashboardPage() {
     })
     .sort((a, b) => (b.totalAllocated - a.totalAllocated) || (b.totalProposals - a.totalProposals) || (b.totalSchools - a.totalSchools));
 
+  const totalUniqueSchools = new Set(allProposals.map((p: any) => p.schoolId).filter(Boolean)).size;
+
   return (
     <div style={{ paddingBottom: "2rem" }}>
       <ProjectCostDashboard
         projectsData={projectsData}
         salesData={salesData}
+        totalUniqueSchools={totalUniqueSchools}
         title="Dashboard Thống Kê Chi Phí Theo Từng Dự Án & Nhân Viên Sale 📊"
         subtitle="Theo dõi trực quan định mức ngân sách, số học sinh mới và chi phí giải ngân chi tiết của từng dự án và từng nhân viên kinh doanh"
       />

@@ -20,8 +20,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "EREM SYSTEM — Enterprise Management",
-  description: "Hệ thống Quản lý Dự trù & Biên bản bàn giao thiết bị trường học",
+  title: "IT HCM SYSTEM — Enterprise Management",
+  description: "Hệ thống Quản lý Dự trù & Biên bản bàn giao thiết bị trường học IT HCM",
   icons: {
     icon: "/icon.svg",
     shortcut: "/icon.svg",
