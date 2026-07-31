@@ -1,60 +1,93 @@
 "use client";
 
 import React from "react";
-import { Printer, Download } from "lucide-react";
+import { Printer, FileSpreadsheet } from "lucide-react";
+import * as XLSX from "xlsx";
 
-export default function PrintButton({ fileName = "DuTruKinhPhi.doc" }: { fileName?: string }) {
-  const exportToWord = () => {
+export default function PrintButton({ fileName = "DuTruKinhPhi.xlsx" }: { fileName?: string }) {
+  const updatePrintDate = () => {
+    const dateEls = document.querySelectorAll('.print-date-text');
+    const now = new Date();
+    const day = String(now.getDate()).padStart(2, "0");
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const year = now.getFullYear();
+    const formattedDate = `TP.HCM, ngày ${day} tháng ${month} năm ${year}`;
+    dateEls.forEach(el => {
+      el.textContent = formattedDate;
+    });
+  };
+
+  const handlePrint = () => {
+    updatePrintDate();
+    window.print();
+  };
+
+  const exportToExcel = () => {
+    updatePrintDate();
     const printElement = document.querySelector('.print-only');
     if (!printElement) return;
 
-    // Build HTML for MS Word
-    const header = `<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-    <head>
-      <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-      <title>Export</title>
-      <style>
-        @page WordSection1 {
-          size: 841.9pt 595.3pt; /* A4 Landscape */
-          mso-page-orientation: landscape;
-          margin: 0.5in 0.5in 0.5in 0.5in;
-        }
-        div.WordSection1 { page: WordSection1; }
-        .print-bg-orange th, .print-bg-orange td { background-color: #fce4d6 !important; }
-        .print-bg-lightorange td { background-color: #fef0e5 !important; }
-        table { border-collapse: collapse; }
-        table td, table th { padding: 6px 4px !important; line-height: 1.3 !important; }
-      </style>
-    </head>
-    <body>
-      <div class="WordSection1">`;
-      
-    const footer = `</div></body></html>`;
-    const sourceHTML = header + printElement.innerHTML + footer;
-    
-    // Encode non-ASCII characters to prevent MS Word from losing diacritics
-    const encodedHTML = sourceHTML.replace(/[\u0080-\uFFFF]/g, i => '&#' + i.charCodeAt(0) + ';');
-    
-    // Create Blob
-    const blob = new Blob(['\ufeff', encodedHTML], { type: 'application/msword' });
-    const url = URL.createObjectURL(blob);
-    
-    // Trigger download
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = fileName;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    const tables = printElement.querySelectorAll('table');
+    const dateEl = printElement.querySelector('.print-date-text');
+    const dateStr = dateEl?.textContent?.trim() || "";
+
+    const combinedRows: any[][] = [
+      ["Công ty cổ phần Giáo dục iSmart"],
+      ["Lầu 3, Tòa nhà Quỳnh Lan, 60 Hai Bà Trưng, Phường Sài Gòn, TP Hồ Chí Minh, VN"],
+      [],
+      ["BẢNG DỰ TRÙ KINH PHÍ"],
+      []
+    ];
+
+    if (tables.length >= 1) {
+      const ws0 = XLSX.utils.table_to_sheet(tables[0]);
+      const data0 = XLSX.utils.sheet_to_json<any[]>(ws0, { header: 1 });
+      combinedRows.push(...data0);
+      combinedRows.push([]);
+    }
+
+    if (tables.length >= 2) {
+      const ws1 = XLSX.utils.table_to_sheet(tables[1]);
+      const data1 = XLSX.utils.sheet_to_json<any[]>(ws1, { header: 1 });
+      combinedRows.push(...data1);
+      combinedRows.push([]);
+    }
+
+    if (dateStr) {
+      combinedRows.push(["", "", "", "", "", dateStr]);
+      combinedRows.push([]);
+    }
+
+    if (tables.length >= 3) {
+      const ws2 = XLSX.utils.table_to_sheet(tables[2]);
+      const data2 = XLSX.utils.sheet_to_json<any[]>(ws2, { header: 1 });
+      combinedRows.push(...data2);
+    }
+
+    const ws = XLSX.utils.aoa_to_sheet(combinedRows);
+    ws['!cols'] = [
+      { wch: 8 },  // STT
+      { wch: 45 }, // Diễn giải các hạng mục / Trường
+      { wch: 15 }, // Đơn vị tính
+      { wch: 18 }, // Đơn giá
+      { wch: 12 }, // Số lượng
+      { wch: 22 }, // Thành tiền
+      { wch: 18 }  // Ghi chú
+    ];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Dự trù kinh phí");
+
+    const excelName = fileName.replace(/\.(doc|docx|xls|xlsx)$/i, "") + ".xlsx";
+    XLSX.writeFile(wb, excelName);
   };
 
   return (
     <div style={{ display: "flex", gap: "0.5rem" }}>
-      <button onClick={exportToWord} type="button" style={{ background: "#3b82f6", color: "white", padding: "0.5rem 1rem", borderRadius: "0.5rem", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.875rem", fontWeight: 600 }}>
-        <Download size={16} /> Xuất Word
+      <button onClick={exportToExcel} type="button" style={{ background: "#10b981", color: "white", padding: "0.5rem 1rem", borderRadius: "0.5rem", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "0.875rem", fontWeight: 600 }}>
+        <FileSpreadsheet size={16} /> Xuất Excel (.xlsx)
       </button>
-      <button className="print-btn" onClick={() => window.print()} type="button">
+      <button className="print-btn" onClick={handlePrint} type="button">
         <Printer size={16} /> In phiếu
       </button>
     </div>

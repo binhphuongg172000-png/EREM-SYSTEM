@@ -7,6 +7,7 @@ import ProposalFilters from "./ProposalFilters";
 import ProposalStatusSelect from "./ProposalStatusSelect";
 import { getCachedData } from "@/lib/cache";
 import { vietnameseIncludes } from "@/lib/vietnamese";
+import { computeProposalAllocatedBudget } from "@/lib/budget-utils";
 import { Building2, Calendar, TrendingUp, TrendingDown, UserCircle, AlertTriangle } from "lucide-react";
 import { cookies } from "next/headers";
 import PaginationControls from "@/components/PaginationControls";
@@ -56,17 +57,10 @@ export default async function AdminProposalsPage({
     console.error("AdminProposalsPage fetch error:", err);
   }
   const allProposals = JSON.parse(JSON.stringify(dbProposals)).map((p: any) => {
-    if (p.status === "CLOSED") {
-      return {
-        ...p,
-        allocatedBudget: Number(p.allocatedBudget || 0),
-      };
-    }
-    const newStudents = Number(p.school?.newStudents) || 0;
-    const allocatedBudget = newStudents > 0 ? Math.floor((newStudents * 100000000) / 105) : Number(p.allocatedBudget || 0);
     return {
       ...p,
-      allocatedBudget
+      allocatedBudget: computeProposalAllocatedBudget(p),
+      investedBudget: Number(p.investedBudget || 0),
     };
   });
 

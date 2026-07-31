@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import ProjectCostDashboard, { ProjectCostStat } from "@/app/admin/dashboard/ProjectCostDashboard";
+import { computeProposalAllocatedBudget, deduplicateActiveProposals } from "@/lib/budget-utils";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -21,6 +22,7 @@ export default async function SaleDashboardPage() {
     const [resProposals, resSchools] = await Promise.all([
       prisma.proposal.findMany({
         where: {
+          status: { not: "CLOSED" },
           OR: [
             { saleId: userId },
             { school: { saleId: userId } }
@@ -51,25 +53,13 @@ export default async function SaleDashboardPage() {
     return lower.includes("thi công") || lower.includes("bảo trì") || lower.includes("hệ thống");
   };
 
-  // Deduplicate proposals so each school counts its latest proposal PER PROJECT
-  const latestProposalsMap = new Map<string, typeof rawAllProposals[0]>();
-  for (const p of rawAllProposals) {
-    const schId = p.schoolId || p.school?.id || p.id;
-    const projName = p.projectName || "IPRO";
-    const key = `${schId}_${projName}`;
-    if (schId && !latestProposalsMap.has(key)) {
-      latestProposalsMap.set(key, p);
-    }
-  }
-  const rawUniqueProposals = Array.from(latestProposalsMap.values());
+  // Deduplicate active proposals so each school counts its latest ACTIVE proposal PER PROJECT (excludes status === "CLOSED")
+  const rawUniqueProposals = deduplicateActiveProposals(rawAllProposals);
 
   const allProposals = rawUniqueProposals.map((p: any) => {
     const newStudents = Number(p.newStudents || p.school?.newStudents || 0);
-    const dbAlloc = Number(p.allocatedBudget || 0);
     const dbInvested = Number(p.investedBudget || 0);
-    const allocatedBudget = dbAlloc > 0
-      ? dbAlloc
-      : (newStudents > 0 ? Math.floor((newStudents * 100000000) / 105) : 0);
+    const allocatedBudget = computeProposalAllocatedBudget(p);
 
     return {
       ...p,
@@ -171,12 +161,31 @@ export default async function SaleDashboardPage() {
     };
   });
 
+  const schoolBudgetList = allProposals.map((p: any) => {
+    const delta = p.allocatedBudget - p.investedBudget;
+    const usagePercentage = p.allocatedBudget > 0 ? Math.round((p.investedBudget / p.allocatedBudget) * 100) : 0;
+    return {
+      id: String(p.id),
+      proposalId: String(p.id),
+      schoolId: String(p.schoolId || p.school?.id || ""),
+      schoolName: String(p.school?.name || "Trường chưa đặt tên"),
+      projectName: String(p.projectName || "IPRO"),
+      saleName: String(p.sale?.name || p.school?.sale?.name || ""),
+      newStudents: Number(p.newStudents || 0),
+      allocatedBudget: Number(p.allocatedBudget || 0),
+      investedBudget: Number(p.investedBudget || 0),
+      delta,
+      usagePercentage,
+    };
+  });
+
   const totalUniqueSchools = new Set(allProposals.map((p: any) => p.schoolId).filter(Boolean)).size;
 
   return (
     <div style={{ paddingBottom: "2rem" }}>
       <ProjectCostDashboard
         projectsData={projectsData}
+        schoolBudgetList={schoolBudgetList}
         totalUniqueSchools={totalUniqueSchools}
         title="Dashboard Cá Nhân Kinh Doanh 🚀"
         subtitle="Theo dõi trực quan ngân sách, số học sinh mới và chi phí thực tế của các dự trù kinh doanh do bạn quản lý"

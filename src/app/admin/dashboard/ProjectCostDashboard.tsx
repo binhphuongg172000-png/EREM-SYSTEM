@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Building2, FileText, Layers, Sparkles, Users, Globe, Calculator,
-  GraduationCap, TrendingUp, TrendingDown, Laptop, Coins, Wrench
+  GraduationCap, TrendingUp, TrendingDown, Laptop, Coins, Wrench, AlertTriangle, Edit3
 } from "lucide-react";
 
 // ─── Types ───────────────────────────────────────────────────────────
@@ -38,6 +40,20 @@ export type SaleCostStat = {
   totalProposals: number;
   totalStudents: number;
   projectStats: SaleProjectDetail[];
+};
+
+export type SchoolBudgetStat = {
+  id: string;
+  proposalId?: string;
+  schoolId?: string;
+  schoolName: string;
+  projectName: string;
+  saleName?: string;
+  newStudents: number;
+  allocatedBudget: number;
+  investedBudget: number;
+  delta: number;
+  usagePercentage: number;
 };
 
 // ─── Utilities ────────────────────────────────────────────────────────
@@ -129,7 +145,7 @@ const S = {
     textAlign: "right",
   }),
   blink: (isNeg: boolean): React.CSSProperties => ({
-    animation: isNeg ? "blinkRed 2.2s ease-in-out infinite" : "none",
+    animation: isNeg ? "blinkRed 1s ease-in-out infinite" : "none",
   }),
 };
 
@@ -209,17 +225,17 @@ function InvestmentCard({ projects, totalInvested, totalItemCost, totalOtherCost
                 alignItems: "center",
                 width: "100%",
               }}>
-                <span style={{ color: "#38bdf8", display: "inline-flex", alignItems: "center", gap: "0.12rem", fontWeight: 700 }}>
+                <span title={fmtMoney(p.itemCost) + " đ"} style={{ color: "#38bdf8", display: "inline-flex", alignItems: "center", gap: "0.12rem", fontWeight: 700, cursor: "pointer" }}>
                   <Laptop size={10} style={{ flexShrink: 0 }} />{fmtShort(p.itemCost)}
                 </span>
-                <span style={{ color: "#c084fc", display: "inline-flex", alignItems: "center", gap: "0.12rem", fontWeight: 700 }}>
+                <span title={fmtMoney(p.otherCost) + " đ"} style={{ color: "#c084fc", display: "inline-flex", alignItems: "center", gap: "0.12rem", fontWeight: 700, cursor: "pointer" }}>
                   <Coins size={10} style={{ flexShrink: 0 }} />{fmtShort(p.otherCost)}
                 </span>
-                <span style={{ color: "#fbbf24", display: "inline-flex", alignItems: "center", gap: "0.12rem", fontWeight: 700 }}>
+                <span title={fmtMoney(p.constrCost) + " đ"} style={{ color: "#fbbf24", display: "inline-flex", alignItems: "center", gap: "0.12rem", fontWeight: 700, cursor: "pointer" }}>
                   <Wrench size={10} style={{ flexShrink: 0 }} />{fmtShort(p.constrCost)}
                 </span>
               </div>
-              <div title={fmtMoney(p.totalInvested) + " đ"} style={{ fontWeight: 900, whiteSpace: "nowrap", color: "#fbbf24", textAlign: "right", fontSize: "0.78rem" }}>
+              <div title={fmtMoney(p.totalInvested) + " đ"} style={{ fontWeight: 900, whiteSpace: "nowrap", color: "#fbbf24", textAlign: "right", fontSize: "0.78rem", cursor: "pointer" }}>
                 {fmtSmartMoney(p.totalInvested)}
               </div>
             </div>
@@ -238,13 +254,13 @@ function InvestmentCard({ projects, totalInvested, totalItemCost, totalOtherCost
           flex: 1,
           paddingRight: "0.4rem",
         }}>
-          <span style={{ color: "#38bdf8", display: "inline-flex", alignItems: "center", gap: "0.12rem", fontWeight: 800 }}>
+          <span title={fmtMoney(totalItemCost) + " đ"} style={{ color: "#38bdf8", display: "inline-flex", alignItems: "center", gap: "0.12rem", fontWeight: 800, cursor: "pointer" }}>
             <Laptop size={11} style={{ flexShrink: 0 }} />{fmtShort(totalItemCost)}
           </span>
-          <span style={{ color: "#c084fc", display: "inline-flex", alignItems: "center", gap: "0.12rem", fontWeight: 800 }}>
+          <span title={fmtMoney(totalOtherCost) + " đ"} style={{ color: "#c084fc", display: "inline-flex", alignItems: "center", gap: "0.12rem", fontWeight: 800, cursor: "pointer" }}>
             <Coins size={11} style={{ flexShrink: 0 }} />{fmtShort(totalOtherCost)}
           </span>
-          <span style={{ color: "#fbbf24", display: "inline-flex", alignItems: "center", gap: "0.12rem", fontWeight: 800 }}>
+          <span title={fmtMoney(totalConstrCost) + " đ"} style={{ color: "#fbbf24", display: "inline-flex", alignItems: "center", gap: "0.12rem", fontWeight: 800, cursor: "pointer" }}>
             <Wrench size={11} style={{ flexShrink: 0 }} />{fmtShort(totalConstrCost)}
           </span>
         </div>
@@ -500,7 +516,7 @@ function ProjectCard({ proj }: { proj: ProjectCostStat }) {
             color: isNeg ? "#ff4d6d" : proj.color,
             ...S.blink(isNeg),
           }}>
-            {isNeg ? "-" : ""}{usage}%
+            {Math.abs(usage)}%
           </span>
         </div>
         <div style={{ width: "100%", height: "5px", borderRadius: "3px", background: "rgba(255, 255, 255, 0.08)", overflow: "hidden" }}>
@@ -534,7 +550,7 @@ function ProjectCard({ proj }: { proj: ProjectCostStat }) {
         ].map(item => {
           const IconComp = item.icon;
           return (
-            <div key={item.label} style={{ display: "inline-flex", alignItems: "center", gap: "0.12rem", whiteSpace: "nowrap", overflow: "hidden" }}>
+            <div key={item.label} title={fmtMoney(item.value) + " đ"} style={{ display: "inline-flex", alignItems: "center", gap: "0.12rem", whiteSpace: "nowrap", overflow: "hidden", cursor: "pointer" }}>
               <IconComp size={10} color={item.color} style={{ flexShrink: 0 }} />
               <span style={{ color: "#cbd5e1", fontSize: "0.62rem", fontWeight: 700 }}>{item.label}</span>
               <strong style={{ color: item.color, fontSize: "0.68rem", fontWeight: 900 }}>{fmtShort(item.value)}</strong>
@@ -550,6 +566,7 @@ function ProjectCard({ proj }: { proj: ProjectCostStat }) {
 export default function ProjectCostDashboard({
   projectsData,
   salesData = [],
+  schoolBudgetList = [],
   totalUniqueSchools,
   title = "Tổng Quan Chi Phí Theo Từng Dự Án",
   subtitle = "Theo dõi kinh phí cấp, tổng tiền đã lập dự trù và chênh lệch ngân sách",
@@ -557,17 +574,58 @@ export default function ProjectCostDashboard({
 }: {
   projectsData: ProjectCostStat[];
   salesData?: SaleCostStat[];
+  schoolBudgetList?: SchoolBudgetStat[];
   totalUniqueSchools?: number;
   title?: string;
   subtitle?: string;
   actionButton?: React.ReactNode;
 }) {
   const [activeTab, setActiveTab] = useState<string>("ALL");
+  const pathname = usePathname();
+  const basePath = pathname?.startsWith("/sale") ? "sale" : "admin";
 
   const filteredProjects = useMemo(() => {
     if (activeTab === "ALL") return projectsData;
     return projectsData.filter(p => p.projectKey === activeTab);
   }, [projectsData, activeTab]);
+
+  const PROJECT_CONFIGS: Array<{
+    key: "IPRO" | "ICLASS" | "IGEN" | "ILINK";
+    color: string;
+    badgeBg: string;
+    border: string;
+  }> = [
+    { key: "IPRO", color: "#38bdf8", badgeBg: "rgba(56, 189, 248, 0.2)", border: "rgba(56, 189, 248, 0.3)" },
+    { key: "ICLASS", color: "#c084fc", badgeBg: "rgba(168, 85, 247, 0.2)", border: "rgba(168, 85, 247, 0.3)" },
+    { key: "IGEN", color: "#fbbf24", badgeBg: "rgba(245, 158, 11, 0.2)", border: "rgba(245, 158, 11, 0.3)" },
+    { key: "ILINK", color: "#34d399", badgeBg: "rgba(16, 185, 129, 0.2)", border: "rgba(16, 185, 129, 0.3)" },
+  ];
+
+  // Filter school budget items by active tab and sort by magnitude of delta
+  const activeSchools = useMemo(() => {
+    if (activeTab === "ALL") return schoolBudgetList;
+    return schoolBudgetList.filter(s => s.projectName.toUpperCase().trim() === activeTab);
+  }, [schoolBudgetList, activeTab]);
+
+  const negativeSchools = useMemo(() => {
+    return activeSchools
+      .filter(s => s.delta < 0)
+      .sort((a, b) => a.delta - b.delta); // Largest negative first
+  }, [activeSchools]);
+
+  const positiveSchools = useMemo(() => {
+    return activeSchools
+      .filter(s => s.delta >= 0)
+      .sort((a, b) => b.delta - a.delta); // Largest positive first
+  }, [activeSchools]);
+
+  const negativeUniqueSchoolsCount = useMemo(() => {
+    return new Set(negativeSchools.map(s => s.schoolName.trim().toLowerCase())).size;
+  }, [negativeSchools]);
+
+  const positiveUniqueSchoolsCount = useMemo(() => {
+    return new Set(positiveSchools.map(s => s.schoolName.trim().toLowerCase())).size;
+  }, [positiveSchools]);
 
   const grand = useMemo(() => ({
     schools: totalUniqueSchools ?? sumField(projectsData, "schoolCount"),
@@ -587,8 +645,16 @@ export default function ProjectCostDashboard({
     <div style={{ animation: "fadeIn 0.25s ease-out" }}>
       <style>{`
         @keyframes blinkRed {
-          0%, 100% { color: #ff4d6d; opacity: 1; text-shadow: 0 0 12px rgba(255,77,109,0.95), 0 0 4px rgba(255,255,255,0.9); }
-          50% { color: #ff1a40; opacity: 0.85; text-shadow: 0 0 6px rgba(255,26,64,0.7); }
+          0%, 100% {
+            color: #f43f5e;
+            opacity: 1;
+            text-shadow: 0 0 12px rgba(244, 63, 94, 0.9), 0 0 4px rgba(255, 255, 255, 0.9);
+          }
+          50% {
+            color: #fda4af;
+            opacity: 0.25;
+            text-shadow: none;
+          }
         }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
         @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
@@ -702,6 +768,241 @@ export default function ProjectCostDashboard({
               <ProjectCard key={proj.projectKey} proj={proj} />
             ))}
           </div>
+        </div>
+      )}
+
+      {/* ── 2 Sections: Ngân Sách Âm & Ngân Sách Dương (Chỉ hiển thị cho Sale) ────────────────── */}
+      {basePath === "sale" && schoolBudgetList.length > 0 && (
+        <div style={{
+          marginTop: "1.25rem",
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(380px, 1fr))",
+          gap: "1rem",
+          alignItems: "start"
+        }}>
+          
+          {/* CỘT 1: DANH SÁCH TRƯỜNG VƯỢT NGÂN SÁCH (NGÂN SÁCH ÂM) */}
+          <div style={{
+            background: "linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95))",
+            borderRadius: "12px",
+            border: "1px solid rgba(244, 63, 94, 0.35)",
+            padding: "0.9rem",
+            boxShadow: "0 4px 16px rgba(244, 63, 94, 0.12)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.75rem",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "0.5rem", borderBottom: "1px solid rgba(244, 63, 94, 0.25)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <div style={{
+                  width: "28px", height: "28px", borderRadius: "8px",
+                  background: "rgba(244, 63, 94, 0.15)", border: "1px solid rgba(244, 63, 94, 0.4)",
+                  display: "flex", alignItems: "center", justifyContent: "center", color: "#f43f5e",
+                  flexShrink: 0
+                }}>
+                  <TrendingDown size={15} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "0.9rem", fontWeight: 900, color: "#ffffff", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                    Trường Vượt Ngân Sách (Âm)
+                    <span style={{ fontSize: "0.65rem", background: "rgba(244, 63, 94, 0.2)", color: "#f43f5e", padding: "1px 7px", borderRadius: "10px", border: "1px solid rgba(244, 63, 94, 0.4)", fontWeight: 800 }}>
+                      {negativeUniqueSchoolsCount} trường • {negativeSchools.length} dự trù
+                    </span>
+                  </h3>
+                </div>
+              </div>
+            </div>
+
+            {negativeSchools.length === 0 ? (
+              <div style={{ padding: "1rem", textAlign: "center", color: "#94a3b8", fontSize: "0.8rem", background: "rgba(15, 23, 42, 0.5)", borderRadius: "8px" }}>
+                🎉 Không có trường nào vượt ngân sách {activeTab !== "ALL" ? `ở dự án ${activeTab}` : ""}!
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
+                {negativeSchools.map(item => {
+                  const cfg = PROJECT_CONFIGS.find(c => c.key === item.projectName) || PROJECT_CONFIGS[0];
+                  return (
+                    <div key={item.id} style={{
+                      background: "rgba(15, 23, 42, 0.7)",
+                      border: "1px solid rgba(244, 63, 94, 0.3)",
+                      borderRadius: "8px",
+                      padding: "0.55rem 0.75rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.4rem",
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexWrap: "wrap" }}>
+                          <Link href={`/${basePath}/proposals/${item.proposalId || item.id}`} style={{ fontWeight: 800, color: "#ffffff", fontSize: "0.85rem", textDecoration: "none" }}>
+                            {item.schoolName}
+                          </Link>
+                          <span style={{ fontSize: "0.62rem", fontWeight: 800, color: cfg.color, background: cfg.badgeBg, padding: "1px 5px", borderRadius: "4px", border: `1px solid ${cfg.border}` }}>
+                            {item.projectName}
+                          </span>
+                        </div>
+                        <Link
+                          href={`/${basePath}/proposals/${item.proposalId || item.id}`}
+                          style={{
+                            fontSize: "0.65rem",
+                            fontWeight: 800,
+                            color: "#ffffff",
+                            background: "linear-gradient(135deg, #f43f5e, #e11d48)",
+                            padding: "2px 7px",
+                            borderRadius: "5px",
+                            textDecoration: "none",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "3px",
+                            boxShadow: "0 2px 5px rgba(244, 63, 94, 0.25)",
+                            whiteSpace: "nowrap"
+                          }}
+                          title="Chỉnh sửa dự trù kinh phí"
+                        >
+                          <Edit3 size={10} /> Sửa
+                        </Link>
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.2rem", background: "rgba(15, 23, 42, 0.5)", padding: "0.35rem 0.5rem", borderRadius: "5px", fontSize: "0.72rem" }}>
+                        <div>
+                          <div style={{ fontSize: "0.58rem", color: "#64748b", fontWeight: 700 }}>NGÂN SÁCH</div>
+                          <div style={{ fontWeight: 800, color: "#34d399" }}>{fmtSmartMoney(item.allocatedBudget)}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "0.58rem", color: "#64748b", fontWeight: 700 }}>ĐÃ ĐẦU TƯ</div>
+                          <div style={{ fontWeight: 800, color: "#fbbf24" }}>{fmtSmartMoney(item.investedBudget)}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "0.58rem", color: "#f43f5e", fontWeight: 700 }}>CHÊNH LỆCH</div>
+                          <div style={{ fontWeight: 900, color: "#f43f5e" }}>{fmtSmartMoney(item.delta)}</div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.68rem" }}>
+                        <span style={{ color: "#38bdf8", fontWeight: 700, display: "flex", alignItems: "center", gap: "3px" }}>
+                          <GraduationCap size={11} /> {fmtMoney(item.newStudents)} HS
+                        </span>
+                        <span style={{ fontWeight: 900, color: "#f43f5e" }}>
+                          Đã đầu tư {item.usagePercentage}%
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          {/* CỘT 2: DANH SÁCH TRƯỜNG CÒN DƯ NGÂN SÁCH (NGÂN SÁCH DƯƠNG) */}
+          <div style={{
+            background: "linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.95))",
+            borderRadius: "12px",
+            border: "1px solid rgba(52, 211, 153, 0.35)",
+            padding: "0.9rem",
+            boxShadow: "0 4px 16px rgba(52, 211, 153, 0.12)",
+            display: "flex",
+            flexDirection: "column",
+            gap: "0.75rem",
+          }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingBottom: "0.5rem", borderBottom: "1px solid rgba(52, 211, 153, 0.25)" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                <div style={{
+                  width: "28px", height: "28px", borderRadius: "8px",
+                  background: "rgba(52, 211, 153, 0.15)", border: "1px solid rgba(52, 211, 153, 0.4)",
+                  display: "flex", alignItems: "center", justifyContent: "center", color: "#34d399",
+                  flexShrink: 0
+                }}>
+                  <TrendingUp size={15} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "0.9rem", fontWeight: 900, color: "#ffffff", display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                    Trường Còn Dư Ngân Sách (Dương)
+                    <span style={{ fontSize: "0.65rem", background: "rgba(52, 211, 153, 0.2)", color: "#34d399", padding: "1px 7px", borderRadius: "10px", border: "1px solid rgba(52, 211, 153, 0.4)", fontWeight: 800 }}>
+                      {positiveUniqueSchoolsCount} trường • {positiveSchools.length} dự trù
+                    </span>
+                  </h3>
+                </div>
+              </div>
+            </div>
+
+            {positiveSchools.length === 0 ? (
+              <div style={{ padding: "1rem", textAlign: "center", color: "#94a3b8", fontSize: "0.8rem", background: "rgba(15, 23, 42, 0.5)", borderRadius: "8px" }}>
+                Không có trường nào còn dư ngân sách {activeTab !== "ALL" ? `ở dự án ${activeTab}` : ""}!
+              </div>
+            ) : (
+              <div style={{ display: "flex", flexDirection: "column", gap: "0.45rem" }}>
+                {positiveSchools.map(item => {
+                  const cfg = PROJECT_CONFIGS.find(c => c.key === item.projectName) || PROJECT_CONFIGS[0];
+                  return (
+                    <div key={item.id} style={{
+                      background: "rgba(15, 23, 42, 0.7)",
+                      border: "1px solid rgba(52, 211, 153, 0.25)",
+                      borderRadius: "8px",
+                      padding: "0.55rem 0.75rem",
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: "0.4rem",
+                    }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "0.5rem" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.35rem", flexWrap: "wrap" }}>
+                          <Link href={`/${basePath}/proposals/${item.proposalId || item.id}`} style={{ fontWeight: 800, color: "#ffffff", fontSize: "0.85rem", textDecoration: "none" }}>
+                            {item.schoolName}
+                          </Link>
+                          <span style={{ fontSize: "0.62rem", fontWeight: 800, color: cfg.color, background: cfg.badgeBg, padding: "1px 5px", borderRadius: "4px", border: `1px solid ${cfg.border}` }}>
+                            {item.projectName}
+                          </span>
+                        </div>
+                        <Link
+                          href={`/${basePath}/proposals/${item.proposalId || item.id}`}
+                          style={{
+                            fontSize: "0.65rem",
+                            fontWeight: 800,
+                            color: "#34d399",
+                            background: "rgba(52, 211, 153, 0.15)",
+                            border: "1px solid rgba(52, 211, 153, 0.3)",
+                            padding: "2px 7px",
+                            borderRadius: "5px",
+                            textDecoration: "none",
+                            display: "inline-flex",
+                            alignItems: "center",
+                            gap: "3px",
+                            whiteSpace: "nowrap"
+                          }}
+                          title="Xem hoặc chỉnh sửa dự trù kinh phí"
+                        >
+                          <Edit3 size={10} /> Sửa
+                        </Link>
+                      </div>
+
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "0.2rem", background: "rgba(15, 23, 42, 0.5)", padding: "0.35rem 0.5rem", borderRadius: "5px", fontSize: "0.72rem" }}>
+                        <div>
+                          <div style={{ fontSize: "0.58rem", color: "#64748b", fontWeight: 700 }}>NGÂN SÁCH</div>
+                          <div style={{ fontWeight: 800, color: "#34d399" }}>{fmtSmartMoney(item.allocatedBudget)}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "0.58rem", color: "#64748b", fontWeight: 700 }}>ĐÃ ĐẦU TƯ</div>
+                          <div style={{ fontWeight: 800, color: "#fbbf24" }}>{fmtSmartMoney(item.investedBudget)}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: "0.58rem", color: "#34d399", fontWeight: 700 }}>CÒN DƯ</div>
+                          <div style={{ fontWeight: 900, color: "#34d399" }}>+{fmtSmartMoney(item.delta)}</div>
+                        </div>
+                      </div>
+
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", fontSize: "0.68rem" }}>
+                        <span style={{ color: "#38bdf8", fontWeight: 700, display: "flex", alignItems: "center", gap: "3px" }}>
+                          <GraduationCap size={11} /> {fmtMoney(item.newStudents)} HS
+                        </span>
+                        <span style={{ fontWeight: 900, color: "#34d399" }}>
+                          Đã dùng {item.usagePercentage}%
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
         </div>
       )}
 

@@ -1095,8 +1095,8 @@ export default function ProposalForm({
                             />
                           </div>
                           <div>
-                            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#38bdf8", marginBottom: "0.35rem", fontWeight: 500 }}><GraduationCap size={14}/> HS Mới <span style={{color:"#f43f5e"}}>*</span></label>
-                            <input type="number" className="form-input" required style={{ width: "100%", padding: "0.5rem 0.75rem", background: "rgba(56,189,248,0.05)", border: "1px solid rgba(56,189,248,0.3)", borderRadius: "8px", color: "#38bdf8" }} 
+                            <label style={{ display: "flex", alignItems: "center", gap: "6px", fontSize: "0.8rem", color: "#38bdf8", marginBottom: "0.35rem", fontWeight: 500 }}><GraduationCap size={14}/> HS Mới</label>
+                            <input type="number" className="form-input" style={{ width: "100%", padding: "0.5rem 0.75rem", background: "rgba(56,189,248,0.05)", border: "1px solid rgba(56,189,248,0.3)", borderRadius: "8px", color: "#38bdf8" }} 
                               value={schoolDetails.newStudents} 
                               onChange={e => setSchoolDetails({...schoolDetails, newStudents: e.target.value})} 
                             />
@@ -1378,9 +1378,12 @@ export default function ProposalForm({
                     </div>
 
                     <div style={{ padding: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                      {items.filter(i => i.type === "ITEM").map((item) => (
-                        <div key={item.tempId} className="item-row">
-                          <div className="item-row-main">
+                      {items.filter(i => i.type === "ITEM").map((item, idx) => (
+                        <div key={item.tempId} className="item-row" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                          <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "rgba(56, 189, 248, 0.15)", color: "#38bdf8", border: "1px solid rgba(56, 189, 248, 0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 700, flexShrink: 0 }}>
+                            {idx + 1}
+                          </div>
+                          <div className="item-row-main" style={{ flex: 1 }}>
                             <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.875rem", marginBottom: 3 }}>{item.name}</div>
                             {item.specifications && (
                               <div style={{ fontSize: "0.75rem", color: "#94a3b8", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
@@ -1463,9 +1466,12 @@ export default function ProposalForm({
                     </div>
 
                     <div style={{ padding: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                      {items.filter(i => i.type === "INVESTMENT" && !isConstructionItem(i)).map((item) => (
-                        <div key={item.tempId} className="item-row">
-                          <div className="item-row-main">
+                      {items.filter(i => i.type === "INVESTMENT" && !isConstructionItem(i)).map((item, idx) => (
+                        <div key={item.tempId} className="item-row" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                          <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "rgba(168, 85, 247, 0.15)", color: "#a855f7", border: "1px solid rgba(168, 85, 247, 0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 700, flexShrink: 0 }}>
+                            {idx + 1}
+                          </div>
+                          <div className="item-row-main" style={{ flex: 1 }}>
                             <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.875rem", marginBottom: 3 }}>{item.name}</div>
                             {item.specifications && (
                               <div style={{ fontSize: "0.75rem", color: "#94a3b8", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
@@ -1548,9 +1554,12 @@ export default function ProposalForm({
                     </div>
 
                     <div style={{ padding: "0.75rem", display: "flex", flexDirection: "column", gap: "0.5rem" }}>
-                      {items.filter(i => i.type === "INVESTMENT" && isConstructionItem(i)).map((item) => (
-                        <div key={item.tempId} className="item-row">
-                          <div className="item-row-main">
+                      {items.filter(i => i.type === "INVESTMENT" && isConstructionItem(i)).map((item, idx) => (
+                        <div key={item.tempId} className="item-row" style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                          <div style={{ width: "24px", height: "24px", borderRadius: "50%", background: "rgba(6, 182, 212, 0.15)", color: "#06b6d4", border: "1px solid rgba(6, 182, 212, 0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.75rem", fontWeight: 700, flexShrink: 0 }}>
+                            {idx + 1}
+                          </div>
+                          <div className="item-row-main" style={{ flex: 1 }}>
                             <div style={{ fontWeight: 600, color: "#f1f5f9", fontSize: "0.875rem", marginBottom: 3 }}>{item.name}</div>
                             {item.specifications && (
                               <div style={{ fontSize: "0.75rem", color: "#94a3b8", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden" }}>

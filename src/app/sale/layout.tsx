@@ -57,7 +57,7 @@ export default function SaleLayout({
       {/* Sidebar for Desktop */}
       <aside className="sale-sidebar">
         <div className="sidebar-brand">
-          <BrandLogo badge="SALE PLATFORM" />
+          <BrandLogo badge="SALE PLATFORM" href="/sale/dashboard" />
         </div>
 
         <nav className="sidebar-nav">

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import EremLogo from "./EremLogo";
 
 interface BrandLogoProps {
@@ -8,6 +9,7 @@ interface BrandLogoProps {
   badge?: string;
   className?: string;
   size?: "sm" | "md" | "lg";
+  href?: string;
 }
 
 export default function BrandLogo({
@@ -15,8 +17,9 @@ export default function BrandLogo({
   badge = "ENTERPRISE",
   className = "",
   size = "md",
+  href,
 }: BrandLogoProps) {
-  return (
+  const content = (
     <EremLogo
       variant="horizontal"
       size={size}
@@ -25,4 +28,14 @@ export default function BrandLogo({
       className={className}
     />
   );
+
+  if (href) {
+    return (
+      <Link href={href} style={{ textDecoration: "none", display: "inline-block", cursor: "pointer" }} title="Về trang Dashboard">
+        {content}
+      </Link>
+    );
+  }
+
+  return content;
 }

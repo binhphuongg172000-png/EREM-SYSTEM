@@ -162,7 +162,7 @@ export default async function ItemsPage({
                     <td style={{ fontWeight: 700, color: "#ffffff" }}>{Number(item.standardPrice).toLocaleString()} đ</td>
                     <td style={{ textAlign: "right" }}>
                       <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", alignItems: "center" }}>
-                        <Link href={`/admin/items/${item.id}/edit`} className="btn btn-secondary" style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem" }}>
+                        <Link href={`/admin/items/${item.id}/edit?page=${page}`} className="btn btn-secondary" style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem" }}>
                           Sửa
                         </Link>
                         <DeleteItemButton id={item.id} />

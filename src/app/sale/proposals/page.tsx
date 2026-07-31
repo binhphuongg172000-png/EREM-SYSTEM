@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { getCachedData } from "@/lib/cache";
 import SaleProposalsClient from "./SaleProposalsClient";
 import { Plus } from "lucide-react";
+import { computeProposalAllocatedBudget, deduplicateActiveProposals } from "@/lib/budget-utils";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,7 @@ export default async function SaleProposalsPage() {
   try {
     res = await prisma.proposal.findMany({
       where: {
+        status: { not: "CLOSED" },
         school: {
           saleId: userId,
         },
@@ -34,26 +36,12 @@ export default async function SaleProposalsPage() {
   }
   const raw = JSON.parse(JSON.stringify(res));
 
-  // Business rule: Each school has 1 proposal per project displayed
-  const schoolProjectMap = new Map<string, typeof raw[0]>();
-  for (const p of raw) {
-    if (!p.schoolId) continue;
-    const key = `${p.schoolId}_${p.projectName || "IPRO"}`;
-    if (!schoolProjectMap.has(key)) {
-      schoolProjectMap.set(key, p);
-    }
-  }
-  const uniqueRaw = Array.from(schoolProjectMap.values());
+  // Business rule: Each school has 1 active proposal per project displayed (excludes status CLOSED)
+  const uniqueRaw = deduplicateActiveProposals(raw);
 
-  const proposals = JSON.parse(JSON.stringify(uniqueRaw)).map((p: any) => {
-    let allocatedBudget = Number(p.allocatedBudget || 0);
-    if (p.status !== "CLOSED") {
-      const newStudents = Number(p.school?.newStudents) || 0;
-      if (newStudents > 0) {
-        allocatedBudget = Math.floor((newStudents * 100000000) / 105);
-      }
-    }
-    let investedBudget = Number(p.investedBudget || 0);
+  const proposals = uniqueRaw.map((p: any) => {
+    const allocatedBudget = computeProposalAllocatedBudget(p);
+    const investedBudget = Number(p.investedBudget || 0);
 
     return {
       ...p,

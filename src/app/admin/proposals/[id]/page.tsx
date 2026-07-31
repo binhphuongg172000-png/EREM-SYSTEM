@@ -62,6 +62,11 @@ export default async function ProposalDetailPage({
   const schoolYearLabel = isThcs ? "2029 - 2030" : "2030 - 2031";
   const depreciationLabel = isThcs ? "4 năm (2029-2030)" : "5 năm (2030-2031)";
 
+  const createdDate = new Date(proposal.createdAt || Date.now());
+  const printDay = String(createdDate.getDate()).padStart(2, "0");
+  const printMonth = String(createdDate.getMonth() + 1).padStart(2, "0");
+  const printYear = createdDate.getFullYear();
+
   let badgeClass = "badge-orange";
   let statusText = "Khởi tạo";
   if (proposal.status === "COMPLETED") { badgeClass = "badge-success"; statusText = "Hoàn thành"; }
@@ -152,7 +157,7 @@ export default async function ProposalDetailPage({
         </div>
 
         <div style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
-          <div style={{ height: "fit-content" }}><PrintButton fileName={`DuTruKinhPhi_${proposal.school?.name || "Truong"}.doc`} /></div>
+          <div style={{ height: "fit-content" }}><PrintButton fileName={`DuTruKinhPhi_${proposal.school?.name || "Truong"}.xlsx`} /></div>
           {isSysAdmin && (
             <DeleteProposalDetailButton proposalId={proposal.id} schoolName={proposal.school?.name || "Trường"} />
           )}
@@ -180,6 +185,11 @@ export default async function ProposalDetailPage({
           <div>
             <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>Nhân viên Sale</div>
             <div style={{ fontSize: "0.85rem", color: "#38bdf8", fontWeight: 600 }}>{proposal.sale.name}</div>
+          </div>
+          <div style={{ height: "32px", width: "1px", background: "#1e293b" }} />
+          <div>
+            <div style={{ fontSize: "0.7rem", color: "#64748b", fontWeight: 500, textTransform: "uppercase", letterSpacing: "0.05em" }}>Dự án</div>
+            <div style={{ fontSize: "0.85rem", color: "#a78bfa", fontWeight: 700 }}>{proposal.projectName || "IPRO"}</div>
           </div>
         </div>
 
@@ -241,6 +251,7 @@ export default async function ProposalDetailPage({
           <table className="table table-hover">
             <thead>
               <tr>
+                <th style={{ width: "50px", textAlign: "center" }}>STT</th>
                 <th>Tên thiết bị</th>
                 <th>Cấu hình</th>
                 <th style={{ textAlign: "center" }}>Số lượng</th>
@@ -251,10 +262,11 @@ export default async function ProposalDetailPage({
             </thead>
             <tbody>
               {groupedItems.length === 0 ? (
-                <tr><td colSpan={6} style={{ padding: "2rem", textAlign: "center", color: "#cbd5e1" }}>Không có thiết bị</td></tr>
+                <tr><td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: "#cbd5e1" }}>Không có thiết bị</td></tr>
               ) : (
-                groupedItems.map((item: any) => (
+                groupedItems.map((item: any, idx: number) => (
                   <tr key={item.id}>
+                    <td style={{ textAlign: "center", color: "#94a3b8", fontWeight: 600 }}>{idx + 1}</td>
                     <td style={{ fontWeight: 700, color: "#ffffff" }}>{item.name}</td>
                     <td style={{ fontSize: "0.85rem", color: "#cbd5e1" }}>{item.specifications}</td>
                     <td style={{ textAlign: "center" }}>{Number(item.quantity)}</td>
@@ -278,6 +290,7 @@ export default async function ProposalDetailPage({
           <table className="table table-hover">
             <thead>
               <tr>
+                <th style={{ width: "50px", textAlign: "center" }}>STT</th>
                 <th>Tên Hạng mục</th>
                 <th>Mô tả</th>
                 <th style={{ textAlign: "center" }}>Số lượng</th>
@@ -288,10 +301,11 @@ export default async function ProposalDetailPage({
             </thead>
             <tbody>
               {groupedOtherInvestments.length === 0 ? (
-                <tr><td colSpan={6} style={{ padding: "2rem", textAlign: "center", color: "#cbd5e1" }}>Không có hạng mục đầu tư khác</td></tr>
+                <tr><td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: "#cbd5e1" }}>Không có hạng mục đầu tư khác</td></tr>
               ) : (
-                groupedOtherInvestments.map((inv: any) => (
+                groupedOtherInvestments.map((inv: any, idx: number) => (
                   <tr key={inv.id}>
+                    <td style={{ textAlign: "center", color: "#94a3b8", fontWeight: 600 }}>{idx + 1}</td>
                     <td style={{ fontWeight: 700, color: "#ffffff" }}>{inv.name}</td>
                     <td style={{ fontSize: "0.85rem", color: "#cbd5e1" }}>{inv.description}</td>
                     <td style={{ textAlign: "center" }}>{Number(inv.quantity)}</td>
@@ -315,6 +329,7 @@ export default async function ProposalDetailPage({
           <table className="table table-hover">
             <thead>
               <tr>
+                <th style={{ width: "50px", textAlign: "center" }}>STT</th>
                 <th>Tên Hạng mục</th>
                 <th>Mô tả</th>
                 <th style={{ textAlign: "center" }}>Số lượng</th>
@@ -325,10 +340,11 @@ export default async function ProposalDetailPage({
             </thead>
             <tbody>
               {groupedConstructions.length === 0 ? (
-                <tr><td colSpan={6} style={{ padding: "2rem", textAlign: "center", color: "#cbd5e1" }}>Không có hạng mục thi công</td></tr>
+                <tr><td colSpan={7} style={{ padding: "2rem", textAlign: "center", color: "#cbd5e1" }}>Không có hạng mục thi công</td></tr>
               ) : (
-                groupedConstructions.map((inv: any) => (
+                groupedConstructions.map((inv: any, idx: number) => (
                   <tr key={inv.id}>
+                    <td style={{ textAlign: "center", color: "#94a3b8", fontWeight: 600 }}>{idx + 1}</td>
                     <td style={{ fontWeight: 700, color: "#ffffff" }}>{inv.name}</td>
                     <td style={{ fontSize: "0.85rem", color: "#cbd5e1" }}>{inv.description}</td>
                     <td style={{ textAlign: "center" }}>{Number(inv.quantity)}</td>
@@ -384,12 +400,13 @@ export default async function ProposalDetailPage({
               <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{proposalNewStudents}</td>
             </tr>
             <tr>
-              <td colSpan={2} style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>Thời gian đầu tư: 2026 - 2027</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px" }}>Dự án:</td>
+              <td style={{ border: "1px solid black", padding: "3px 6px", fontWeight: "bold" }}>{proposal.projectName || "IPRO"}</td>
               <td style={{ border: "1px solid black", padding: "3px 6px" }}>Số học sinh cũ</td>
               <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{proposalOldStudents}</td>
             </tr>
             <tr>
-              <td colSpan={2} style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}></td>
+              <td colSpan={2} style={{ border: "1px solid black", padding: "3px 6px", textAlign: "center" }}>Thời gian đầu tư: 2026 - 2027</td>
               <td style={{ border: "1px solid black", padding: "3px 6px" }}>Số phòng học đầu tư</td>
               <td style={{ border: "1px solid black", padding: "3px 6px", textAlign: "right" }}>{proposal.school.investedClassrooms}</td>
             </tr>
@@ -493,7 +510,9 @@ export default async function ProposalDetailPage({
         </table>
 
         <div style={{ marginTop: "6px", textAlign: "right", fontStyle: "italic", paddingRight: "30px", pageBreakInside: "avoid" }}>
-          TP.HCM, ngày ..... tháng ..... năm 2026
+          <span className="print-date-text">
+            TP.HCM, ngày {printDay} tháng {printMonth} năm {printYear}
+          </span>
         </div>
 
         <table style={{ width: "100%", marginTop: "6px", borderCollapse: "collapse", border: "none", pageBreakInside: "avoid" }}>

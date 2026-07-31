@@ -70,7 +70,7 @@ export default function AdminLayout({
       {/* Sidebar */}
       <aside className="admin-sidebar">
         <div className="sidebar-brand">
-          <BrandLogo badge="ADMIN CONTROL" />
+          <BrandLogo badge="ADMIN CONTROL" href="/admin/dashboard" />
         </div>
         
         <nav className="sidebar-nav">
