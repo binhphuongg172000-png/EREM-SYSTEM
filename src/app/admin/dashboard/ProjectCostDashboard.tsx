@@ -581,8 +581,14 @@ export default function ProjectCostDashboard({
   actionButton?: React.ReactNode;
 }) {
   const [activeTab, setActiveTab] = useState<string>("ALL");
+  const [selectedSaleId, setSelectedSaleId] = useState<string>("ALL");
   const pathname = usePathname();
   const basePath = pathname?.startsWith("/sale") ? "sale" : "admin";
+
+  const displayedSales = useMemo(() => {
+    if (selectedSaleId === "ALL") return salesData;
+    return salesData.filter(s => s.saleId === selectedSaleId);
+  }, [salesData, selectedSaleId]);
 
   const filteredProjects = useMemo(() => {
     if (activeTab === "ALL") return projectsData;
@@ -1016,26 +1022,69 @@ export default function ProjectCostDashboard({
             padding: "1.15rem",
             boxShadow: "0 6px 24px rgba(0, 0, 0, 0.3)",
           }}>
-            <div style={{ display: "flex", alignItems: "center", gap: "0.6rem", marginBottom: "0.85rem" }}>
-              <div style={{
-                width: "34px", height: "34px", borderRadius: "8px",
-                background: "rgba(16, 185, 129, 0.2)", border: "1px solid rgba(16, 185, 129, 0.3)",
-                display: "flex", alignItems: "center", justifyContent: "center", color: "#10b981",
-              }}>
-                <Users size={18} />
+            <div style={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              flexWrap: "wrap",
+              gap: "0.75rem",
+              marginBottom: "0.85rem",
+              paddingBottom: "0.75rem",
+              borderBottom: "1px solid rgba(16, 185, 129, 0.25)"
+            }}>
+              <div style={{ display: "flex", alignItems: "center", gap: "0.6rem" }}>
+                <div style={{
+                  width: "34px", height: "34px", borderRadius: "8px",
+                  background: "rgba(16, 185, 129, 0.2)", border: "1px solid rgba(16, 185, 129, 0.3)",
+                  display: "flex", alignItems: "center", justifyContent: "center", color: "#10b981",
+                }}>
+                  <Users size={18} />
+                </div>
+                <div>
+                  <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 900, color: "#ffffff" }}>
+                    Thống Kê Theo Nhân Viên Sale
+                  </h3>
+                  <p style={{ margin: "0.1rem 0 0 0", fontSize: "0.74rem", color: "#94a3b8" }}>
+                    Chi phí, học sinh mới và đầu tư chi tiết của từng nhân viên kinh doanh
+                  </p>
+                </div>
               </div>
-              <div>
-                <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 900, color: "#ffffff" }}>
-                  Thống Kê Theo Nhân Viên Sale
-                </h3>
-                <p style={{ margin: "0.1rem 0 0 0", fontSize: "0.74rem", color: "#94a3b8" }}>
-                  Chi phí, học sinh mới và đầu tư chi tiết của từng nhân viên kinh doanh
-                </p>
-              </div>
+
+              {/* Dropdown Filter Select */}
+              {salesData.length > 1 && (
+                <div style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
+                  <span style={{ fontSize: "0.78rem", color: "#94a3b8", fontWeight: 700 }}>Nhân viên:</span>
+                  <select
+                    value={selectedSaleId}
+                    onChange={(e) => setSelectedSaleId(e.target.value)}
+                    style={{
+                      background: "rgba(15, 23, 42, 0.95)",
+                      color: "#10b981",
+                      border: "1px solid rgba(16, 185, 129, 0.45)",
+                      borderRadius: "8px",
+                      padding: "0.4rem 0.85rem",
+                      fontSize: "0.82rem",
+                      fontWeight: 800,
+                      outline: "none",
+                      cursor: "pointer",
+                      boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
+                    }}
+                  >
+                    <option value="ALL" style={{ background: "#0f172a", color: "#ffffff" }}>
+                      Tất cả Nhân viên ({salesData.length})
+                    </option>
+                    {salesData.map(sale => (
+                      <option key={sale.saleId} value={sale.saleId} style={{ background: "#0f172a", color: "#ffffff" }}>
+                        {sale.saleName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-              {salesData.map(sale => {
+              {displayedSales.map(sale => {
                 const saleDelta = sale.totalAllocated - sale.totalInvested;
                 const isSaleNeg = saleDelta < 0;
                 const saleUsage = sale.totalAllocated > 0 ? Math.round((sale.totalInvested / sale.totalAllocated) * 100) : 0;
