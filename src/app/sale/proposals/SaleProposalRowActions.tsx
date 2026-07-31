@@ -56,9 +56,9 @@ export default function SaleProposalRowActions({ proposal }: { proposal: any }) 
       <div style={{ width: "64px", flexShrink: 0 }}>
         {!isLocked ? (
           <Link
-            href={`/sale/proposals/new?schoolId=${proposal.schoolId}`}
+            href={`/sale/proposals/new?schoolId=${proposal.schoolId}&project=${proposal.projectName || "IPRO"}`}
             prefetch={true}
-            onMouseEnter={() => router.prefetch(`/sale/proposals/new?schoolId=${proposal.schoolId}`)}
+            onMouseEnter={() => router.prefetch(`/sale/proposals/new?schoolId=${proposal.schoolId}&project=${proposal.projectName || "IPRO"}`)}
             style={{
               ...btnBase,
               background: "rgba(251, 191, 36, 0.08)",

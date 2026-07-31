@@ -66,12 +66,14 @@ export default function ProposalForm({
   schools,
   catalogItems,
   catalogInvestments,
-  initialSchoolId = ""
+  initialSchoolId = "",
+  initialProject = ""
 }: {
   schools: School[],
   catalogItems: CatalogItem[],
   catalogInvestments: CatalogInvestment[],
-  initialSchoolId?: string
+  initialSchoolId?: string,
+  initialProject?: string
 }) {
   const router = useRouter();
   const schoolSearchRef = useRef<HTMLDivElement>(null);
@@ -89,7 +91,9 @@ export default function ProposalForm({
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [showClearConfirm, setShowClearConfirm] = useState(false);
   const [schoolFilter, setSchoolFilter] = useState<"ALL" | "NONE" | "INIT" | "LOCKED" | "COMPLETED">("ALL");
-  const [projectName, setProjectName] = useState<"IPRO" | "ICLASS" | "IGEN" | "ILINK" | "">("");
+  const [projectName, setProjectName] = useState<"IPRO" | "ICLASS" | "IGEN" | "ILINK" | "">(
+    (initialProject as any) || ""
+  );
   const [pendingProjectChange, setPendingProjectChange] = useState<"IPRO" | "ICLASS" | "IGEN" | "ILINK" | null>(null);
   const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
   const [catalogModalTab, setCatalogModalTab] = useState<"ALL" | "ITEM" | "INVESTMENT" | "CONSTRUCTION">("ALL");

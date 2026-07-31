@@ -4,6 +4,7 @@ import Link from "next/link";
 import SearchInput from "../SearchInput";
 import DeleteItemButton from "./DeleteItemButton";
 import PaginationControls from "@/components/PaginationControls";
+import { cookies } from "next/headers";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -13,6 +14,10 @@ export default async function ItemsPage({
 }: {
   searchParams: Promise<{ search?: string; project?: string; page?: string }>;
 }) {
+  const cookieStore = await cookies();
+  const userRole = cookieStore.get("userRole")?.value;
+  const isSuperAdmin = userRole === "SUPER_ADMIN";
+
   const resolvedParams = await searchParams;
   const search = resolvedParams?.search || "";
   const projectFilter = resolvedParams?.project || "ALL";
@@ -127,7 +132,9 @@ export default async function ItemsPage({
           </span>
         </div>
 
-        <Link href="/admin/items/new" className="btn btn-primary">+ Thêm Thiết bị</Link>
+        {isSuperAdmin && (
+          <Link href="/admin/items/new" className="btn btn-primary">+ Thêm Thiết bị</Link>
+        )}
       </div>
 
       <div className="card table-container" style={{ padding: 0 }}>
@@ -142,12 +149,12 @@ export default async function ItemsPage({
                 <th>Linh kiện kèm theo</th>
                 <th>ĐVT</th>
                 <th>Đơn giá chuẩn (VNĐ)</th>
-                <th style={{ textAlign: "right" }}>Thao tác</th>
+                {isSuperAdmin && <th style={{ textAlign: "right" }}>Thao tác</th>}
               </tr>
             </thead>
             <tbody>
               {displayItems.length === 0 ? (
-                <tr><td colSpan={8} style={{ padding: "2rem", textAlign: "center", color: "#cbd5e1" }}>Chưa có thiết bị nào phù hợp.</td></tr>
+                <tr><td colSpan={isSuperAdmin ? 8 : 7} style={{ padding: "2rem", textAlign: "center", color: "#cbd5e1" }}>Chưa có thiết bị nào phù hợp.</td></tr>
               ) : (
                 displayItems.map((item, idx) => (
                   <tr key={item.id}>
@@ -160,14 +167,16 @@ export default async function ItemsPage({
                     <td style={{ fontSize: "0.85rem", color: "#cbd5e1" }}>{item.accessories || "-"}</td>
                     <td>{item.unit || "Bộ"}</td>
                     <td style={{ fontWeight: 700, color: "#ffffff" }}>{Number(item.standardPrice).toLocaleString()} đ</td>
-                    <td style={{ textAlign: "right" }}>
-                      <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", alignItems: "center" }}>
-                        <Link href={`/admin/items/${item.id}/edit?page=${page}`} className="btn btn-secondary" style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem" }}>
-                          Sửa
-                        </Link>
-                        <DeleteItemButton id={item.id} />
-                      </div>
-                    </td>
+                    {isSuperAdmin && (
+                      <td style={{ textAlign: "right" }}>
+                        <div style={{ display: "flex", gap: "0.5rem", justifyContent: "flex-end", alignItems: "center" }}>
+                          <Link href={`/admin/items/${item.id}/edit?page=${page}`} className="btn btn-secondary" style={{ fontSize: "0.8rem", padding: "0.35rem 0.75rem" }}>
+                            Sửa
+                          </Link>
+                          <DeleteItemButton id={item.id} />
+                        </div>
+                      </td>
+                    )}
                   </tr>
                 ))
               )}

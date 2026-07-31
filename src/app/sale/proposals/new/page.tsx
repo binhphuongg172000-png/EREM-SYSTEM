@@ -35,7 +35,7 @@ export async function getNewProposalData(userId: string) {
 export default async function NewProposalPage({
   searchParams,
 }: {
-  searchParams?: Promise<{ schoolId?: string }>;
+  searchParams?: Promise<{ schoolId?: string; project?: string }>;
 }) {
   const cookieStore = await cookies();
   const userId = cookieStore.get("userId")?.value;
@@ -43,6 +43,7 @@ export default async function NewProposalPage({
 
   const resolvedSearchParams = await searchParams;
   const initialSchoolId = resolvedSearchParams?.schoolId || "";
+  const initialProject = resolvedSearchParams?.project || "";
 
   const { rawSchools, catalogItems, catalogInvestments } = await getNewProposalData(userId);
 
@@ -122,6 +123,7 @@ export default async function NewProposalPage({
         catalogItems={serializedItems} 
         catalogInvestments={serializedInvestments} 
         initialSchoolId={initialSchoolId}
+        initialProject={initialProject}
       />
     </div>
   );

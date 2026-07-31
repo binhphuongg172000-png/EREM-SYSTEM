@@ -3,6 +3,15 @@
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { clearCache } from "@/lib/cache";
+import { cookies } from "next/headers";
+
+async function checkSuperAdminPermission() {
+  const cookieStore = await cookies();
+  const role = cookieStore.get("userRole")?.value;
+  if (role !== "SUPER_ADMIN") {
+    throw new Error("Chỉ Super Admin mới có quyền Thêm, Sửa hoặc Xóa danh mục mẫu!");
+  }
+}
 
 function safeRevalidate(paths: string[]) {
   clearCache();
@@ -17,6 +26,7 @@ function safeRevalidate(paths: string[]) {
 
 export async function createItem(data: any) {
   try {
+    await checkSuperAdminPermission();
     if (!data.name || !data.standardPrice) {
       throw new Error("Vui lòng điền đầy đủ thông tin thiết bị (Tên, Đơn giá)");
     }
@@ -52,6 +62,7 @@ export async function createItem(data: any) {
 
 export async function createOtherInvestment(data: any) {
   try {
+    await checkSuperAdminPermission();
     if (!data.name || !data.description || !data.unit || !data.standardPrice) {
       throw new Error("Vui lòng điền đầy đủ thông tin hạng mục (Tên, Mô tả, Đơn vị tính, Đơn giá)");
     }
@@ -86,6 +97,7 @@ export async function createOtherInvestment(data: any) {
 
 export async function deleteOtherInvestment(id: string) {
   try {
+    await checkSuperAdminPermission();
     await prisma.otherInvestment.delete({
       where: { id },
     });
@@ -98,6 +110,7 @@ export async function deleteOtherInvestment(id: string) {
 
 export async function deleteItem(id: string) {
   try {
+    await checkSuperAdminPermission();
     await prisma.item.delete({
       where: { id },
     });
@@ -110,6 +123,7 @@ export async function deleteItem(id: string) {
 
 export async function updateItem(id: string, data: any) {
   try {
+    await checkSuperAdminPermission();
     if (!data.name || !data.standardPrice) {
       throw new Error("Vui lòng điền đầy đủ thông tin thiết bị (Tên, Đơn giá)");
     }
@@ -150,6 +164,7 @@ export async function updateItem(id: string, data: any) {
 
 export async function updateOtherInvestment(id: string, data: any) {
   try {
+    await checkSuperAdminPermission();
     if (!data.name || !data.description || !data.unit || !data.standardPrice) {
       throw new Error("Vui lòng điền đầy đủ thông tin hạng mục (Tên, Mô tả, Đơn vị tính, Đơn giá)");
     }
