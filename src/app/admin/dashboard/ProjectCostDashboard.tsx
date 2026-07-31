@@ -1106,7 +1106,7 @@ export default function ProjectCostDashboard({
                           <span style={{ color: "rgba(255,255,255,0.2)" }}>|</span>
                           <div title={(isSaleNeg ? "" : "+") + fmtMoney(saleDelta) + " đ"} style={{ cursor: "pointer", display: "inline-flex", alignItems: "center", gap: "0.25rem" }}>
                             <span style={{ fontSize: "0.62rem", color: isSaleNeg ? "#ff4d6d" : "#34d399", fontWeight: 700 }}>
-                              {isSaleNeg ? "THÂM HỤT:" : "CÒN DƯ:"}
+                              CHÊNH LỆCH:
                             </span>
                             <strong style={{ color: isSaleNeg ? "#ff4d6d" : "#34d399", fontWeight: 900, ...S.blink(isSaleNeg) }}>
                               {isSaleNeg ? "" : "+"}{fmtSmartMoney(saleDelta)} ({saleUsage}%)
